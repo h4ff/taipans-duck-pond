@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Taipan Pond — Stress Test v0.32</title>
+  <title>Taipan Pond — Stress Test v0.34</title>
   <link rel="stylesheet" href="src/styles.css">
 </head>
 <body>
@@ -11,8 +11,8 @@
     <header class="toolbar">
       <div>
         <p class="eyebrow">Taipans Cricket Club</p>
-        <h1>Duck Pond — Stress Test v0.32</h1>
-        <p class="subtle">Fixed 1672 × 941 world coordinates with uniform mobile scaling.</p>
+        <h1>Duck Pond — Stress Test v0.34</h1>
+        <p class="subtle">Runtime fix for the v0.33 collapsed viewport; v0.33 layout and movement changes retained.</p>
       </div>
 
       <div class="controls" aria-label="Developer controls">
@@ -23,8 +23,10 @@
       </div>
     </header>
 
-    <section id="scene" class="scene" aria-label="Interactive Taipan duck pond">
-      <div id="world" class="scene-world">
+    <section id="sceneFrame" class="scene-frame" aria-label="Interactive Taipan duck pond">
+      <div id="scene" class="scene-viewport">
+        <div id="worldStage" class="world-stage">
+          <div id="world" class="scene-world">
         <img class="scene-background" src="assets/scene-background.png" alt="">
 
         <button id="liveScoreboard" class="live-scoreboard" type="button"
@@ -47,6 +49,8 @@
              src="assets/pier-foreground.png" alt="" aria-hidden="true">
 
         <div id="splashLayer" class="splash-layer" aria-hidden="true"></div>
+          </div>
+        </div>
       </div>
 
       <div id="scoreboardPanel" class="scoreboard-panel" hidden>
@@ -62,14 +66,15 @@
         <small>Placeholder player data for the population test.</small>
       </div>
 
-      <div id="status" class="scene-note" aria-live="polite">
-        Load 60 ducks to stress-test the pond.
-      </div>
     </section>
+
+    <div id="status" class="scene-note" aria-live="polite">
+      Load 60 ducks to stress-test the pond.
+    </div>
 
     <footer>
       <strong>What to judge:</strong>
-      portrait scale, pier entry alignment, splash size, moving depth and orientation changes.
+      portrait zoom/panning, pier entry alignment, routed pier crossings and moving depth.
     </footer>
   </main>
 

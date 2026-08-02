@@ -4,7 +4,9 @@
   const WORLD_WIDTH = 1672;
   const WORLD_HEIGHT = 941;
 
+  const sceneFrame = document.getElementById("sceneFrame");
   const scene = document.getElementById("scene");
+  const worldStage = document.getElementById("worldStage");
   const world = document.getElementById("world");
   const duckLayer = document.getElementById("duckLayer");
   const splashLayer = document.getElementById("splashLayer");
@@ -31,6 +33,7 @@
   let directedAddEnabled = false;
   let directedDestination = null;
   let worldScale = 1;
+  let portraitPanInitialised = false;
 
   const waterPolygon = [
     [11.5,57.0],[20.0,53.5],[31.0,51.5],[44.0,50.7],
@@ -51,19 +54,56 @@
   const pctToWorldX = value => WORLD_WIDTH * value / 100;
   const pctToWorldY = value => WORLD_HEIGHT * value / 100;
 
+  function portraitZoomEnabled() {
+    return window.matchMedia(
+      "(max-width: 720px) and (orientation: portrait)"
+    ).matches;
+  }
+
   function applyWorldScale() {
-    const scaleX = scene.clientWidth / WORLD_WIDTH;
-    const scaleY = scene.clientHeight / WORLD_HEIGHT;
-    worldScale = Math.min(scaleX, scaleY);
+    const previousScrollable = Math.max(
+      0,
+      worldStage.offsetWidth - scene.clientWidth
+    );
+    const previousRatio = previousScrollable > 0
+      ? scene.scrollLeft / previousScrollable
+      : 0;
 
-    const renderedWidth = WORLD_WIDTH * worldScale;
-    const renderedHeight = WORLD_HEIGHT * worldScale;
-    const left = (scene.clientWidth - renderedWidth) / 2;
-    const top = (scene.clientHeight - renderedHeight) / 2;
+    const fitScale = scene.clientWidth / WORLD_WIDTH;
+    const zoom = portraitZoomEnabled() ? 1.45 : 1;
+    worldScale = fitScale * zoom;
 
-    world.style.left = `${left}px`;
-    world.style.top = `${top}px`;
+    const renderedWidth = Math.round(WORLD_WIDTH * worldScale);
+    const renderedHeight = Math.round(WORLD_HEIGHT * worldScale);
+
+    worldStage.style.width = `${renderedWidth}px`;
+    worldStage.style.height = `${renderedHeight}px`;
+    scene.style.height = `${renderedHeight}px`;
+
+    world.style.left = "0";
+    world.style.top = "0";
     world.style.transform = `scale(${worldScale})`;
+
+    requestAnimationFrame(() => {
+      const maxScroll = Math.max(0, renderedWidth - scene.clientWidth);
+
+      if (portraitZoomEnabled()) {
+        if (!portraitPanInitialised) {
+          // Begin at the pier/entry side. The user can swipe right across
+          // the rest of the pond.
+          scene.scrollLeft = 0;
+          portraitPanInitialised = true;
+        } else {
+          scene.scrollLeft = Math.max(
+            0,
+            Math.min(maxScroll, previousRatio * maxScroll)
+          );
+        }
+      } else {
+        scene.scrollLeft = 0;
+        portraitPanInitialised = false;
+      }
+    });
   }
 
   function setWorldPosition(element, xPct, yPct) {
@@ -99,6 +139,10 @@
       const t = (x - 31.0) / 5.5;
       const frontEdgeY = 69.0 + t * 6.0;
       return y >= frontEdgeY;
+    }
+
+    if (x > 36.5 && x <= 42.0) {
+      return y >= 75.0;
     }
 
     return false;
@@ -231,6 +275,70 @@
 
   function distance(a, b) {
     return Math.hypot(a.x - b.x, a.y - b.y);
+  }
+
+  const PIER_REAR_WAYPOINT = { x: 38.4, y: 66.0 };
+  const PIER_FRONT_WAYPOINT = { x: 39.5, y: 79.0 };
+
+  function routeIsClear(points) {
+    for (let i = 0; i < points.length - 1; i++) {
+      if (!segmentClear(points[i], points[i + 1])) return false;
+    }
+    return true;
+  }
+
+  function planRoute(from, to) {
+    const safeTo = nearestValidStoppingPoint(to);
+
+    if (segmentClear(from, safeTo)) return [safeTo];
+
+    const destinationPrefersFront = safeTo.y >= 75.0;
+    const candidates = destinationPrefersFront
+      ? [
+          [PIER_FRONT_WAYPOINT, safeTo],
+          [PIER_REAR_WAYPOINT, PIER_FRONT_WAYPOINT, safeTo],
+          [PIER_REAR_WAYPOINT, safeTo]
+        ]
+      : [
+          [PIER_REAR_WAYPOINT, safeTo],
+          [PIER_FRONT_WAYPOINT, PIER_REAR_WAYPOINT, safeTo],
+          [PIER_FRONT_WAYPOINT, safeTo]
+        ];
+
+    for (const route of candidates) {
+      if (
+        route.every(point => canDuckStopAt(point.x, point.y)) &&
+        routeIsClear([from, ...route])
+      ) {
+        return route;
+      }
+    }
+
+    // Keep the endpoint safe even if a route cannot be found. This fallback
+    // should be rare and remains visible through Directed Add testing.
+    return [safeTo];
+  }
+
+  async function animateRoute(duck, from, to, duration) {
+    const route = planRoute(from, to);
+    const legs = [];
+    let current = from;
+    let totalDistance = 0;
+
+    for (const point of route) {
+      const legDistance = Math.max(.01, distance(current, point));
+      legs.push({ from: current, to: point, distance: legDistance });
+      totalDistance += legDistance;
+      current = point;
+    }
+
+    for (const leg of legs) {
+      const legDuration = Math.max(
+        500,
+        duration * (leg.distance / totalDistance)
+      );
+      await animateMove(duck, leg.from, leg.to, legDuration);
+    }
   }
 
   function randomWaterPoint() {
@@ -403,7 +511,7 @@
       duck.dataset.motionState = "swimming";
       duck.classList.remove("floating");
 
-      await animateMove(duck, from, to, duration);
+      await animateRoute(duck, from, to, duration);
 
       activeSwimmers = Math.max(0, activeSwimmers - 1);
       if (!duck.isConnected) return;
@@ -443,10 +551,15 @@
     applyDuckSize(duck);
     duck.style.setProperty("--bob-duration", `${4 + (id % 7) * .27}s`);
 
+    const visual = document.createElement("span");
+    visual.className = "duck-visual";
+
     const image = document.createElement("img");
     image.src = angrySrc;
     image.alt = "";
-    duck.appendChild(image);
+
+    visual.appendChild(image);
+    duck.appendChild(visual);
 
     duck.addEventListener("click", () => reactToClick(duck));
     duckLayer.appendChild(duck);
@@ -466,9 +579,14 @@
     return duck;
   }
 
-  function entryTransform(rotation, scale, anchor = "centre") {
-    const translateY = anchor === "feet" ? "-96%" : "-50%";
-    return `translate(-50%, ${translateY}) rotate(${rotation}deg) scale(${scale})`;
+  function setEntryVisual(duck, rotation, scale) {
+    duck.style.setProperty("--entry-rotation", `${rotation}deg`);
+    duck.style.setProperty("--entry-scale", String(scale));
+  }
+
+  function clearEntryVisual(duck) {
+    duck.style.removeProperty("--entry-rotation");
+    duck.style.removeProperty("--entry-scale");
   }
 
   function animateEntrySegment(
@@ -511,7 +629,13 @@
 
         setWorldPosition(duck, x, y);
         duck.style.opacity = String(opacity);
-        duck.style.transform = entryTransform(rotation, scale, anchor);
+
+        if (anchor === "feet") {
+          setEntryVisual(duck, rotation, scale);
+        } else {
+          duck.style.transform =
+            `translate(-50%,-50%) rotate(${rotation}deg) scale(${scale})`;
+        }
 
         if (raw < 1) {
           duck._entryFrame = requestAnimationFrame(frame);
@@ -525,24 +649,25 @@
   }
 
   async function animateEntry(duck, requestedDestination = null) {
+    duck.classList.add("entrying");
     duck.style.zIndex = "2600";
     duck.style.opacity = "1";
 
     const walkFrames = [
-      { at:0,    x:-11, y:72.25, rotation:-4, scale:.82, opacity:1 },
-      { at:.16,  x:-4,  y:72.05, rotation:5,  scale:.82, opacity:1 },
-      { at:.33,  x:3,   y:72.25, rotation:-5, scale:.82, opacity:1 },
-      { at:.50,  x:10,  y:72.05, rotation:5,  scale:.82, opacity:1 },
-      { at:.67,  x:17,  y:72.25, rotation:-4, scale:.82, opacity:1 },
-      { at:.82,  x:23.5,y:72.05, rotation:4,  scale:.82, opacity:1 },
-      { at:.94,  x:28.5,y:72.20, rotation:-3, scale:.82, opacity:1 },
-      { at:1,    x:31,  y:71.95, rotation:0,  scale:.82, opacity:1 }
+      { at:0,    x:-11, y:72.75, rotation:-4, scale:.82, opacity:1 },
+      { at:.16,  x:-4,  y:72.55, rotation:5,  scale:.82, opacity:1 },
+      { at:.33,  x:3,   y:72.75, rotation:-5, scale:.82, opacity:1 },
+      { at:.50,  x:10,  y:72.55, rotation:5,  scale:.82, opacity:1 },
+      { at:.67,  x:17,  y:72.75, rotation:-4, scale:.82, opacity:1 },
+      { at:.82,  x:23.5,y:72.55, rotation:4,  scale:.82, opacity:1 },
+      { at:.94,  x:28.5,y:72.70, rotation:-3, scale:.82, opacity:1 },
+      { at:1,    x:31,  y:72.45, rotation:0,  scale:.82, opacity:1 }
     ];
 
     await animateEntrySegment(duck, walkFrames, 4600, t => t, "feet");
 
     const jumpFrames = [
-      { at:0,   x:31,   y:71.95, rotation:0, scale:.82, opacity:1 },
+      { at:0,   x:31,   y:72.45, rotation:0, scale:.82, opacity:1 },
       { at:.38, x:33.8, y:65.5,  rotation:5, scale:.80, opacity:1 },
       { at:1,   x:37,   y:73.6,  rotation:8, scale:.64, opacity:.18 }
     ];
@@ -581,7 +706,7 @@
 
         setWorldPosition(duck, x, y);
         duck.style.opacity = String(opacity);
-        duck.style.transform = entryTransform(rotation, scale, "feet");
+        setEntryVisual(duck, rotation, scale);
 
         if (!splashCreated && raw >= .66) {
           splashCreated = true;
@@ -600,6 +725,9 @@
 
     duck.style.opacity = "0";
     await sleep(360);
+
+    duck.classList.remove("entrying");
+    clearEntryVisual(duck);
 
     await animateEntrySegment(
       duck,
@@ -627,7 +755,7 @@
     duck.dataset.motionState = "swimming";
     activeSwimmers++;
 
-    await animateMove(
+    await animateRoute(
       duck,
       entry,
       destination,
@@ -780,24 +908,9 @@
   window.addEventListener("resize", handleViewportChange);
   window.addEventListener("orientationchange", handleViewportChange);
 
-  let statusHideTimer = null;
-  const statusObserver = new MutationObserver(() => {
-    status.classList.remove("mobile-hidden");
-    clearTimeout(statusHideTimer);
-
-    if (window.matchMedia("(max-width: 720px)").matches) {
-      statusHideTimer = setTimeout(() => {
-        status.classList.add("mobile-hidden");
-      }, 2400);
-    }
-  });
-
-  statusObserver.observe(status, {
-    childList: true,
-    characterData: true,
-    subtree: true
-  });
 
   applyWorldScale();
   updateCounts();
+
+  window.addEventListener("load", applyWorldScale, { once: true });
 })();

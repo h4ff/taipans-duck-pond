@@ -1,4 +1,4 @@
-# Taipan Pond — Stress Test v0.32
+# Taipan Pond — Stress Test v0.34
 
 This remains a technical test build. It is not the v1.0 UAT candidate.
 
@@ -459,3 +459,45 @@ Retained:
 - inclusive pond-edge validation;
 - live Y-based duck-to-duck depth sorting;
 - pier crossing override only while inside the pier influence area.
+
+
+## v0.33 — Zoomed portrait, exact frame and routed pier movement
+
+### Portrait
+- the world is zoomed to 1.45× relative to fit-to-width;
+- the pond becomes horizontally pannable by touch;
+- portrait initially opens at the left/pier side;
+- landscape and desktop continue to show the complete pond.
+
+### Frame
+- the visual border is now a separate outer frame;
+- an inner viewport and sized world stage remove the fractional blue gap;
+- the world begins at the inner viewport's exact `0,0`.
+
+### Status messages
+- debug/status messages are no longer overlaid on the pond;
+- they appear in a compact bar below the framed image.
+
+### Entry walk
+- walking uses a dedicated bottom-centre visual wrapper;
+- the visible duck feet are anchored to the pier path instead of estimating
+  the sprite centre;
+- the path was lowered slightly to sit more naturally on the deck.
+
+### Pier-safe movement
+- destinations whose direct route intersects the pier use validated waypoints
+  around the right end;
+- the route planner tries rear-side and front-side waypoint combinations;
+- initial distribution swims and roaming swims use the same route planner.
+
+### Splash
+- reduced from `86 × 30` to `64 × 22` world units;
+- maximum expansion reduced from `1.8×` to `1.45×`.
+
+
+## v0.34 — v0.33 runtime repair
+
+- removed the orphaned `statusObserver.observe(...)` call left after moving status messages below the pond;
+- this ReferenceError prevented `applyWorldScale()` from running and collapsed the viewport;
+- added a one-time load reflow as a safety check;
+- all v0.33 zoom, panning, frame, walking-anchor and route changes are otherwise unchanged.
