@@ -1,4 +1,4 @@
-# Taipan Pond — Stress Test v0.34
+# Taipan Pond — Stress Test v0.39
 
 This remains a technical test build. It is not the v1.0 UAT candidate.
 
@@ -501,3 +501,33 @@ Retained:
 - this ReferenceError prevented `applyWorldScale()` from running and collapsed the viewport;
 - added a one-time load reflow as a safety check;
 - all v0.33 zoom, panning, frame, walking-anchor and route changes are otherwise unchanged.
+
+
+## v0.39 — Permanent pier layer
+
+This build branches directly from **v0.34**. The route experiments in
+v0.35–v0.38 are not included.
+
+Layer model:
+
+1. background;
+2. swimming ducks, Y-sorted against one another;
+3. foreground bank and reeds;
+4. the complete pier at `z-index: 2200`;
+5. the temporary waddling/jumping entry duck at `z-index: 2600`;
+6. splash effects at `z-index: 3000`.
+
+Consequences:
+
+- every swimming duck is permanently behind the entire pier;
+- the waddling and jumping duck remains visibly on top of the pier;
+- after resurfacing, that duck immediately returns below the pier;
+- there is no front/behind pier classification or transition latch;
+- there is no frame at which a swimming duck can pop above the pier corner.
+
+The existing under-pier stopping exclusion remains in place. Route validation
+now uses the same exclusion, so swimming ducks cannot travel through the area
+below or directly in front of the pier. They must pass around the right-hand
+end.
+
+Normal live Y-based depth sorting between ducks remains active.

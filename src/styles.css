@@ -142,7 +142,7 @@ body {
 .duck-layer .duck { pointer-events: auto; }
 .near-bank { z-index: 2100; }
 .reeds { z-index: 2140; }
-.pier-depth { z-index: 880; }
+.pier-depth { z-index: 2200; }
 .splash-layer { z-index: 3000; pointer-events: none; }
 
 .duck {
@@ -179,6 +179,7 @@ body {
 .duck.entrying {
   width: 0;
   height: 0;
+  z-index: 2600 !important;
   transform: none !important;
   animation: none !important;
 }

@@ -132,36 +132,13 @@
     duck.style.setProperty("--duck-size", `${124 + variant * 6}px`);
   }
 
-  function isInFrontOfPier(x, y) {
-    if (x <= 31.0 && y >= 75.0) return true;
-
-    if (x > 31.0 && x <= 36.5) {
-      const t = (x - 31.0) / 5.5;
-      const frontEdgeY = 69.0 + t * 6.0;
-      return y >= frontEdgeY;
-    }
-
-    if (x > 36.5 && x <= 42.0) {
-      return y >= 75.0;
-    }
-
-    return false;
-  }
-
-  function setDepth(duck, y, pierOverride = null) {
+  function setDepth(duck, y) {
     duck.style.setProperty("--duck-scale", scaleForY(y).toFixed(3));
 
-    let z = 100 + Math.round(y * 10);
-
-    if (pierOverride === "behind") {
-      z = Math.min(z, 870);
-    } else if (pierOverride === "front") {
-      z = Math.max(z, 900);
-    } else {
-      const x = Number(duck.dataset.x || "0");
-      if (isInFrontOfPier(x, y)) z = Math.max(z, 900);
-    }
-
+    // Swimming ducks sort against one another by Y, but remain below the
+    // permanent pier layer (z-index 2200). Entry ducks are explicitly raised
+    // above the pier while waddling and jumping.
+    const z = 100 + Math.round(y * 10);
     duck.style.zIndex = String(z);
   }
 
@@ -257,6 +234,10 @@
     return { x: 55, y: 70 };
   }
 
+  function canDuckTravelAt(x, y) {
+    return inWater(x, y) && !inUnderPierRestExclusion(x, y);
+  }
+
   function segmentClear(from, to) {
     const steps = Math.max(
       12,
@@ -267,7 +248,10 @@
       const t = i / steps;
       const x = from.x + (to.x - from.x) * t;
       const y = from.y + (to.y - from.y) * t;
-      if (!inWater(x, y)) return false;
+
+      // Do not let swimming routes cut underneath or in front of the pier.
+      // They must pass around its right-hand end.
+      if (!canDuckTravelAt(x, y)) return false;
     }
 
     return true;
@@ -411,10 +395,6 @@
     };
   }
 
-  function pierInfluence(x, y) {
-    return x >= -2 && x <= 40 && y >= 59 && y <= 83;
-  }
-
   function animateMove(duck, from, to, duration) {
     const safeTo = nearestValidStoppingPoint(to);
 
@@ -422,13 +402,6 @@
       const started = performance.now();
       const dx = safeTo.x - from.x;
       const dy = safeTo.y - from.y;
-      const fromFront = isInFrontOfPier(from.x, from.y);
-      const toFront = isInFrontOfPier(safeTo.x, safeTo.y);
-      const crossingPier = fromFront !== toFront;
-      const look = .18;
-
-      let crossingState = crossingPier ? (fromFront ? "front" : "behind") : null;
-      let transitionLatched = false;
 
       function frame(now) {
         if (!duck.isConnected) {
@@ -444,43 +417,14 @@
         const x = from.x + dx * eased;
         const y = from.y + dy * eased;
 
-        if (crossingPier && !transitionLatched) {
-          if (fromFront && !toFront) {
-            const projectedFront = isInFrontOfPier(
-              x + dx * look,
-              y + dy * look
-            );
-            if (!projectedFront) {
-              crossingState = "behind";
-              transitionLatched = true;
-            }
-          } else if (!fromFront && toFront) {
-            const trailingFront = isInFrontOfPier(
-              x - dx * look,
-              y - dy * look
-            );
-            if (trailingFront) {
-              crossingState = "front";
-              transitionLatched = true;
-            }
-          }
-        }
-
         setWorldPosition(duck, x, y);
         duck.dataset.x = x.toFixed(3);
         duck.dataset.y = y.toFixed(3);
-
-        const override =
-          crossingPier && pierInfluence(x, y)
-            ? crossingState
-            : null;
-
-        setDepth(duck, y, override);
+        setDepth(duck, y);
 
         if (raw < 1) {
           duck._moveFrame = requestAnimationFrame(frame);
         } else {
-          setDepth(duck, y);
           resolve();
         }
       }
