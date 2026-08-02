@@ -16,28 +16,6 @@ body {
   font-family: Inter, ui-rounded, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-.controls button {
-  font: inherit;
-  font-weight: 800;
-  border: 3px solid var(--ink);
-  border-radius: 10px;
-  padding: .7rem .9rem;
-  cursor: pointer;
-  background: var(--red);
-  color: white;
-  box-shadow: 0 4px 0 var(--ink);
-}
-
-.controls button:active {
-  transform: translateY(3px);
-  box-shadow: 0 1px 0 var(--ink);
-}
-
-.controls button.secondary {
-  background: var(--cream);
-  color: var(--ink);
-}
-
 .app-shell {
   width: min(1420px, 100%);
   margin: 0 auto;
@@ -77,15 +55,55 @@ body {
   flex-wrap: wrap;
 }
 
+.controls button {
+  font: inherit;
+  font-weight: 800;
+  border: 3px solid var(--ink);
+  border-radius: 10px;
+  padding: .7rem .9rem;
+  cursor: pointer;
+  background: var(--red);
+  color: white;
+  box-shadow: 0 4px 0 var(--ink);
+  touch-action: manipulation;
+}
+
+.controls button:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--ink);
+}
+
+.controls button.secondary {
+  background: var(--cream);
+  color: var(--ink);
+}
+
+#directedAddButton[aria-pressed="true"] {
+  background: var(--yellow);
+  color: var(--ink);
+}
+
 .scene {
   position: relative;
   overflow: hidden;
-  aspect-ratio: 16 / 9;
+  width: 100%;
+  aspect-ratio: 1672 / 941;
   border: 5px solid var(--ink);
   border-radius: 20px;
   background: #86c8e0;
   box-shadow: 0 12px 0 rgba(24,39,44,.16);
   user-select: none;
+  isolation: isolate;
+}
+
+.scene-world {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1672px;
+  height: 941px;
+  transform-origin: 0 0;
+  overflow: hidden;
 }
 
 .scene-background,
@@ -94,13 +112,14 @@ body {
 .splash-layer {
   position: absolute;
   inset: 0;
+  width: 1672px;
+  height: 941px;
 }
 
 .scene-background,
 .foreground-layer {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  display: block;
+  object-fit: fill;
   pointer-events: none;
 }
 
@@ -109,15 +128,11 @@ body {
 .duck-layer .duck { pointer-events: auto; }
 .near-bank { z-index: 2100; }
 .reeds { z-index: 2140; }
-.pier-depth {
-  /* Duck z-index is 100 + y*10. This puts y <= 78 behind the pier,
-     while y >= 79 appears in front of the entire structure. */
-  z-index: 880;
-}
+.pier-depth { z-index: 880; }
 .splash-layer { z-index: 3000; pointer-events: none; }
 
 .duck {
-  --duck-size: 108px;
+  --duck-size: 124px;
   --duck-scale: .7;
   --bob-duration: 4.8s;
   position: absolute;
@@ -132,6 +147,7 @@ body {
   user-select: none;
   filter: drop-shadow(0 8px 3px rgba(24,39,44,.20));
   will-change: left, top, transform;
+  touch-action: manipulation;
 }
 
 .duck img {
@@ -140,26 +156,6 @@ body {
   height: auto;
   pointer-events: none;
 }
-
-.duck .duck-medal {
-  position: absolute;
-  right: 17%;
-  top: 51%;
-  width: 22px;
-  height: 22px;
-  display: grid;
-  place-items: center;
-  border: 2px solid var(--ink);
-  border-radius: 50%;
-  font-size: 12px;
-  font-weight: 900;
-  color: var(--ink);
-  transform: translate(50%, -50%);
-}
-
-.duck-medal.gold { background: #e1b629; }
-.duck-medal.silver { background: #d6d9dc; }
-.duck-medal.bronze { background: #b87333; }
 
 .duck.floating {
   animation: bob var(--bob-duration) ease-in-out infinite;
@@ -196,6 +192,37 @@ body {
   100% { transform: translate(-50%, -50%) scale(1.8); opacity: 0; }
 }
 
+.destination-marker {
+  position: absolute;
+  z-index: 4500;
+  width: 30px;
+  height: 30px;
+  transform: translate(-50%, -50%);
+  border: 4px solid #f5edd9;
+  border-radius: 50%;
+  background: rgba(242, 176, 46, .34);
+  box-shadow: 0 0 0 3px #18272c, 0 0 0 7px rgba(242,176,46,.42);
+  pointer-events: none;
+}
+
+.destination-marker::before,
+.destination-marker::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  background: #18272c;
+  transform: translate(-50%, -50%);
+}
+
+.destination-marker::before { width: 38px; height: 3px; }
+.destination-marker::after { width: 3px; height: 38px; }
+
+.destination-marker.invalid {
+  background: rgba(192, 74, 49, .42);
+  box-shadow: 0 0 0 3px #18272c, 0 0 0 7px rgba(192,74,49,.46);
+}
+
 .live-scoreboard {
   position: absolute;
   left: 10.6%;
@@ -214,7 +241,7 @@ body {
   color: #f6e9c6;
   cursor: pointer;
   transform: perspective(400px) rotateY(-1deg);
-  font-size: clamp(5px, .62vw, 10px);
+  font-size: 8px;
   overflow: hidden;
 }
 
@@ -225,7 +252,7 @@ body {
 }
 
 .live-scoreboard strong {
-  font-size: clamp(11px, 1.35vw, 23px);
+  font-size: 22px;
   line-height: 1;
 }
 
@@ -243,7 +270,7 @@ body {
   position: absolute;
   left: 50%;
   top: 50%;
-  z-index: 5000;
+  z-index: 6000;
   width: min(430px, calc(100% - 30px));
   transform: translate(-50%, -50%);
   border: 5px solid var(--ink);
@@ -306,7 +333,7 @@ body {
   position: absolute;
   right: 18px;
   bottom: 14px;
-  z-index: 4000;
+  z-index: 7000;
   max-width: 55%;
   padding: 7px 10px;
   border-radius: 8px;
@@ -314,6 +341,7 @@ body {
   border: 2px solid var(--ink);
   font-size: .85rem;
   font-weight: 800;
+  transition: opacity .25s ease;
 }
 
 footer {
@@ -323,66 +351,46 @@ footer {
 
 @media (max-width: 720px) {
   .app-shell { padding: 10px; }
-  .toolbar { align-items: flex-start; flex-direction: column; }
-  .controls { justify-content: flex-start; }
+
+  .toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .toolbar h1 {
+    font-size: clamp(1.65rem, 7.5vw, 2.15rem);
+  }
+
+  .controls {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .controls button {
+    width: 100%;
+    min-height: 52px;
+    padding: .55rem .45rem;
+  }
 
   .scene-note {
-    right: 8px;
-    bottom: 8px;
-    max-width: 68%;
-    padding: 4px 7px;
+    right: 7px;
+    bottom: 7px;
+    max-width: 62%;
+    padding: 4px 6px;
     border-width: 1px;
-    font-size: .56rem;
+    font-size: .58rem;
     line-height: 1.15;
-    transition: opacity .25s ease;
   }
 
   .scene-note.mobile-hidden {
     opacity: 0;
     pointer-events: none;
   }
-}
 
-
-.destination-marker {
-  position: absolute;
-  z-index: 4500;
-  width: 26px;
-  height: 26px;
-  transform: translate(-50%, -50%);
-  border: 4px solid #f5edd9;
-  border-radius: 50%;
-  background: rgba(242, 176, 46, .34);
-  box-shadow: 0 0 0 3px #18272c, 0 0 0 7px rgba(242,176,46,.42);
-  pointer-events: none;
-}
-
-.destination-marker::before,
-.destination-marker::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  background: #18272c;
-  transform: translate(-50%, -50%);
-}
-
-.destination-marker::before {
-  width: 34px;
-  height: 3px;
-}
-
-.destination-marker::after {
-  width: 3px;
-  height: 34px;
-}
-
-.destination-marker.invalid {
-  background: rgba(192, 74, 49, .42);
-  box-shadow: 0 0 0 3px #18272c, 0 0 0 7px rgba(192,74,49,.46);
-}
-
-#directedAddButton[aria-pressed="true"] {
-  background: var(--yellow);
-  color: var(--ink);
+  footer {
+    font-size: .95rem;
+  }
 }

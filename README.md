@@ -1,4 +1,4 @@
-# Taipan Pond — Stress Test v0.31
+# Taipan Pond — Stress Test v0.32
 
 This remains a technical test build. It is not the v1.0 UAT candidate.
 
@@ -415,3 +415,47 @@ Unchanged:
 ### Mobile status
 - portrait status messages are smaller;
 - they fade automatically after approximately 2.8 seconds.
+
+
+## v0.32 — Fixed world-coordinate refactor
+
+The interactive scene now uses one immutable internal coordinate system:
+
+- **World size:** `1672 × 941`
+- the browser scales the complete world uniformly to fit the visible scene;
+- device rotation changes only the outer world scale;
+- duck positions, pier entry, splash position/size, exclusions and depth rules
+  remain in the same internal coordinates.
+
+### Mobile fixes
+
+- fixed world-sized ducks instead of viewport-sized ducks;
+- portrait ducks therefore shrink with the pond rather than maintaining a
+  minimum CSS size;
+- the walk animation uses a dedicated **feet anchor**;
+- the feet path follows the pier surface in world coordinates;
+- splash dimensions are world units and scale with the pond;
+- active entry animations do not need their positions recalculated on rotation.
+
+### Controls
+
+Removed:
+
+- Load 10
+- Load 25
+- Load 50
+
+Retained:
+
+- Directed Add
+- Add Duck
+- Load 60 Ducks
+- Reset
+
+### Carried forward
+
+- v0.30 exclusion-aware population loading;
+- Directed Add;
+- inclusive pond-edge validation;
+- live Y-based duck-to-duck depth sorting;
+- pier crossing override only while inside the pier influence area.

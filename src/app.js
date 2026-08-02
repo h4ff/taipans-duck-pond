@@ -1,12 +1,20 @@
 (() => {
+  "use strict";
+
+  const WORLD_WIDTH = 1672;
+  const WORLD_HEIGHT = 941;
+
   const scene = document.getElementById("scene");
+  const world = document.getElementById("world");
   const duckLayer = document.getElementById("duckLayer");
   const splashLayer = document.getElementById("splashLayer");
+  const destinationMarker = document.getElementById("destinationMarker");
+
   const addDuckButton = document.getElementById("addDuckButton");
   const directedAddButton = document.getElementById("directedAddButton");
-  const destinationMarker = document.getElementById("destinationMarker");
+  const load60Button = document.getElementById("load60Button");
   const resetButton = document.getElementById("resetButton");
-  const populationButtons = [...document.querySelectorAll(".population-button")];
+
   const scoreboardCount = document.getElementById("scoreboardCount");
   const panelDuckCount = document.getElementById("panelDuckCount");
   const liveScoreboard = document.getElementById("liveScoreboard");
@@ -22,6 +30,7 @@
   let activeSwimmers = 0;
   let directedAddEnabled = false;
   let directedDestination = null;
+  let worldScale = 1;
 
   const waterPolygon = [
     [11.5,57.0],[20.0,53.5],[31.0,51.5],[44.0,50.7],
@@ -32,13 +41,6 @@
     [10.0,63.0]
   ];
 
-  // Tight physical footprint used while ducks are travelling.
-  // Ducks can route around the end and pass behind the pier.
-  // Pier keep-out boxes tuned from the user's purple markup.
-  // These represent only the timber mass that should block duck centres:
-  // 1) the long front deck/fascia strip
-  // 2) the top-right corner cap
-  // 3) the right-side front/end face
   const pierExclusionBoxes = [
     { minX: -0.8, maxX: 30.8, minY: 66.2, maxY: 75.2 },
     { minX: 28.8, maxX: 35.6, minY: 61.4, maxY: 67.6 },
@@ -46,6 +48,28 @@
   ];
 
   const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+  const pctToWorldX = value => WORLD_WIDTH * value / 100;
+  const pctToWorldY = value => WORLD_HEIGHT * value / 100;
+
+  function applyWorldScale() {
+    const scaleX = scene.clientWidth / WORLD_WIDTH;
+    const scaleY = scene.clientHeight / WORLD_HEIGHT;
+    worldScale = Math.min(scaleX, scaleY);
+
+    const renderedWidth = WORLD_WIDTH * worldScale;
+    const renderedHeight = WORLD_HEIGHT * worldScale;
+    const left = (scene.clientWidth - renderedWidth) / 2;
+    const top = (scene.clientHeight - renderedHeight) / 2;
+
+    world.style.left = `${left}px`;
+    world.style.top = `${top}px`;
+    world.style.transform = `scale(${worldScale})`;
+  }
+
+  function setWorldPosition(element, xPct, yPct) {
+    element.style.left = `${pctToWorldX(xPct)}px`;
+    element.style.top = `${pctToWorldY(yPct)}px`;
+  }
 
   function updateCounts() {
     const count = ducks.size;
@@ -57,41 +81,20 @@
     return Math.max(4, Math.min(10, Math.round(ducks.size * .15)));
   }
 
-  function pctX(value) {
-    return scene.clientWidth * value / 100;
-  }
-
-  function pctY(value) {
-    return scene.clientHeight * value / 100;
-  }
-
   function scaleForY(y) {
     const clamped = Math.max(51, Math.min(89, y));
     const t = (clamped - 51) / 38;
     return .45 + t * .43;
   }
 
-  function duckBaseSize() {
-    const portrait = window.matchMedia("(orientation: portrait)").matches;
-    const factor = portrait ? .060 : .072;
-    const minimum = portrait ? 38 : 46;
-    return Math.max(minimum, Math.min(104, scene.clientWidth * factor));
-  }
-
   function applyDuckSize(duck) {
     const variant = Number(duck.dataset.sizeVariant || "0");
-    duck.style.setProperty("--duck-size", `${Math.round(duckBaseSize() + variant * 4)}px`);
-  }
-
-  function syncDuckSizes() {
-    ducks.forEach(duck => applyDuckSize(duck));
+    duck.style.setProperty("--duck-size", `${124 + variant * 6}px`);
   }
 
   function isInFrontOfPier(x, y) {
-    // Main front edge of the pier.
     if (x <= 31.0 && y >= 75.0) return true;
 
-    // Sloping/right-end edge of the pier.
     if (x > 31.0 && x <= 36.5) {
       const t = (x - 31.0) / 5.5;
       const frontEdgeY = 69.0 + t * 6.0;
@@ -101,40 +104,52 @@
     return false;
   }
 
-  function setDepth(duck, y, movement = null) {
+  function setDepth(duck, y, pierOverride = null) {
     duck.style.setProperty("--duck-scale", scaleForY(y).toFixed(3));
 
-    const x = movement?.x ?? Number(duck.dataset.x || "0");
-    let frontOfPier = isInFrontOfPier(x, y);
     let z = 100 + Math.round(y * 10);
 
-    if (movement?.pierDepthState === "behind") {
-      frontOfPier = false;
+    if (pierOverride === "behind") {
       z = Math.min(z, 870);
-    } else if (movement?.pierDepthState === "front") {
-      frontOfPier = true;
+    } else if (pierOverride === "front") {
       z = Math.max(z, 900);
-    } else if (frontOfPier) {
-      z = Math.max(z, 900);
+    } else {
+      const x = Number(duck.dataset.x || "0");
+      if (isInFrontOfPier(x, y)) z = Math.max(z, 900);
     }
 
     duck.style.zIndex = String(z);
   }
 
-  function pointInPolygon(x, y, polygon) {
-    let inside = false;
+  function pointOnSegment(x, y, x1, y1, x2, y2, tolerance = .12) {
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const lengthSq = dx * dx + dy * dy;
+    if (lengthSq === 0) return Math.hypot(x - x1, y - y1) <= tolerance;
 
+    const t = Math.max(0, Math.min(1, ((x - x1) * dx + (y - y1) * dy) / lengthSq));
+    const px = x1 + t * dx;
+    const py = y1 + t * dy;
+    return Math.hypot(x - px, y - py) <= tolerance;
+  }
+
+  function pointInPolygonInclusive(x, y, polygon) {
+    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+      if (pointOnSegment(x, y, polygon[j][0], polygon[j][1], polygon[i][0], polygon[i][1])) {
+        return true;
+      }
+    }
+
+    let inside = false;
     for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
       const [xi, yi] = polygon[i];
       const [xj, yj] = polygon[j];
-
       const intersects =
         ((yi > y) !== (yj > y)) &&
         (x < ((xj - xi) * (y - yi)) / ((yj - yi) || .000001) + xi);
 
       if (intersects) inside = !inside;
     }
-
     return inside;
   }
 
@@ -152,12 +167,10 @@
   }
 
   function inWater(x, y) {
-    return pointInPolygon(x, y, waterPolygon) && !inPier(x, y);
+    return pointInPolygonInclusive(x, y, waterPolygon) && !inPier(x, y);
   }
 
   function underPierRestLineY(x) {
-    // Expanded diagonal based on the marked under-pier keep-out area.
-    // It begins farther left and sits higher than the v0.29 line.
     const minX = 7.5;
     const maxX = 35.5;
     const leftY = 76.8;
@@ -169,9 +182,6 @@
 
   function inUnderPierRestExclusion(x, y) {
     if (x < 7.5 || x > 35.5) return false;
-
-    // A small clearance margin accounts for the duck body extending around
-    // its centre anchor rather than treating the anchor as the whole sprite.
     const bodyClearance = 1.2;
     return y >= underPierRestLineY(x) - bodyClearance;
   }
@@ -185,23 +195,17 @@
     );
   }
 
-  function validRestingPoint(x, y) {
-    return canDuckStopAt(x, y);
-  }
-
   function nearestValidStoppingPoint(point) {
     if (canDuckStopAt(point.x, point.y)) return point;
 
-    for (let radius = 0.6; radius <= 18; radius += 0.6) {
+    for (let radius = .6; radius <= 18; radius += .6) {
       const samples = Math.max(16, Math.round(radius * 7));
-
       for (let i = 0; i < samples; i++) {
         const angle = (i / samples) * Math.PI * 2;
         const candidate = {
           x: point.x + Math.cos(angle) * radius,
           y: point.y + Math.sin(angle) * radius
         };
-
         if (canDuckStopAt(candidate.x, candidate.y)) return candidate;
       }
     }
@@ -210,7 +214,10 @@
   }
 
   function segmentClear(from, to) {
-    const steps = Math.max(12, Math.ceil(Math.hypot(to.x - from.x, to.y - from.y) * 1.6));
+    const steps = Math.max(
+      12,
+      Math.ceil(Math.hypot(to.x - from.x, to.y - from.y) * 1.6)
+    );
 
     for (let i = 0; i <= steps; i++) {
       const t = i / steps;
@@ -232,7 +239,6 @@
         x: 11 + Math.random() * 82,
         y: 51 + Math.random() * 37
       };
-
       if (canDuckStopAt(point.x, point.y)) return point;
     }
 
@@ -243,13 +249,16 @@
     let best = randomWaterPoint();
     let bestDistance = -1;
 
-    for (let attempt = 0; attempt < 35; attempt++) {
+    for (let attempt = 0; attempt < 45; attempt++) {
       const candidate = randomWaterPoint();
       let nearest = Infinity;
 
       for (const duck of ducks.values()) {
         if (duck === excludeDuck || !duck.dataset.x) continue;
-        const other = { x: Number(duck.dataset.x), y: Number(duck.dataset.y) };
+        const other = {
+          x: Number(duck.dataset.x),
+          y: Number(duck.dataset.y)
+        };
         nearest = Math.min(nearest, distance(candidate, other));
       }
 
@@ -282,30 +291,36 @@
   function createSplash(xPct, yPct) {
     const splash = document.createElement("div");
     splash.className = "splash";
-    splash.style.left = `${xPct}%`;
-    splash.style.top = `${yPct}%`;
+    setWorldPosition(splash, xPct, yPct);
     splashLayer.appendChild(splash);
     splash.addEventListener("animationend", () => splash.remove(), { once: true });
   }
 
   function currentPosition(duck) {
-    return { x: Number(duck.dataset.x), y: Number(duck.dataset.y) };
+    return {
+      x: Number(duck.dataset.x),
+      y: Number(duck.dataset.y)
+    };
+  }
+
+  function pierInfluence(x, y) {
+    return x >= -2 && x <= 40 && y >= 59 && y <= 83;
   }
 
   function animateMove(duck, from, to, duration) {
     const safeTo = nearestValidStoppingPoint(to);
 
     return new Promise(resolve => {
-      const start = performance.now();
+      const started = performance.now();
+      const dx = safeTo.x - from.x;
+      const dy = safeTo.y - from.y;
       const fromFront = isInFrontOfPier(from.x, from.y);
       const toFront = isInFrontOfPier(safeTo.x, safeTo.y);
       const crossingPier = fromFront !== toFront;
-      const dx = safeTo.x - from.x;
-      const dy = safeTo.y - from.y;
-      const transitionLead = 0.18;
+      const look = .18;
 
-      let pierDepthState = fromFront ? "front" : "behind";
-      let transitionLatched = !crossingPier;
+      let crossingState = crossingPier ? (fromFront ? "front" : "behind") : null;
+      let transitionLatched = false;
 
       function frame(now) {
         if (!duck.isConnected) {
@@ -313,7 +328,7 @@
           return;
         }
 
-        const raw = Math.min(1, (now - start) / duration);
+        const raw = Math.min(1, (now - started) / duration);
         const eased = raw < .5
           ? 2 * raw * raw
           : 1 - Math.pow(-2 * raw + 2, 2) / 2;
@@ -324,47 +339,35 @@
         if (crossingPier && !transitionLatched) {
           if (fromFront && !toFront) {
             const projectedFront = isInFrontOfPier(
-              x + dx * transitionLead,
-              y + dy * transitionLead
+              x + dx * look,
+              y + dy * look
             );
-
             if (!projectedFront) {
-              pierDepthState = "behind";
+              crossingState = "behind";
               transitionLatched = true;
             }
           } else if (!fromFront && toFront) {
             const trailingFront = isInFrontOfPier(
-              x - dx * transitionLead,
-              y - dy * transitionLead
+              x - dx * look,
+              y - dy * look
             );
-
             if (trailingFront) {
-              pierDepthState = "front";
+              crossingState = "front";
               transitionLatched = true;
             }
           }
         }
 
-        duck.style.left = `${x}%`;
-        duck.style.top = `${y}%`;
+        setWorldPosition(duck, x, y);
         duck.dataset.x = x.toFixed(3);
         duck.dataset.y = y.toFixed(3);
 
-        // Use ordinary live Y-based duck sorting everywhere except the small
-        // pier crossing corridor. This prevents moving ducks being forced to
-        // the back/front of every other duck for an entire swim.
-        const inPierCorridor =
-          crossingPier &&
-          x >= -1 &&
-          x <= 40 &&
-          y >= 61 &&
-          y <= 81;
+        const override =
+          crossingPier && pierInfluence(x, y)
+            ? crossingState
+            : null;
 
-        setDepth(
-          duck,
-          y,
-          inPierCorridor ? { x, pierDepthState } : null
-        );
+        setDepth(duck, y, override);
 
         if (raw < 1) {
           duck._moveFrame = requestAnimationFrame(frame);
@@ -391,7 +394,10 @@
 
       const from = currentPosition(duck);
       const to = nearbyPoint(from);
-      const duration = Math.max(3200, Math.min(6500, 2500 + distance(from, to) * 360));
+      const duration = Math.max(
+        3200,
+        Math.min(6500, 2500 + distance(from, to) * 360)
+      );
 
       activeSwimmers++;
       duck.dataset.motionState = "swimming";
@@ -448,9 +454,7 @@
 
     if (instant) {
       const safePoint = nearestValidStoppingPoint(point);
-
-      duck.style.left = `${safePoint.x}%`;
-      duck.style.top = `${safePoint.y}%`;
+      setWorldPosition(duck, safePoint.x, safePoint.y);
       duck.dataset.x = safePoint.x.toFixed(3);
       duck.dataset.y = safePoint.y.toFixed(3);
       setDepth(duck, safePoint.y);
@@ -462,7 +466,18 @@
     return duck;
   }
 
-  function animateEntrySegment(duck, keyframes, duration, easing = t => t) {
+  function entryTransform(rotation, scale, anchor = "centre") {
+    const translateY = anchor === "feet" ? "-96%" : "-50%";
+    return `translate(-50%, ${translateY}) rotate(${rotation}deg) scale(${scale})`;
+  }
+
+  function animateEntrySegment(
+    duck,
+    keyframes,
+    duration,
+    easing = t => t,
+    anchor = "centre"
+  ) {
     return new Promise(resolve => {
       const started = performance.now();
 
@@ -494,11 +509,9 @@
         const scale = left.scale + (right.scale - left.scale) * local;
         const opacity = left.opacity + (right.opacity - left.opacity) * local;
 
-        duck.style.left = `${x}%`;
-        duck.style.top = `${y}%`;
+        setWorldPosition(duck, x, y);
         duck.style.opacity = String(opacity);
-        duck.style.transform =
-          `translate(-50%,-50%) rotate(${rotation}deg) scale(${scale})`;
+        duck.style.transform = entryTransform(rotation, scale, anchor);
 
         if (raw < 1) {
           duck._entryFrame = requestAnimationFrame(frame);
@@ -516,22 +529,22 @@
     duck.style.opacity = "1";
 
     const walkFrames = [
-      { at:0,    x:-11, y:66.7, rotation:-4, scale:.82, opacity:1 },
-      { at:.16,  x:-4,  y:66.3, rotation:5,  scale:.82, opacity:1 },
-      { at:.33,  x:3,   y:66.8, rotation:-5, scale:.82, opacity:1 },
-      { at:.50,  x:10,  y:66.3, rotation:5,  scale:.82, opacity:1 },
-      { at:.67,  x:17,  y:66.7, rotation:-4, scale:.82, opacity:1 },
-      { at:.82,  x:23.5,y:66.3, rotation:4,  scale:.82, opacity:1 },
-      { at:.94,  x:28.5,y:66.6, rotation:-3, scale:.82, opacity:1 },
-      { at:1,    x:31,  y:66.3, rotation:0,  scale:.82, opacity:1 }
+      { at:0,    x:-11, y:72.25, rotation:-4, scale:.82, opacity:1 },
+      { at:.16,  x:-4,  y:72.05, rotation:5,  scale:.82, opacity:1 },
+      { at:.33,  x:3,   y:72.25, rotation:-5, scale:.82, opacity:1 },
+      { at:.50,  x:10,  y:72.05, rotation:5,  scale:.82, opacity:1 },
+      { at:.67,  x:17,  y:72.25, rotation:-4, scale:.82, opacity:1 },
+      { at:.82,  x:23.5,y:72.05, rotation:4,  scale:.82, opacity:1 },
+      { at:.94,  x:28.5,y:72.20, rotation:-3, scale:.82, opacity:1 },
+      { at:1,    x:31,  y:71.95, rotation:0,  scale:.82, opacity:1 }
     ];
 
-    await animateEntrySegment(duck, walkFrames, 4600);
+    await animateEntrySegment(duck, walkFrames, 4600, t => t, "feet");
 
     const jumpFrames = [
-      { at:0,   x:31,   y:66.3, rotation:0, scale:.82, opacity:1 },
-      { at:.38, x:33.8, y:64.4, rotation:5, scale:.80, opacity:1 },
-      { at:1,   x:37,   y:73.6, rotation:8, scale:.64, opacity:.18 }
+      { at:0,   x:31,   y:71.95, rotation:0, scale:.82, opacity:1 },
+      { at:.38, x:33.8, y:65.5,  rotation:5, scale:.80, opacity:1 },
+      { at:1,   x:37,   y:73.6,  rotation:8, scale:.64, opacity:.18 }
     ];
 
     let splashCreated = false;
@@ -549,6 +562,7 @@
 
         let left = jumpFrames[0];
         let right = jumpFrames[jumpFrames.length - 1];
+
         for (let i = 0; i < jumpFrames.length - 1; i++) {
           if (eased >= jumpFrames[i].at && eased <= jumpFrames[i + 1].at) {
             left = jumpFrames[i];
@@ -565,11 +579,9 @@
         const scale = left.scale + (right.scale - left.scale) * local;
         const opacity = left.opacity + (right.opacity - left.opacity) * local;
 
-        duck.style.left = `${x}%`;
-        duck.style.top = `${y}%`;
+        setWorldPosition(duck, x, y);
         duck.style.opacity = String(opacity);
-        duck.style.transform =
-          `translate(-50%,-50%) rotate(${rotation}deg) scale(${scale})`;
+        duck.style.transform = entryTransform(rotation, scale, "feet");
 
         if (!splashCreated && raw >= .66) {
           splashCreated = true;
@@ -596,16 +608,16 @@
         { at:1, x:37, y:73.6, rotation:0, scale:.73, opacity:1 }
       ],
       520,
-      t => 1 - Math.pow(1 - t, 3)
+      t => 1 - Math.pow(1 - t, 3),
+      "centre"
     );
 
     duck.style.transform = "";
     const entry = { x:37, y:73.6 };
-    duck.style.left = "37%";
-    duck.style.top = "73.6%";
+    setWorldPosition(duck, entry.x, entry.y);
     duck.style.opacity = "1";
-    duck.dataset.x = "37";
-    duck.dataset.y = "73.6";
+    duck.dataset.x = entry.x.toFixed(3);
+    duck.dataset.y = entry.y.toFixed(3);
     setDepth(duck, entry.y);
 
     const destination = requestedDestination
@@ -643,7 +655,7 @@
 
     if (directedAddEnabled) {
       status.textContent =
-        `Duck sent to ${destination.x.toFixed(1)}%, ${destination.y.toFixed(1)}%. Choose another point or reuse this one.`;
+        `Duck sent to ${destination.x.toFixed(1)}%, ${destination.y.toFixed(1)}%.`;
     }
   }
 
@@ -656,7 +668,7 @@
       directedDestination = null;
       destinationMarker.hidden = true;
       destinationMarker.classList.remove("invalid");
-      status.textContent = "Directed Add disabled. Add Duck will use automatic distribution.";
+      status.textContent = "Directed Add disabled.";
     } else {
       status.textContent = "Directed Add enabled. Click a destination in the pond.";
     }
@@ -664,28 +676,27 @@
 
   function selectDirectedDestination(event) {
     if (!directedAddEnabled) return;
-    if (event.target.closest("button, .duck, .scoreboard-panel")) return;
+    if (event.target.closest("button, .duck")) return;
 
-    const rect = scene.getBoundingClientRect();
+    const rect = world.getBoundingClientRect();
     const x = ((event.clientX - rect.left) / rect.width) * 100;
     const y = ((event.clientY - rect.top) / rect.height) * 100;
     const valid = canDuckStopAt(x, y);
 
     destinationMarker.hidden = false;
-    destinationMarker.style.left = `${x}%`;
-    destinationMarker.style.top = `${y}%`;
+    setWorldPosition(destinationMarker, x, y);
     destinationMarker.classList.toggle("invalid", !valid);
 
     if (!valid) {
       directedDestination = null;
       status.textContent =
-        `That point (${x.toFixed(1)}%, ${y.toFixed(1)}%) is excluded. Choose another point.`;
+        `That point (${x.toFixed(1)}%, ${y.toFixed(1)}%) is excluded.`;
       return;
     }
 
     directedDestination = { x, y };
     status.textContent =
-      `Directed destination selected: ${x.toFixed(1)}%, ${y.toFixed(1)}%. Press Add Duck.`;
+      `Destination selected: ${x.toFixed(1)}%, ${y.toFixed(1)}%. Press Add Duck.`;
   }
 
   function resetPond() {
@@ -702,27 +713,24 @@
     nextDuckId = 1;
     activeSwimmers = 0;
     updateCounts();
+
     destinationMarker.hidden = true;
     directedDestination = null;
     status.textContent = directedAddEnabled
-      ? "Pond reset. Directed Add is still on; choose a destination."
+      ? "Pond reset. Choose a directed destination."
       : "Pond reset.";
   }
 
-  function loadPopulation(target) {
+  function loadPopulation(target = 60) {
     resetPond();
-
     const points = [];
 
     for (let i = 0; i < target; i++) {
       let best = null;
       let bestNearest = -1;
 
-      // Population loading now generates only points that pass the exact
-      // same exclusion-aware validator used by Directed Add.
       for (let attempt = 0; attempt < 120; attempt++) {
         const candidate = randomWaterPoint();
-
         if (!canDuckStopAt(candidate.x, candidate.y)) continue;
 
         const nearest = points.length
@@ -735,38 +743,23 @@
         }
       }
 
-      const safeBest = nearestValidStoppingPoint(
-        best || randomWaterPoint()
-      );
-
-      if (!canDuckStopAt(safeBest.x, safeBest.y)) {
-        throw new Error(
-          `Population loader produced an invalid point at ${safeBest.x}, ${safeBest.y}`
-        );
-      }
-
+      const safeBest = nearestValidStoppingPoint(best || randomWaterPoint());
       points.push(safeBest);
-
-      makeDuck({
-        point: safeBest,
-        instant: true
-      });
+      makeDuck({ point: safeBest, instant: true });
     }
 
     status.textContent =
-      `${target} exclusion-checked ducks loaded. Up to ${maxActiveSwimmers()} will swim at once.`;
+      `60 exclusion-checked ducks loaded. Up to ${maxActiveSwimmers()} will swim at once.`;
   }
 
-  directedAddButton.addEventListener("click", () => setDirectedAdd(!directedAddEnabled));
-  scene.addEventListener("click", selectDirectedDestination);
-  addDuckButton.addEventListener("click", addAnimatedDuck);
-  resetButton.addEventListener("click", resetPond);
-
-  populationButtons.forEach(button => {
-    button.addEventListener("click", () => {
-      loadPopulation(Number(button.dataset.population));
-    });
+  directedAddButton.addEventListener("click", () => {
+    setDirectedAdd(!directedAddEnabled);
   });
+
+  world.addEventListener("click", selectDirectedDestination);
+  addDuckButton.addEventListener("click", addAnimatedDuck);
+  load60Button.addEventListener("click", () => loadPopulation(60));
+  resetButton.addEventListener("click", resetPond);
 
   liveScoreboard.addEventListener("click", () => {
     scoreboardPanel.hidden = false;
@@ -776,24 +769,11 @@
     scoreboardPanel.hidden = true;
   });
 
-  scoreboardPanel.addEventListener("click", event => {
-    if (event.target === scoreboardPanel) scoreboardPanel.hidden = true;
-  });
-
   let resizeFrame = null;
-
   function handleViewportChange() {
     if (resizeFrame) cancelAnimationFrame(resizeFrame);
-
     resizeFrame = requestAnimationFrame(() => {
-      syncDuckSizes();
-
-      // Existing swimming/floating ducks already use percentage positions.
-      // Reapply depth from their current logical coordinate after rotation.
-      ducks.forEach(duck => {
-        if (!duck.dataset.y) return;
-        setDepth(duck, Number(duck.dataset.y));
-      });
+      applyWorldScale();
     });
   }
 
@@ -808,7 +788,7 @@
     if (window.matchMedia("(max-width: 720px)").matches) {
       statusHideTimer = setTimeout(() => {
         status.classList.add("mobile-hidden");
-      }, 2800);
+      }, 2400);
     }
   });
 
@@ -818,6 +798,6 @@
     subtree: true
   });
 
+  applyWorldScale();
   updateCounts();
-  syncDuckSizes();
 })();
