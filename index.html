@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Taipan Pond — Stress Test v0.30</title>
+  <link rel="stylesheet" href="src/styles.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="toolbar">
+      <div>
+        <p class="eyebrow">Taipans Cricket Club</p>
+        <h1>Duck Pond — Stress Test v0.30</h1>
+        <p class="subtle">Expanded under-pier clearance and explicit exclusion-aware population loading.</p>
+      </div>
+
+      <div class="controls" aria-label="Developer controls">
+        <button id="directedAddButton" type="button" class="secondary" aria-pressed="false">Directed Add: Off</button>
+        <button id="addDuckButton" type="button">+ Add Duck</button>
+        <button class="population-button secondary" data-population="10" type="button">Load 10</button>
+        <button class="population-button secondary" data-population="25" type="button">Load 25</button>
+        <button class="population-button secondary" data-population="50" type="button">Load 50</button>
+        <button class="population-button secondary" data-population="60" type="button">Load 60</button>
+        <button id="resetButton" type="button" class="secondary">Reset</button>
+      </div>
+    </header>
+
+    <section id="scene" class="scene" aria-label="Interactive Taipan duck pond">
+      <img class="scene-background" src="assets/scene-background.png" alt="">
+
+      <button id="liveScoreboard" class="live-scoreboard" type="button"
+              aria-label="Open pond scoreboard">
+        <span class="score-label">POND</span>
+        <strong id="scoreboardCount">0</strong>
+        <span class="score-mini"><b>1</b> HATH 6</span>
+        <span class="score-mini"><b>2</b> SMITH 5</span>
+        <span class="score-mini"><b>3</b> JONES 4</span>
+      </button>
+
+      <div id="destinationMarker" class="destination-marker" hidden aria-hidden="true"></div>
+      <div id="duckLayer" class="duck-layer"></div>
+
+      <img class="foreground-layer near-bank"
+           src="assets/foreground-near-bank.png" alt="" aria-hidden="true">
+<img class="foreground-layer reeds"
+           src="assets/foreground-reeds.png" alt="" aria-hidden="true">
+      <img class="foreground-layer pier-depth"
+           src="assets/pier-foreground.png" alt="" aria-hidden="true">
+
+      <div id="splashLayer" class="splash-layer" aria-hidden="true"></div>
+
+      <div id="scoreboardPanel" class="scoreboard-panel" hidden>
+        <button id="closeScoreboard" class="scoreboard-close" type="button"
+                aria-label="Close scoreboard">×</button>
+        <p>ROUND TEST</p>
+        <h2><span id="panelDuckCount">0</span> ducks in the pond</h2>
+        <ol>
+          <li><span class="medal gold">1</span><strong>Hathaway</strong><span>6 ducks</span></li>
+          <li><span class="medal silver">2</span><strong>Smith</strong><span>5 ducks</span></li>
+          <li><span class="medal bronze">3</span><strong>Jones</strong><span>4 ducks</span></li>
+        </ol>
+        <small>Placeholder player data for the population test.</small>
+      </div>
+
+      <div id="status" class="scene-note" aria-live="polite">
+        Load 50 or 60 ducks to stress-test the pond.
+      </div>
+    </section>
+
+    <footer>
+      <strong>What to judge:</strong>
+      crowding, performance, clickability, foreground occlusion and whether the scoreboard remains readable.
+    </footer>
+  </main>
+
+  <script src="src/app.js"></script>
+</body>
+</html>
