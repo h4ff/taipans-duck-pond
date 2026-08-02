@@ -186,13 +186,14 @@ body {
   border-left-color: transparent;
   border-right-color: transparent;
   border-radius: 50%;
+  transform: translate(-50%, -50%);
   animation: splash .75s ease-out forwards;
 }
 
 @keyframes splash {
-  0% { transform: scale(.25); opacity: 0; }
+  0% { transform: translate(-50%, -50%) scale(.25); opacity: 0; }
   30% { opacity: 1; }
-  100% { transform: scale(1.8); opacity: 0; }
+  100% { transform: translate(-50%, -50%) scale(1.8); opacity: 0; }
 }
 
 .live-scoreboard {
@@ -324,7 +325,22 @@ footer {
   .app-shell { padding: 10px; }
   .toolbar { align-items: flex-start; flex-direction: column; }
   .controls { justify-content: flex-start; }
-  .scene-note { max-width: 80%; font-size: .72rem; }
+
+  .scene-note {
+    right: 8px;
+    bottom: 8px;
+    max-width: 68%;
+    padding: 4px 7px;
+    border-width: 1px;
+    font-size: .56rem;
+    line-height: 1.15;
+    transition: opacity .25s ease;
+  }
+
+  .scene-note.mobile-hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
 }
 
 

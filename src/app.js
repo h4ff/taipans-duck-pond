@@ -72,7 +72,10 @@
   }
 
   function duckBaseSize() {
-    return Math.max(56, Math.min(110, scene.clientWidth * .078));
+    const portrait = window.matchMedia("(orientation: portrait)").matches;
+    const factor = portrait ? .060 : .072;
+    const minimum = portrait ? 38 : 46;
+    return Math.max(minimum, Math.min(104, scene.clientWidth * factor));
   }
 
   function applyDuckSize(duck) {
@@ -276,11 +279,11 @@
     return current;
   }
 
-  function createSplash(x, y) {
+  function createSplash(xPct, yPct) {
     const splash = document.createElement("div");
     splash.className = "splash";
-    splash.style.left = `${x - 43}px`;
-    splash.style.top = `${y - 15}px`;
+    splash.style.left = `${xPct}%`;
+    splash.style.top = `${yPct}%`;
     splashLayer.appendChild(splash);
     splash.addEventListener("animationend", () => splash.remove(), { once: true });
   }
@@ -320,9 +323,6 @@
 
         if (crossingPier && !transitionLatched) {
           if (fromFront && !toFront) {
-            // Front -> behind: look ahead and latch behind once the projected
-            // anchor crosses the pier edge. It then remains behind for the
-            // rest of this move.
             const projectedFront = isInFrontOfPier(
               x + dx * transitionLead,
               y + dy * transitionLead
@@ -333,8 +333,6 @@
               transitionLatched = true;
             }
           } else if (!fromFront && toFront) {
-            // Behind -> front: look behind and latch front only after the
-            // trailing part of the sprite has cleared the pier edge.
             const trailingFront = isInFrontOfPier(
               x - dx * transitionLead,
               y - dy * transitionLead
@@ -351,15 +349,26 @@
         duck.style.top = `${y}%`;
         duck.dataset.x = x.toFixed(3);
         duck.dataset.y = y.toFixed(3);
-        setDepth(duck, y, {
-          x,
-          pierDepthState
-        });
+
+        // Use ordinary live Y-based duck sorting everywhere except the small
+        // pier crossing corridor. This prevents moving ducks being forced to
+        // the back/front of every other duck for an entire swim.
+        const inPierCorridor =
+          crossingPier &&
+          x >= -1 &&
+          x <= 40 &&
+          y >= 61 &&
+          y <= 81;
+
+        setDepth(
+          duck,
+          y,
+          inPierCorridor ? { x, pierDepthState } : null
+        );
 
         if (raw < 1) {
           duck._moveFrame = requestAnimationFrame(frame);
         } else {
-          // The completed move uses the normal stationary depth rule.
           setDepth(duck, y);
           resolve();
         }
@@ -453,56 +462,144 @@
     return duck;
   }
 
+  function animateEntrySegment(duck, keyframes, duration, easing = t => t) {
+    return new Promise(resolve => {
+      const started = performance.now();
+
+      function frame(now) {
+        if (!duck.isConnected) {
+          resolve();
+          return;
+        }
+
+        const raw = Math.min(1, (now - started) / duration);
+        const t = easing(raw);
+
+        let left = keyframes[0];
+        let right = keyframes[keyframes.length - 1];
+
+        for (let i = 0; i < keyframes.length - 1; i++) {
+          if (t >= keyframes[i].at && t <= keyframes[i + 1].at) {
+            left = keyframes[i];
+            right = keyframes[i + 1];
+            break;
+          }
+        }
+
+        const span = Math.max(.0001, right.at - left.at);
+        const local = Math.max(0, Math.min(1, (t - left.at) / span));
+        const x = left.x + (right.x - left.x) * local;
+        const y = left.y + (right.y - left.y) * local;
+        const rotation = left.rotation + (right.rotation - left.rotation) * local;
+        const scale = left.scale + (right.scale - left.scale) * local;
+        const opacity = left.opacity + (right.opacity - left.opacity) * local;
+
+        duck.style.left = `${x}%`;
+        duck.style.top = `${y}%`;
+        duck.style.opacity = String(opacity);
+        duck.style.transform =
+          `translate(-50%,-50%) rotate(${rotation}deg) scale(${scale})`;
+
+        if (raw < 1) {
+          duck._entryFrame = requestAnimationFrame(frame);
+        } else {
+          resolve();
+        }
+      }
+
+      duck._entryFrame = requestAnimationFrame(frame);
+    });
+  }
+
   async function animateEntry(duck, requestedDestination = null) {
     duck.style.zIndex = "2600";
-
-    const walkY = 66.7;
-    const startX = pctX(-11);
-    const startY = pctY(walkY);
-    const pierEndX = pctX(31);
-    const pierEndY = pctY(66.3);
-    const splashX = pctX(37);
-    const splashY = pctY(73.6);
-
-    duck.style.left = `${startX}px`;
-    duck.style.top = `${startY}px`;
     duck.style.opacity = "1";
 
-    const walk = duck.animate([
-      { left:`${startX}px`, top:`${startY}px`, transform:"translate(-50%,-50%) rotate(-4deg) scale(.82)" },
-      { left:`${pctX(-4)}px`, top:`${pctY(66.3)}px`, transform:"translate(-50%,-50%) rotate(5deg) scale(.82)" },
-      { left:`${pctX(3)}px`, top:`${pctY(66.8)}px`, transform:"translate(-50%,-50%) rotate(-5deg) scale(.82)" },
-      { left:`${pctX(10)}px`, top:`${pctY(66.3)}px`, transform:"translate(-50%,-50%) rotate(5deg) scale(.82)" },
-      { left:`${pctX(17)}px`, top:`${pctY(66.7)}px`, transform:"translate(-50%,-50%) rotate(-4deg) scale(.82)" },
-      { left:`${pctX(23.5)}px`, top:`${pctY(66.3)}px`, transform:"translate(-50%,-50%) rotate(4deg) scale(.82)" },
-      { left:`${pctX(28.5)}px`, top:`${pctY(66.6)}px`, transform:"translate(-50%,-50%) rotate(-3deg) scale(.82)" },
-      { left:`${pierEndX}px`, top:`${pierEndY}px`, transform:"translate(-50%,-50%) rotate(0) scale(.82)" }
-    ], { duration:4600, easing:"linear", fill:"forwards" });
+    const walkFrames = [
+      { at:0,    x:-11, y:66.7, rotation:-4, scale:.82, opacity:1 },
+      { at:.16,  x:-4,  y:66.3, rotation:5,  scale:.82, opacity:1 },
+      { at:.33,  x:3,   y:66.8, rotation:-5, scale:.82, opacity:1 },
+      { at:.50,  x:10,  y:66.3, rotation:5,  scale:.82, opacity:1 },
+      { at:.67,  x:17,  y:66.7, rotation:-4, scale:.82, opacity:1 },
+      { at:.82,  x:23.5,y:66.3, rotation:4,  scale:.82, opacity:1 },
+      { at:.94,  x:28.5,y:66.6, rotation:-3, scale:.82, opacity:1 },
+      { at:1,    x:31,  y:66.3, rotation:0,  scale:.82, opacity:1 }
+    ];
 
-    await walk.finished;
-    walk.cancel();
+    await animateEntrySegment(duck, walkFrames, 4600);
 
-    const jump = duck.animate([
-      { left:`${pierEndX}px`, top:`${pierEndY}px`, transform:"translate(-50%,-50%) rotate(0) scale(.82)", opacity:1 },
-      { left:`${pctX(33.8)}px`, top:`${pctY(64.4)}px`, transform:"translate(-50%,-50%) rotate(5deg) scale(.80)", opacity:1, offset:.38 },
-      { left:`${splashX}px`, top:`${splashY}px`, transform:"translate(-50%,-50%) rotate(8deg) scale(.64)", opacity:.18 }
-    ], { duration:850, easing:"cubic-bezier(.3,.05,.5,1)", fill:"forwards" });
+    const jumpFrames = [
+      { at:0,   x:31,   y:66.3, rotation:0, scale:.82, opacity:1 },
+      { at:.38, x:33.8, y:64.4, rotation:5, scale:.80, opacity:1 },
+      { at:1,   x:37,   y:73.6, rotation:8, scale:.64, opacity:.18 }
+    ];
 
-    setTimeout(() => createSplash(splashX, splashY), 560);
-    await jump.finished;
-    jump.cancel();
+    let splashCreated = false;
+    const jumpStarted = performance.now();
+
+    await new Promise(resolve => {
+      function frame(now) {
+        if (!duck.isConnected) {
+          resolve();
+          return;
+        }
+
+        const raw = Math.min(1, (now - jumpStarted) / 850);
+        const eased = raw * raw * (3 - 2 * raw);
+
+        let left = jumpFrames[0];
+        let right = jumpFrames[jumpFrames.length - 1];
+        for (let i = 0; i < jumpFrames.length - 1; i++) {
+          if (eased >= jumpFrames[i].at && eased <= jumpFrames[i + 1].at) {
+            left = jumpFrames[i];
+            right = jumpFrames[i + 1];
+            break;
+          }
+        }
+
+        const span = Math.max(.0001, right.at - left.at);
+        const local = Math.max(0, Math.min(1, (eased - left.at) / span));
+        const x = left.x + (right.x - left.x) * local;
+        const y = left.y + (right.y - left.y) * local;
+        const rotation = left.rotation + (right.rotation - left.rotation) * local;
+        const scale = left.scale + (right.scale - left.scale) * local;
+        const opacity = left.opacity + (right.opacity - left.opacity) * local;
+
+        duck.style.left = `${x}%`;
+        duck.style.top = `${y}%`;
+        duck.style.opacity = String(opacity);
+        duck.style.transform =
+          `translate(-50%,-50%) rotate(${rotation}deg) scale(${scale})`;
+
+        if (!splashCreated && raw >= .66) {
+          splashCreated = true;
+          createSplash(37, 73.6);
+        }
+
+        if (raw < 1) {
+          duck._entryFrame = requestAnimationFrame(frame);
+        } else {
+          resolve();
+        }
+      }
+
+      duck._entryFrame = requestAnimationFrame(frame);
+    });
 
     duck.style.opacity = "0";
     await sleep(360);
 
-    const resurface = duck.animate([
-      { left:`${splashX}px`, top:`${pctY(75.2)}px`, transform:"translate(-50%,-50%) scale(.58)", opacity:0 },
-      { left:`${splashX}px`, top:`${pctY(73.6)}px`, transform:"translate(-50%,-50%) scale(.73)", opacity:1 }
-    ], { duration:520, easing:"ease-out", fill:"forwards" });
+    await animateEntrySegment(
+      duck,
+      [
+        { at:0, x:37, y:75.2, rotation:0, scale:.58, opacity:0 },
+        { at:1, x:37, y:73.6, rotation:0, scale:.73, opacity:1 }
+      ],
+      520,
+      t => 1 - Math.pow(1 - t, 3)
+    );
 
-    await resurface.finished;
-    resurface.cancel();
-
+    duck.style.transform = "";
     const entry = { x:37, y:73.6 };
     duck.style.left = "37%";
     duck.style.top = "73.6%";
@@ -514,6 +611,7 @@
     const destination = requestedDestination
       ? nearestValidStoppingPoint(requestedDestination)
       : distributedPoint(duck);
+
     duck.dataset.motionState = "swimming";
     activeSwimmers++;
 
@@ -594,6 +692,7 @@
     for (const duck of ducks.values()) {
       clearTimeout(duck._roamTimer);
       if (duck._moveFrame) cancelAnimationFrame(duck._moveFrame);
+      if (duck._entryFrame) cancelAnimationFrame(duck._entryFrame);
       duck.getAnimations().forEach(animation => animation.cancel());
     }
 
@@ -681,7 +780,43 @@
     if (event.target === scoreboardPanel) scoreboardPanel.hidden = true;
   });
 
-  window.addEventListener("resize", syncDuckSizes);
+  let resizeFrame = null;
+
+  function handleViewportChange() {
+    if (resizeFrame) cancelAnimationFrame(resizeFrame);
+
+    resizeFrame = requestAnimationFrame(() => {
+      syncDuckSizes();
+
+      // Existing swimming/floating ducks already use percentage positions.
+      // Reapply depth from their current logical coordinate after rotation.
+      ducks.forEach(duck => {
+        if (!duck.dataset.y) return;
+        setDepth(duck, Number(duck.dataset.y));
+      });
+    });
+  }
+
+  window.addEventListener("resize", handleViewportChange);
+  window.addEventListener("orientationchange", handleViewportChange);
+
+  let statusHideTimer = null;
+  const statusObserver = new MutationObserver(() => {
+    status.classList.remove("mobile-hidden");
+    clearTimeout(statusHideTimer);
+
+    if (window.matchMedia("(max-width: 720px)").matches) {
+      statusHideTimer = setTimeout(() => {
+        status.classList.add("mobile-hidden");
+      }, 2800);
+    }
+  });
+
+  statusObserver.observe(status, {
+    childList: true,
+    characterData: true,
+    subtree: true
+  });
 
   updateCounts();
   syncDuckSizes();

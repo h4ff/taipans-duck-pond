@@ -1,4 +1,4 @@
-# Taipan Pond — Stress Test v0.30
+# Taipan Pond — Stress Test v0.31
 
 This remains a technical test build. It is not the v1.0 UAT candidate.
 
@@ -385,3 +385,33 @@ Unchanged:
 - latched pier-depth crossing;
 - top/far-side pier behaviour;
 - mobile/responsive sizing.
+
+
+## v0.31 — Mobile/orientation and moving-depth correction
+
+### Portrait sizing
+- reduced the minimum duck size in portrait;
+- uses a smaller portrait-specific scene-width factor.
+
+### Entry alignment
+- replaced pixel-based Web Animations entry coordinates with percentage-based
+  requestAnimationFrame movement;
+- walking, jumping, resurfacing and splash positions now remain tied to the
+  16:9 scene during portrait/landscape changes;
+- splash placement is percentage-based.
+
+### Orientation changes
+- resize and orientation events resynchronise duck size and depth;
+- active percentage-based entry movement continues against the new scene size
+  instead of using stale pixel coordinates.
+
+### Moving duck layering
+- ordinary swimming uses live Y-based depth sorting on every frame;
+- the latched front/behind override is used only inside the pier crossing
+  corridor;
+- moving ducks should no longer sit artificially behind or in front of the
+  entire flock until they stop.
+
+### Mobile status
+- portrait status messages are smaller;
+- they fade automatically after approximately 2.8 seconds.
