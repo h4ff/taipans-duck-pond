@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Taipan Pond — Stress Test v0.39</title>
+  <title>Taipan Pond — Stress Test v0.56</title>
   <link rel="stylesheet" href="src/styles.css">
 </head>
 <body>
@@ -11,12 +11,14 @@
     <header class="toolbar">
       <div>
         <p class="eyebrow">Taipans Cricket Club</p>
-        <h1>Duck Pond — Stress Test v0.39</h1>
-        <p class="subtle">Permanent pier occlusion: waddling ducks above, swimming ducks behind.</p>
+        <h1>Duck Pond — Stress Test v0.56</h1>
+        <p class="subtle">Player-appearance test build with feather tone, height variants and existing pond interactions.</p>
       </div>
 
       <div class="controls" aria-label="Developer controls">
-        <button id="directedAddButton" type="button" class="secondary" aria-pressed="false">Directed Add: Off</button>
+        <button id="duckTypeButton" type="button" class="secondary">Duck Type: Standard</button>
+        <button id="featherToneButton" type="button" class="secondary">Feather: White</button>
+        <button id="buildVariantButton" type="button" class="secondary">Build: Standard</button>
         <button id="addDuckButton" type="button">+ Add Duck</button>
         <button id="load60Button" type="button" class="secondary">Load 60 Ducks</button>
         <button id="resetButton" type="button" class="secondary">Reset</button>
@@ -27,7 +29,7 @@
       <div id="scene" class="scene-viewport">
         <div id="worldStage" class="world-stage">
           <div id="world" class="scene-world">
-        <img class="scene-background" src="assets/scene-background.png" alt="">
+        <img class="scene-background" src="assets/scene/background.png" alt="">
 
         <button id="liveScoreboard" class="live-scoreboard" type="button"
                 aria-label="Open pond scoreboard">
@@ -42,11 +44,11 @@
         <div id="duckLayer" class="duck-layer"></div>
 
         <img class="foreground-layer near-bank"
-             src="assets/foreground-near-bank.png" alt="" aria-hidden="true">
+             src="assets/scene/foreground-near-bank.png" alt="" aria-hidden="true">
         <img class="foreground-layer reeds"
-             src="assets/foreground-reeds.png" alt="" aria-hidden="true">
+             src="assets/scene/foreground-reeds.png" alt="" aria-hidden="true">
         <img class="foreground-layer pier-depth"
-             src="assets/pier-foreground.png" alt="" aria-hidden="true">
+             src="assets/scene/pier-foreground.png" alt="" aria-hidden="true">
 
         <div id="splashLayer" class="splash-layer" aria-hidden="true"></div>
           </div>
@@ -74,7 +76,7 @@
 
     <footer>
       <strong>What to judge:</strong>
-      portrait zoom/panning, pier entry alignment, clean pier occlusion and swimming distribution.
+      natural swimming, feather colours, short/standard/tall sizing, expressions and interactions.
     </footer>
   </main>
 

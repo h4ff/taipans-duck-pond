@@ -13,7 +13,9 @@
   const destinationMarker = document.getElementById("destinationMarker");
 
   const addDuckButton = document.getElementById("addDuckButton");
-  const directedAddButton = document.getElementById("directedAddButton");
+  const duckTypeButton = document.getElementById("duckTypeButton");
+  const featherToneButton = document.getElementById("featherToneButton");
+  const buildVariantButton = document.getElementById("buildVariantButton");
   const load60Button = document.getElementById("load60Button");
   const resetButton = document.getElementById("resetButton");
 
@@ -24,14 +26,91 @@
   const closeScoreboard = document.getElementById("closeScoreboard");
   const status = document.getElementById("status");
 
-  const angrySrc = "assets/duck-angry.png";
-  const sadSrc = "assets/duck-sad.png";
+  const WALK_FRAME_ROOT = "assets/duck/walk";
+
+  function walkFrameSrc(duckType, featherTone, frameNumber) {
+    const safeType = DUCK_TYPES.includes(duckType) ? duckType : "standard";
+    const safeTone = FEATHER_TONES[featherTone] ? featherTone : "white";
+    const safeFrame = Math.max(1, Math.min(3, frameNumber));
+    return `${WALK_FRAME_ROOT}/${safeType}/${safeTone}/walk-${String(safeFrame).padStart(2, "0")}.png`;
+  }
+
+  const SWIM_ASSETS = {
+    bodyRoot: "assets/duck/swim/body",
+    wingRoot: "assets/duck/swim/wing",
+    sadFaceRoot: "assets/duck/swim/face",
+    faces: {
+      neutral: "assets/duck/swim/face/face-neutral.png",
+      sad: "assets/duck/swim/face/face-sad-white.png",
+      surprised: "assets/duck/swim/face/face-surprised.png",
+      angry: "assets/duck/swim/face/face-angry.png"
+    },
+    wakes: {
+      standard: "assets/effects/wake/wake-standard.png",
+      golden: "assets/effects/wake/wake-golden.png",
+      diamond: "assets/effects/wake/wake-diamond.png"
+    }
+  };
+
+  function swimBodySrc(duckType, featherTone) {
+    const safeType = DUCK_TYPES.includes(duckType) ? duckType : "standard";
+    const safeTone = FEATHER_TONES[featherTone] ? featherTone : "white";
+    return `${SWIM_ASSETS.bodyRoot}/body-${safeType}-${safeTone}.png`;
+  }
+
+  function swimWingSrc(which, featherTone) {
+    const safeTone = FEATHER_TONES[featherTone] ? featherTone : "white";
+    return `${SWIM_ASSETS.wingRoot}/wing-${which}-${safeTone}.png`;
+  }
+
+  const DUCK_TYPES = ["standard", "golden", "diamond"];
+  let selectedDuckType = "standard";
+  const FEATHER_TONES = {
+    white: { label: "White" },
+    yellow: { label: "Yellow" },
+    lightBrown: { label: "Light Brown" },
+    darkBrown: { label: "Dark Brown" }
+  };
+  const FEATHER_TONE_KEYS = ["white", "yellow", "lightBrown", "darkBrown"];
+  let selectedFeatherTone = "white";
+
+  const BUILD_VARIANTS = {
+    standard: { label: "Standard", scaleX: 1.00, scaleY: 1.00 },
+    short: { label: "Short", scaleX: .95, scaleY: .90 },
+    beanpole: { label: "Tall & Skinny", scaleX: .82, scaleY: 1.25 },
+    stocky: { label: "Stocky", scaleX: 1.12, scaleY: .97 },
+    big: { label: "Big", scaleX: 1.16, scaleY: 1.08 }
+  };
+  const BUILD_VARIANT_KEYS = ["standard", "short", "beanpole", "stocky", "big"];
+  let selectedBuildVariant = "standard";
+
+  function swimFaceSrc(faceName, featherTone) {
+    const safeTone = FEATHER_TONES[featherTone] ? featherTone : "white";
+    if (faceName === "sad") {
+      return `${SWIM_ASSETS.sadFaceRoot}/face-sad-${safeTone}.png`;
+    }
+    return SWIM_ASSETS.faces[faceName] || SWIM_ASSETS.faces.neutral;
+  }
+
+
+  function splashFrameSrc(duckType, frameNumber) {
+    const safeType = DUCK_TYPES.includes(duckType) ? duckType : "standard";
+    return `assets/effects/splash/${safeType}/splash-${String(frameNumber).padStart(2, "0")}.png`;
+  }
 
   const ducks = new Map();
   let nextDuckId = 1;
   let activeSwimmers = 0;
-  let directedAddEnabled = false;
-  let directedDestination = null;
+  const collisionPairs = new Map();
+  let nextGlobalCollisionReactionAt = 0;
+
+  function randomCollisionGap() {
+    return 8000 + Math.random() * 7000;
+  }
+
+  function randomDuckCollisionCooldown() {
+    return 18000 + Math.random() * 12000;
+  }
   let worldScale = 1;
   let portraitPanInitialised = false;
 
@@ -128,8 +207,12 @@
   }
 
   function applyDuckSize(duck) {
-    const variant = Number(duck.dataset.sizeVariant || "0");
-    duck.style.setProperty("--duck-size", `${124 + variant * 6}px`);
+    const variant = BUILD_VARIANTS[duck.dataset.buildVariant] || BUILD_VARIANTS.standard;
+    // Keep the underlying sprite canvas constant. Build is a deliberate
+    // caricature layer applied separately from pond-perspective scaling.
+    duck.style.setProperty("--duck-size", "130px");
+    duck.style.setProperty("--build-scale-x", variant.scaleX.toFixed(3));
+    duck.style.setProperty("--build-scale-y", variant.scaleY.toFixed(3));
   }
 
   function setDepth(duck, y) {
@@ -364,14 +447,29 @@
   }
 
   function nearbyPoint(current) {
-    for (let i = 0; i < 120; i++) {
+    // v0.46: ducks make committed swims rather than tiny local hops.
+    // The vertical range is still compressed slightly to suit the pond perspective.
+    for (let i = 0; i < 180; i++) {
       const angle = Math.random() * Math.PI * 2;
-      const radius = 3 + Math.random() * 7;
+      const radius = 9 + Math.random() * 13;
       const candidate = {
         x: current.x + Math.cos(angle) * radius,
-        y: current.y + Math.sin(angle) * radius * .55
+        y: current.y + Math.sin(angle) * radius * .64
       };
 
+      if (canDuckStopAt(candidate.x, candidate.y) && segmentClear(current, candidate)) {
+        return candidate;
+      }
+    }
+
+    // If the duck is boxed in near an edge, fall back to the older shorter move.
+    for (let i = 0; i < 100; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 5 + Math.random() * 7;
+      const candidate = {
+        x: current.x + Math.cos(angle) * radius,
+        y: current.y + Math.sin(angle) * radius * .58
+      };
       if (canDuckStopAt(candidate.x, candidate.y) && segmentClear(current, candidate)) {
         return candidate;
       }
@@ -380,12 +478,38 @@
     return current;
   }
 
-  function createSplash(xPct, yPct) {
+  async function createSplashAnimation(xPct, yPct, duckType = "standard") {
     const splash = document.createElement("div");
-    splash.className = "splash";
+    splash.className = "splash-sprite";
+
+    const image = document.createElement("img");
+    image.alt = "";
+    splash.appendChild(image);
+
     setWorldPosition(splash, xPct, yPct);
     splashLayer.appendChild(splash);
-    splash.addEventListener("animationend", () => splash.remove(), { once: true });
+
+    const timings = [90, 105, 130, 175];
+    for (let i = 1; i <= 4; i++) {
+      image.src = splashFrameSrc(duckType, i);
+      await sleep(timings[i - 1]);
+    }
+
+    splash.remove();
+  }
+
+  function createResurfaceEffect(xPct, yPct, duckType = "standard") {
+    const ripple = document.createElement("div");
+    ripple.className = "resurface-sprite";
+
+    const image = document.createElement("img");
+    image.src = splashFrameSrc(duckType, 1);
+    image.alt = "";
+    ripple.appendChild(image);
+
+    setWorldPosition(ripple, xPct, yPct);
+    splashLayer.appendChild(ripple);
+    ripple.addEventListener("animationend", () => ripple.remove(), { once: true });
   }
 
   function currentPosition(duck) {
@@ -395,13 +519,101 @@
     };
   }
 
+  function setFacingForMovement(duck, dx) {
+    // Dead-zone prevents twitching when a duck is moving almost vertically.
+    if (Math.abs(dx) < .45) return;
+    const stack = duck.querySelector(".swim-stack");
+    if (!stack) return;
+
+    const nextFacing = dx > 0 ? "right" : "left";
+    if (duck.dataset.facing === nextFacing) return;
+
+    stack.style.setProperty("--facing-scale", nextFacing === "right" ? "-1" : "1");
+    duck.dataset.facing = nextFacing;
+  }
+
+  function curvedControlPoint(from, to) {
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const length = Math.max(1, Math.hypot(dx, dy));
+    const nx = -dy / length;
+    const ny = dx / length;
+    const direction = Math.random() < .5 ? -1 : 1;
+
+    // Deliberately larger bend than v0.45 so the curve is actually visible.
+    // Try successively smaller arcs if the wide curve would leave the water.
+    const preferredBend = Math.min(7.2, Math.max(2.0, length * (.26 + Math.random() * .10)));
+
+    for (const factor of [1, .78, .58, .38, .18]) {
+      const bend = preferredBend * factor;
+      const control = {
+        x: (from.x + to.x) / 2 + nx * bend * direction,
+        y: (from.y + to.y) / 2 + ny * bend * direction * .66
+      };
+
+      let valid = true;
+      for (let i = 1; i < 16; i++) {
+        const point = quadraticPoint(from, control, to, i / 16);
+        if (!canDuckTravelAt(point.x, point.y)) {
+          valid = false;
+          break;
+        }
+      }
+      if (valid) return control;
+    }
+
+    return { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
+  }
+
+  function quadraticPoint(from, control, to, t) {
+    const mt = 1 - t;
+    return {
+      x: mt * mt * from.x + 2 * mt * t * control.x + t * t * to.x,
+      y: mt * mt * from.y + 2 * mt * t * control.y + t * t * to.y
+    };
+  }
+
+  function quadraticTangent(from, control, to, t) {
+    return {
+      x: 2 * (1 - t) * (control.x - from.x) + 2 * t * (to.x - control.x),
+      y: 2 * (1 - t) * (control.y - from.y) + 2 * t * (to.y - control.y)
+    };
+  }
+
+  function swimProgress(t) {
+    // A visible accelerate -> cruise -> decelerate profile.
+    // 20% of the time is spent accelerating, 60% cruising, 20% slowing.
+    const ramp = .20;
+    const totalArea = .80;
+
+    if (t < ramp) {
+      return (0.5 * t * t / ramp) / totalArea;
+    }
+
+    if (t <= 1 - ramp) {
+      return (0.5 * ramp + (t - ramp)) / totalArea;
+    }
+
+    const u = t - (1 - ramp);
+    return (0.5 * ramp + (1 - 2 * ramp) + u - 0.5 * u * u / ramp) / totalArea;
+  }
+
   function animateMove(duck, from, to, duration) {
     const safeTo = nearestValidStoppingPoint(to);
+    const control = curvedControlPoint(from, safeTo);
 
     return new Promise(resolve => {
       const started = performance.now();
-      const dx = safeTo.x - from.x;
-      const dy = safeTo.y - from.y;
+      const initialTangent = quadraticTangent(from, control, safeTo, 0);
+      setFacingForMovement(duck, initialTangent.x);
+
+      const chord = { x: safeTo.x - from.x, y: safeTo.y - from.y };
+      const cross = chord.x * (control.y - from.y) - chord.y * (control.x - from.x);
+      const stack = duck.querySelector(".swim-stack");
+      const baseLean = Math.abs(cross) < .25 ? 0 : (cross > 0 ? 2.8 : -2.8);
+      if (stack) {
+        stack.style.setProperty("--swim-tilt", `${baseLean}deg`);
+      }
 
       function frame(now) {
         if (!duck.isConnected) {
@@ -410,21 +622,35 @@
         }
 
         const raw = Math.min(1, (now - started) / duration);
-        const eased = raw < .5
-          ? 2 * raw * raw
-          : 1 - Math.pow(-2 * raw + 2, 2) / 2;
+        const progress = swimProgress(raw);
+        const point = quadraticPoint(from, control, safeTo, progress);
+        const tangent = quadraticTangent(from, control, safeTo, progress);
 
-        const x = from.x + dx * eased;
-        const y = from.y + dy * eased;
+        setFacingForMovement(duck, tangent.x);
 
-        setWorldPosition(duck, x, y);
-        duck.dataset.x = x.toFixed(3);
-        duck.dataset.y = y.toFixed(3);
-        setDepth(duck, y);
+        // Ease the turn lean back to level during the final 20% of the swim.
+        // This removes the visible snap/jolt that occurred when the duck stopped.
+        if (stack) {
+          const settleStart = .80;
+          let tiltFactor = 1;
+          if (raw > settleStart) {
+            const u = Math.min(1, (raw - settleStart) / (1 - settleStart));
+            const smooth = u * u * (3 - 2 * u);
+            tiltFactor = 1 - smooth;
+          }
+          stack.style.setProperty("--swim-tilt", `${(baseLean * tiltFactor).toFixed(3)}deg`);
+        }
+
+        setWorldPosition(duck, point.x, point.y);
+        duck.dataset.x = point.x.toFixed(3);
+        duck.dataset.y = point.y.toFixed(3);
+        setDepth(duck, point.y);
+        checkDuckCollisions(duck);
 
         if (raw < 1) {
           duck._moveFrame = requestAnimationFrame(frame);
         } else {
+          if (stack) stack.style.setProperty("--swim-tilt", "0deg");
           resolve();
         }
       }
@@ -446,9 +672,10 @@
 
       const from = currentPosition(duck);
       const to = nearbyPoint(from);
+      const pace = Number(duck.dataset.swimPace || "1");
       const duration = Math.max(
-        3200,
-        Math.min(6500, 2500 + distance(from, to) * 360)
+        4600,
+        Math.min(10500, (3000 + distance(from, to) * 350) / pace)
       );
 
       activeSwimmers++;
@@ -462,48 +689,346 @@
 
       duck.dataset.motionState = "floating";
       duck.classList.add("floating");
-      scheduleRoam(duck, 1200 + Math.random() * 6500);
+      scheduleRoam(duck, 3200 + Math.random() * 9000);
     }, delay);
+  }
+
+
+  function updateFeatherToneButton() {
+    const tone = FEATHER_TONES[selectedFeatherTone] || FEATHER_TONES.white;
+    featherToneButton.textContent = `Feather: ${tone.label}`;
+  }
+
+  function updateBuildVariantButton() {
+    const variant = BUILD_VARIANTS[selectedBuildVariant] || BUILD_VARIANTS.standard;
+    buildVariantButton.textContent = `Build: ${variant.label}`;
+  }
+
+  function setDuckFace(duck, faceName) {
+    const face = duck.querySelector(".swim-face");
+    if (!face) return;
+    face.src = swimFaceSrc(faceName, duck.dataset.featherTone);
+    duck.dataset.face = faceName;
+  }
+
+  function chooseIdleFace(duck, forceChange = false) {
+    const current = duck.dataset.idleFace || "neutral";
+    let next = Math.random() < .68 ? "neutral" : "sad";
+
+    if (forceChange && next === current) {
+      next = current === "neutral" ? "sad" : "neutral";
+    }
+
+    duck.dataset.idleFace = next;
+    return next;
+  }
+
+  function restoreIdleFace(duck) {
+    if (!duck.isConnected || duck.dataset.reacting === "true") return;
+    setDuckFace(duck, duck.dataset.idleFace || "neutral");
+  }
+
+  function scheduleMoodShift(duck, delay = 8000 + Math.random() * 10000) {
+    clearTimeout(duck._moodTimer);
+    duck._moodTimer = setTimeout(() => {
+      if (!duck.isConnected) return;
+
+      if (["floating", "swimming"].includes(duck.dataset.motionState) &&
+          duck.dataset.reacting !== "true") {
+        // Most ducks look neutral, but some remain sad and moods can change
+        // occasionally so the pond does not feel like a wall of identical faces.
+        const forceChange = Math.random() < .42;
+        const face = chooseIdleFace(duck, forceChange);
+        setDuckFace(duck, face);
+      }
+
+      scheduleMoodShift(duck, 9000 + Math.random() * 13000);
+    }, delay);
+  }
+
+  function collisionPairKey(a, b) {
+    const aId = Number(a.dataset.duckId);
+    const bId = Number(b.dataset.duckId);
+    return aId < bId ? `${aId}:${bId}` : `${bId}:${aId}`;
+  }
+
+  function ducksAreTouching(a, b) {
+    const ap = currentPosition(a);
+    const bp = currentPosition(b);
+    if (![ap.x, ap.y, bp.x, bp.y].every(Number.isFinite)) return false;
+
+    // Elliptical hit area: ducks are visually wider than they are tall.
+    const nx = (ap.x - bp.x) / 3.7;
+    const ny = (ap.y - bp.y) / 2.8;
+    return nx * nx + ny * ny < 1;
+  }
+
+  function collisionEscapePoint(duck, sourceDuck) {
+    const from = currentPosition(duck);
+    const source = currentPosition(sourceDuck);
+    let dx = from.x - source.x;
+    let dy = from.y - source.y;
+    let length = Math.hypot(dx, dy);
+
+    if (length < .1) {
+      const angle = Math.random() * Math.PI * 2;
+      dx = Math.cos(angle);
+      dy = Math.sin(angle);
+      length = 1;
+    }
+
+    dx /= length;
+    dy /= length;
+
+    for (const distanceAway of [10, 8, 6]) {
+      for (const angleOffset of [0, .28, -.28, .5, -.5]) {
+        const c = Math.cos(angleOffset);
+        const s = Math.sin(angleOffset);
+        const rx = dx * c - dy * s;
+        const ry = dx * s + dy * c;
+        const candidate = {
+          x: from.x + rx * distanceAway,
+          y: from.y + ry * distanceAway * .62
+        };
+        if (canDuckStopAt(candidate.x, candidate.y) && segmentClear(from, candidate)) {
+          return candidate;
+        }
+      }
+    }
+
+    return nearbyPoint(from);
+  }
+
+  async function startCollisionEscape(duck, sourceDuck) {
+    if (!duck.isConnected || duck.dataset.motionState !== "floating") return;
+    if (duck.dataset.collisionEscaping === "true") return;
+
+    duck.dataset.collisionEscaping = "true";
+    clearTimeout(duck._roamTimer);
+
+    // The duck that actually scoots away should look startled, not angry.
+    setDuckFace(duck, "surprised");
+
+    const from = currentPosition(duck);
+    const to = collisionEscapePoint(duck, sourceDuck);
+    const distanceAway = distance(from, to);
+
+    if (distanceAway < .5) {
+      duck.dataset.collisionEscaping = "false";
+    duck.dataset.nextCollisionReactionAt = String(performance.now() + 2500 + Math.random() * 6500);
+      restoreIdleFace(duck);
+      scheduleRoam(duck, 1800 + Math.random() * 2500);
+      return;
+    }
+
+    duck.dataset.motionState = "swimming";
+    duck.classList.remove("floating");
+    activeSwimmers++;
+
+    await animateRoute(duck, from, to, Math.max(1900, Math.min(3200, 1250 + distanceAway * 160)));
+
+    activeSwimmers = Math.max(0, activeSwimmers - 1);
+    if (!duck.isConnected) return;
+
+    duck.dataset.motionState = "floating";
+    duck.dataset.collisionEscaping = "false";
+    duck.classList.add("floating");
+    restoreIdleFace(duck);
+    scheduleRoam(duck, 3600 + Math.random() * 5500);
+  }
+
+  function triggerCollisionReaction(a, b) {
+    const now = performance.now();
+    const key = collisionPairKey(a, b);
+    const lastPair = collisionPairs.get(key) || 0;
+    const aReadyAt = Number(a.dataset.nextCollisionReactionAt || 0);
+    const bReadyAt = Number(b.dataset.nextCollisionReactionAt || 0);
+
+    // A crowded pond should have occasional character moments, not constant
+    // pinball reactions. Gate collisions globally, per-duck and per-pair.
+    if (now < nextGlobalCollisionReactionAt) return;
+    if (now < aReadyAt || now < bReadyAt) return;
+    if (now - lastPair < 30000) return;
+
+    // Even when two sprites touch, most encounters are ignored visually.
+    if (Math.random() > .28) return;
+
+    collisionPairs.set(key, now);
+    nextGlobalCollisionReactionAt = now + randomCollisionGap();
+    a.dataset.nextCollisionReactionAt = String(now + randomDuckCollisionCooldown());
+    b.dataset.nextCollisionReactionAt = String(now + randomDuckCollisionCooldown());
+
+    // Prefer a stationary duck as the one that scoots away. If both are
+    // stationary, choose randomly. If both are already moving, just shudder.
+    let escapee = null;
+    if (a.dataset.motionState === "floating" && b.dataset.motionState === "floating") {
+      escapee = Math.random() < .5 ? a : b;
+    } else if (a.dataset.motionState === "floating") {
+      escapee = a;
+    } else if (b.dataset.motionState === "floating") {
+      escapee = b;
+    }
+    const source = escapee === a ? b : escapee === b ? a : null;
+
+    a.dataset.reacting = "true";
+    b.dataset.reacting = "true";
+    a.classList.add("collision-bump");
+    b.classList.add("collision-bump");
+
+    // The duck that will retreat is shocked; the other gets annoyed.
+    if (escapee) {
+      setDuckFace(escapee, "surprised");
+      setDuckFace(source, "angry");
+    } else {
+      setDuckFace(a, "angry");
+      setDuckFace(b, Math.random() < .55 ? "angry" : "surprised");
+    }
+
+    setTimeout(() => {
+      for (const duck of [a, b]) {
+        if (!duck.isConnected) continue;
+        duck.classList.remove("collision-bump");
+        duck.dataset.reacting = "false";
+        // Keep the escapee shocked until its scoot is complete.
+        if (duck !== escapee || duck.dataset.collisionEscaping !== "true") {
+          restoreIdleFace(duck);
+        }
+      }
+    }, 720);
+
+    if (escapee && source) {
+      setTimeout(() => startCollisionEscape(escapee, source), 220);
+    }
+  }
+
+  function checkDuckCollisions(duck) {
+    if (!duck.isConnected || !["floating", "swimming"].includes(duck.dataset.motionState)) return;
+
+    const now = performance.now();
+    if (now - Number(duck._lastCollisionCheck || 0) < 110) return;
+    duck._lastCollisionCheck = now;
+
+    for (const other of ducks.values()) {
+      if (other === duck || !other.isConnected) continue;
+      if (!["floating", "swimming"].includes(other.dataset.motionState)) continue;
+      if (ducksAreTouching(duck, other)) {
+        triggerCollisionReaction(duck, other);
+        break;
+      }
+    }
+  }
+
+  function buildEntryVisual(duck, frameIndex = 1) {
+    const visual = duck.querySelector(".duck-visual");
+    visual.replaceChildren();
+
+    const image = document.createElement("img");
+    image.className = "entry-frame";
+    image.src = walkFrameSrc(duck.dataset.duckType, duck.dataset.featherTone, frameIndex);
+    image.alt = "";
+    visual.appendChild(image);
+  }
+
+  function setWalkFrame(duck, frameNumber) {
+    const image = duck.querySelector(".entry-frame");
+    if (!image) return;
+    image.src = walkFrameSrc(duck.dataset.duckType, duck.dataset.featherTone, frameNumber);
+    duck.dataset.walkFrame = String(frameNumber);
+  }
+
+  function buildSwimVisual(duck, faceName = "sad") {
+    const visual = duck.querySelector(".duck-visual");
+    visual.replaceChildren();
+
+    const stack = document.createElement("span");
+    stack.className = "swim-stack";
+    stack.style.setProperty(
+      "--facing-scale",
+      duck.dataset.facing === "right" ? "-1" : "1"
+    );
+
+    const wake = document.createElement("img");
+    wake.className = "swim-layer swim-wake";
+    wake.src = SWIM_ASSETS.wakes[duck.dataset.duckType] || SWIM_ASSETS.wakes.standard;
+    wake.alt = "";
+
+    const wingBack = document.createElement("img");
+    wingBack.className = "swim-layer swim-wing-back";
+    wingBack.src = swimWingSrc("back", duck.dataset.featherTone);
+    wingBack.alt = "";
+
+    const body = document.createElement("img");
+    body.className = "swim-layer swim-body";
+    body.src = swimBodySrc(duck.dataset.duckType, duck.dataset.featherTone);
+    body.alt = "";
+
+    const face = document.createElement("img");
+    face.className = "swim-layer swim-face";
+    face.src = swimFaceSrc(faceName, duck.dataset.featherTone);
+    face.alt = "";
+
+    const wingFront = document.createElement("img");
+    wingFront.className = "swim-layer swim-wing-front";
+    wingFront.src = swimWingSrc("front", duck.dataset.featherTone);
+    wingFront.alt = "";
+
+    stack.append(wingBack, body, wake, face, wingFront);
+    visual.appendChild(stack);
+
+    duck.dataset.face = faceName;
   }
 
   function reactToClick(duck) {
     if (!["floating", "swimming"].includes(duck.dataset.motionState)) return;
     if (duck.dataset.reacting === "true") return;
 
+    const angry = Math.random() < 0.5;
     duck.dataset.reacting = "true";
     duck.classList.add("reacting");
-    const image = duck.querySelector("img");
-    image.src = sadSrc;
+    duck.classList.toggle("reaction-angry", angry);
+    duck.classList.toggle("reaction-surprised", !angry);
+    setDuckFace(duck, angry ? "angry" : "surprised");
 
     setTimeout(() => {
       if (!duck.isConnected) return;
-      image.src = angrySrc;
-      duck.classList.remove("reacting");
+      duck.classList.remove("reacting", "reaction-angry", "reaction-surprised");
       duck.dataset.reacting = "false";
-    }, 900);
+      restoreIdleFace(duck);
+    }, angry ? 900 : 820);
   }
 
-  function makeDuck({ point, instant = false }) {
+  function makeDuck({ point, instant = false, duckType = selectedDuckType, featherTone = selectedFeatherTone, buildVariant = selectedBuildVariant }) {
     const id = nextDuckId++;
     const duck = document.createElement("button");
     duck.type = "button";
     duck.className = "duck";
     duck.dataset.motionState = instant ? "floating" : "entering";
     duck.dataset.reacting = "false";
-    duck.dataset.sizeVariant = String(id % 3);
-    duck.setAttribute("aria-label", `Duck ${id}`);
+    duck.dataset.duckId = String(id);
+    duck.dataset.buildVariant = BUILD_VARIANTS[buildVariant] ? buildVariant : "standard";
+    duck.dataset.duckType = DUCK_TYPES.includes(duckType) ? duckType : "standard";
+    duck.dataset.featherTone = FEATHER_TONES[featherTone] ? featherTone : "white";
+    duck.dataset.facing = "left";
+    duck.dataset.collisionEscaping = "false";
+    chooseIdleFace(duck);
+    duck.dataset.swimPace = (0.88 + (id % 5) * 0.06).toFixed(2);
+    duck.setAttribute(
+      "aria-label",
+      `Duck ${id}, ${duck.dataset.duckType} duck`
+    );
+
     applyDuckSize(duck);
     duck.style.setProperty("--bob-duration", `${4 + (id % 7) * .27}s`);
 
     const visual = document.createElement("span");
     visual.className = "duck-visual";
-
-    const image = document.createElement("img");
-    image.src = angrySrc;
-    image.alt = "";
-
-    visual.appendChild(image);
     duck.appendChild(visual);
+
+    if (instant) {
+      buildSwimVisual(duck, duck.dataset.idleFace || "neutral");
+    } else {
+      buildEntryVisual(duck, 1);
+    }
 
     duck.addEventListener("click", () => reactToClick(duck));
     duckLayer.appendChild(duck);
@@ -516,6 +1041,7 @@
       duck.dataset.y = safePoint.y.toFixed(3);
       setDepth(duck, safePoint.y);
       duck.classList.add("floating");
+      scheduleMoodShift(duck);
       scheduleRoam(duck, 1000 + Math.random() * 9000);
     }
 
@@ -598,22 +1124,42 @@
     duck.style.opacity = "1";
 
     const walkFrames = [
-      { at:0,    x:-11, y:72.75, rotation:-4, scale:.82, opacity:1 },
-      { at:.16,  x:-4,  y:72.55, rotation:5,  scale:.82, opacity:1 },
-      { at:.33,  x:3,   y:72.75, rotation:-5, scale:.82, opacity:1 },
-      { at:.50,  x:10,  y:72.55, rotation:5,  scale:.82, opacity:1 },
-      { at:.67,  x:17,  y:72.75, rotation:-4, scale:.82, opacity:1 },
-      { at:.82,  x:23.5,y:72.55, rotation:4,  scale:.82, opacity:1 },
-      { at:.94,  x:28.5,y:72.70, rotation:-3, scale:.82, opacity:1 },
+      { at:0,    x:-11, y:72.75, rotation:-2, scale:.82, opacity:1 },
+      { at:.16,  x:-4,  y:72.58, rotation:2,  scale:.82, opacity:1 },
+      { at:.33,  x:3,   y:72.75, rotation:-2, scale:.82, opacity:1 },
+      { at:.50,  x:10,  y:72.58, rotation:2,  scale:.82, opacity:1 },
+      { at:.67,  x:17,  y:72.75, rotation:-2, scale:.82, opacity:1 },
+      { at:.82,  x:23.5,y:72.58, rotation:2,  scale:.82, opacity:1 },
+      { at:.94,  x:28.5,y:72.70, rotation:-1, scale:.82, opacity:1 },
       { at:1,    x:31,  y:72.45, rotation:0,  scale:.82, opacity:1 }
     ];
 
+    // Requested walk cycle: 1 -> 2 -> 3 -> 2 -> 1, repeating.
+    // Explicitly finish on frame 2 before the pre-jump squash.
+    const walkCycle = [1, 2, 3, 2, 1];
+    let walkIndex = 0;
+    setWalkFrame(duck, walkCycle[walkIndex]);
+
+    duck._walkTimer = setInterval(() => {
+      if (!duck.isConnected) return;
+      walkIndex = (walkIndex + 1) % walkCycle.length;
+      setWalkFrame(duck, walkCycle[walkIndex]);
+    }, 175);
+
     await animateEntrySegment(duck, walkFrames, 4600, t => t, "feet");
+    clearInterval(duck._walkTimer);
+    duck._walkTimer = null;
+    setWalkFrame(duck, 2);
+
+    // Brief anticipation squash at the pier edge.
+    duck.classList.add("prejump");
+    await sleep(300);
+    duck.classList.remove("prejump");
 
     const jumpFrames = [
       { at:0,   x:31,   y:72.45, rotation:0, scale:.82, opacity:1 },
       { at:.38, x:33.8, y:65.5,  rotation:5, scale:.80, opacity:1 },
-      { at:1,   x:37,   y:73.6,  rotation:8, scale:.64, opacity:.18 }
+      { at:1,   x:37,   y:73.6,  rotation:8, scale:.64, opacity:0 }
     ];
 
     let splashCreated = false;
@@ -646,15 +1192,16 @@
         const y = left.y + (right.y - left.y) * local;
         const rotation = left.rotation + (right.rotation - left.rotation) * local;
         const scale = left.scale + (right.scale - left.scale) * local;
-        const opacity = left.opacity + (right.opacity - left.opacity) * local;
 
         setWorldPosition(duck, x, y);
-        duck.style.opacity = String(opacity);
         setEntryVisual(duck, rotation, scale);
 
-        if (!splashCreated && raw >= .66) {
+        if (!splashCreated && raw >= .68) {
           splashCreated = true;
-          createSplash(37, 73.6);
+          duck.style.opacity = "0";
+          createSplashAnimation(37, 73.6, duck.dataset.duckType);
+        } else if (!splashCreated) {
+          duck.style.opacity = "1";
         }
 
         if (raw < 1) {
@@ -668,24 +1215,48 @@
     });
 
     duck.style.opacity = "0";
-    await sleep(360);
+    await sleep(460);
 
+    // The swimming sprite replaces the walking sprite while the duck is
+    // underwater. The small first splash cell acts as the resurfacing ring.
     duck.classList.remove("entrying");
     clearEntryVisual(duck);
+    buildSwimVisual(duck, duck.dataset.idleFace || "neutral");
 
-    await animateEntrySegment(
-      duck,
-      [
-        { at:0, x:37, y:75.2, rotation:0, scale:.58, opacity:0 },
-        { at:1, x:37, y:73.6, rotation:0, scale:.73, opacity:1 }
-      ],
-      520,
-      t => 1 - Math.pow(1 - t, 3),
-      "centre"
-    );
+    const entry = { x: 37, y: 73.6 };
+    setWorldPosition(duck, entry.x, entry.y);
+    duck.dataset.x = entry.x.toFixed(3);
+    duck.dataset.y = entry.y.toFixed(3);
+    setDepth(duck, entry.y);
 
-    duck.style.transform = "";
-    const entry = { x:37, y:73.6 };
+    createResurfaceEffect(entry.x, entry.y, duck.dataset.duckType);
+
+    const appearStarted = performance.now();
+    await new Promise(resolve => {
+      function appearFrame(now) {
+        if (!duck.isConnected) {
+          resolve();
+          return;
+        }
+
+        const raw = Math.min(1, (now - appearStarted) / 520);
+        const eased = 1 - Math.pow(1 - raw, 3);
+        const y = 74.6 + (entry.y - 74.6) * eased;
+
+        setWorldPosition(duck, entry.x, y);
+        duck.style.opacity = String(eased);
+        setDepth(duck, y);
+
+        if (raw < 1) {
+          duck._entryFrame = requestAnimationFrame(appearFrame);
+        } else {
+          resolve();
+        }
+      }
+
+      duck._entryFrame = requestAnimationFrame(appearFrame);
+    });
+
     setWorldPosition(duck, entry.x, entry.y);
     duck.style.opacity = "1";
     duck.dataset.x = entry.x.toFixed(3);
@@ -703,77 +1274,32 @@
       duck,
       entry,
       destination,
-      Math.max(4800, Math.min(9000, 3300 + distance(entry, destination) * 150))
+      Math.max(4800, Math.min(9000, (3300 + distance(entry, destination) * 150) / Number(duck.dataset.swimPace || "1")))
     );
 
     activeSwimmers = Math.max(0, activeSwimmers - 1);
     duck.dataset.motionState = "floating";
     duck.classList.add("floating");
+    scheduleMoodShift(duck);
     scheduleRoam(duck);
   }
 
   function addAnimatedDuck() {
-    if (directedAddEnabled && !directedDestination) {
-      status.textContent = "Directed Add is on. Click a valid point in the pond first.";
-      return;
-    }
-
-    const destination = directedAddEnabled
-      ? { ...directedDestination }
-      : null;
-
-    const duck = makeDuck({ point:{x:37,y:73.6}, instant:false });
-    animateEntry(duck, destination);
-
-    if (directedAddEnabled) {
-      status.textContent =
-        `Duck sent to ${destination.x.toFixed(1)}%, ${destination.y.toFixed(1)}%.`;
-    }
-  }
-
-  function setDirectedAdd(enabled) {
-    directedAddEnabled = enabled;
-    directedAddButton.setAttribute("aria-pressed", String(enabled));
-    directedAddButton.textContent = enabled ? "Directed Add: On" : "Directed Add: Off";
-
-    if (!enabled) {
-      directedDestination = null;
-      destinationMarker.hidden = true;
-      destinationMarker.classList.remove("invalid");
-      status.textContent = "Directed Add disabled.";
-    } else {
-      status.textContent = "Directed Add enabled. Click a destination in the pond.";
-    }
-  }
-
-  function selectDirectedDestination(event) {
-    if (!directedAddEnabled) return;
-    if (event.target.closest("button, .duck")) return;
-
-    const rect = world.getBoundingClientRect();
-    const x = ((event.clientX - rect.left) / rect.width) * 100;
-    const y = ((event.clientY - rect.top) / rect.height) * 100;
-    const valid = canDuckStopAt(x, y);
-
-    destinationMarker.hidden = false;
-    setWorldPosition(destinationMarker, x, y);
-    destinationMarker.classList.toggle("invalid", !valid);
-
-    if (!valid) {
-      directedDestination = null;
-      status.textContent =
-        `That point (${x.toFixed(1)}%, ${y.toFixed(1)}%) is excluded.`;
-      return;
-    }
-
-    directedDestination = { x, y };
-    status.textContent =
-      `Destination selected: ${x.toFixed(1)}%, ${y.toFixed(1)}%. Press Add Duck.`;
+    const duck = makeDuck({
+      point:{x:37,y:73.6},
+      instant:false,
+      duckType:selectedDuckType,
+      featherTone:selectedFeatherTone,
+      buildVariant:selectedBuildVariant
+    });
+    animateEntry(duck, null);
   }
 
   function resetPond() {
     for (const duck of ducks.values()) {
       clearTimeout(duck._roamTimer);
+      clearTimeout(duck._moodTimer);
+      if (duck._walkTimer) clearInterval(duck._walkTimer);
       if (duck._moveFrame) cancelAnimationFrame(duck._moveFrame);
       if (duck._entryFrame) cancelAnimationFrame(duck._entryFrame);
       duck.getAnimations().forEach(animation => animation.cancel());
@@ -784,13 +1310,12 @@
     ducks.clear();
     nextDuckId = 1;
     activeSwimmers = 0;
+    collisionPairs.clear();
+    nextGlobalCollisionReactionAt = performance.now() + 3000 + Math.random() * 4000;
     updateCounts();
 
     destinationMarker.hidden = true;
-    directedDestination = null;
-    status.textContent = directedAddEnabled
-      ? "Pond reset. Choose a directed destination."
-      : "Pond reset.";
+    status.textContent = "Pond reset.";
   }
 
   function loadPopulation(target = 60) {
@@ -817,18 +1342,57 @@
 
       const safeBest = nearestValidStoppingPoint(best || randomWaterPoint());
       points.push(safeBest);
-      makeDuck({ point: safeBest, instant: true });
+
+      // Fixed stress-test distribution: 55 standard, 4 golden, 1 diamond.
+      let loadDuckType = "standard";
+      if (i >= target - 1) loadDuckType = "diamond";
+      else if (i >= target - 5) loadDuckType = "golden";
+
+      // Feather tone and build are mixed for testing and will eventually come from player data.
+      const featherTone = FEATHER_TONE_KEYS[Math.floor(Math.random() * FEATHER_TONE_KEYS.length)];
+
+      // For the 60-duck stress test, exaggeration is deliberately uncommon:
+      // one beanpole, a handful of broader ducks, some short ducks, mostly standard.
+      let buildVariant = "standard";
+      if (i === 0) buildVariant = "beanpole";
+      else if (i < 7) buildVariant = "stocky";
+      else if (i < 10) buildVariant = "big";
+      else if (i < 18) buildVariant = "short";
+
+      makeDuck({ point: safeBest, instant: true, duckType: loadDuckType, featherTone, buildVariant });
     }
 
     status.textContent =
-      `60 exclusion-checked ducks loaded. Up to ${maxActiveSwimmers()} will swim at once.`;
+      `Loaded 60 ducks: 55 standard, 4 golden, 1 diamond, with mixed feather tones and builds.`;
   }
 
-  directedAddButton.addEventListener("click", () => {
-    setDirectedAdd(!directedAddEnabled);
+  function updateDuckTypeButton() {
+    const label = selectedDuckType.charAt(0).toUpperCase() + selectedDuckType.slice(1);
+    duckTypeButton.textContent = `Duck Type: ${label}`;
+  }
+
+  featherToneButton.addEventListener("click", () => {
+    const index = FEATHER_TONE_KEYS.indexOf(selectedFeatherTone);
+    selectedFeatherTone = FEATHER_TONE_KEYS[(index + 1) % FEATHER_TONE_KEYS.length];
+    updateFeatherToneButton();
+    status.textContent = `New ducks will use ${FEATHER_TONES[selectedFeatherTone].label.toLowerCase()} feathers.`;
   });
 
-  world.addEventListener("click", selectDirectedDestination);
+  buildVariantButton.addEventListener("click", () => {
+    const index = BUILD_VARIANT_KEYS.indexOf(selectedBuildVariant);
+    selectedBuildVariant = BUILD_VARIANT_KEYS[(index + 1) % BUILD_VARIANT_KEYS.length];
+    updateBuildVariantButton();
+    status.textContent = `New ducks will use the ${BUILD_VARIANTS[selectedBuildVariant].label.toLowerCase()} build.`;
+  });
+
+  duckTypeButton.addEventListener("click", () => {
+    const index = DUCK_TYPES.indexOf(selectedDuckType);
+    selectedDuckType = DUCK_TYPES[(index + 1) % DUCK_TYPES.length];
+    updateDuckTypeButton();
+    status.textContent =
+      `New ducks will be ${selectedDuckType}.`;
+  });
+
   addDuckButton.addEventListener("click", addAnimatedDuck);
   load60Button.addEventListener("click", () => loadPopulation(60));
   resetButton.addEventListener("click", resetPond);
@@ -855,6 +1419,9 @@
 
   applyWorldScale();
   updateCounts();
+  updateDuckTypeButton();
+  updateFeatherToneButton();
+  updateBuildVariantButton();
 
   window.addEventListener("load", applyWorldScale, { once: true });
 })();

@@ -148,6 +148,8 @@ body {
 .duck {
   --duck-size: 124px;
   --duck-scale: .7;
+  --build-scale-x: 1;
+  --build-scale-y: 1;
   --bob-duration: 4.8s;
   position: absolute;
   width: var(--duck-size);
@@ -167,13 +169,8 @@ body {
 .duck-visual {
   display: block;
   width: 100%;
-}
-
-.duck img {
-  display: block;
-  width: 100%;
-  height: auto;
-  pointer-events: none;
+  transform: scaleX(var(--build-scale-x)) scaleY(var(--build-scale-y));
+  transform-origin: 50% 72%;
 }
 
 .duck.entrying {
@@ -189,12 +186,71 @@ body {
   left: 0;
   bottom: 0;
   width: var(--duck-size);
-  transform: translateX(-50%);
+  transform: translateX(-50%) scaleX(var(--build-scale-x)) scaleY(var(--build-scale-y));
+  transform-origin: 50% 100%;
 }
 
-.duck.entrying .duck-visual img {
-  transform: rotate(var(--entry-rotation, 0deg)) scale(var(--entry-scale, 1));
+.entry-frame {
+  display: block;
+  width: 100%;
+  height: auto;
+  pointer-events: none;
+  transform:
+    rotate(var(--entry-rotation, 0deg))
+    scale(var(--entry-scale, 1));
   transform-origin: 50% 100%;
+}
+
+.duck.prejump .entry-frame {
+  animation: pre-jump-squash .30s ease-in-out forwards;
+}
+
+@keyframes pre-jump-squash {
+  0% {
+    transform: rotate(0deg) scale(.82);
+  }
+  62% {
+    transform: rotate(0deg) scaleX(.90) scaleY(.68);
+  }
+  100% {
+    transform: rotate(0deg) scaleX(.86) scaleY(.76);
+  }
+}
+
+.swim-stack {
+  --facing-scale: 1;
+  --swim-tilt: 0deg;
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  transform: translateY(-27%) rotate(var(--swim-tilt)) scaleX(var(--facing-scale));
+  transform-origin: 50% 50%;
+  pointer-events: none;
+}
+
+.swim-layer {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.swim-wing-back { z-index: 1; opacity: 0; }
+.swim-body { z-index: 2; }
+.swim-wake { z-index: 3; }
+.swim-face { z-index: 4; }
+.swim-wing-front { z-index: 5; }
+
+.duck[data-motion-state="floating"] .swim-wake {
+  opacity: .72;
+}
+
+.duck[data-motion-state="swimming"] .swim-wake {
+  opacity: 1;
 }
 
 .duck.floating {
@@ -214,22 +270,103 @@ body {
   filter: drop-shadow(0 11px 4px rgba(24,39,44,.28)) brightness(1.03);
 }
 
-.splash {
-  position: absolute;
-  width: 64px;
-  height: 22px;
-  border: 5px solid rgba(245,255,255,.9);
-  border-left-color: transparent;
-  border-right-color: transparent;
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  animation: splash .75s ease-out forwards;
+.duck.reacting .swim-stack {
+  animation: duck-startle-shake .12s steps(2, end) 6;
 }
 
-@keyframes splash {
-  0% { transform: translate(-50%, -50%) scale(.25); opacity: 0; }
-  30% { opacity: 1; }
-  100% { transform: translate(-50%, -50%) scale(1.45); opacity: 0; }
+.duck.reacting .swim-wing-front {
+  transform-origin: 40% 58%;
+  animation: front-wing-flap .18s ease-in-out 4;
+}
+
+.duck.reacting .swim-wing-back {
+  opacity: 1;
+  transform-origin: 45% 58%;
+  animation: back-wing-flap .18s ease-in-out 4;
+}
+
+
+.duck.reaction-angry .swim-stack {
+  animation: duck-angry-jolt .14s ease-in-out 5;
+}
+
+.duck.reaction-angry {
+  filter: drop-shadow(0 11px 4px rgba(24,39,44,.32)) brightness(.98) contrast(1.06);
+}
+
+.duck.reaction-angry .swim-wing-front,
+.duck.reaction-angry .swim-wing-back {
+  animation-duration: .14s;
+  animation-iteration-count: 5;
+}
+
+@keyframes duck-angry-jolt {
+  0%,100% { transform: translateY(-27%) rotate(var(--swim-tilt)) scaleX(var(--facing-scale)) rotate(0deg); }
+  25% { transform: translateY(-28%) rotate(var(--swim-tilt)) scaleX(var(--facing-scale)) translateX(-2px) rotate(-3deg); }
+  75% { transform: translateY(-27%) rotate(var(--swim-tilt)) scaleX(var(--facing-scale)) translateX(2px) rotate(3deg); }
+}
+
+.duck.collision-bump .swim-stack {
+  animation: duck-collision-shudder .10s steps(2, end) 6;
+}
+
+@keyframes duck-collision-shudder {
+  0%, 100% {
+    transform: translateY(-27%) rotate(var(--swim-tilt)) scaleX(var(--facing-scale)) translateX(0);
+  }
+  35% {
+    transform: translateY(-27%) rotate(var(--swim-tilt)) scaleX(var(--facing-scale)) translateX(-3px) rotate(-2deg);
+  }
+  70% {
+    transform: translateY(-27%) rotate(var(--swim-tilt)) scaleX(var(--facing-scale)) translateX(3px) rotate(2deg);
+  }
+}
+
+@keyframes duck-startle-shake {
+  0%, 100% {
+    transform: translateY(-27%) rotate(var(--swim-tilt)) scaleX(var(--facing-scale)) translateX(0) rotate(0);
+  }
+  50% {
+    transform: translateY(-28%) rotate(var(--swim-tilt)) scaleX(var(--facing-scale)) translateX(2px) rotate(-2deg);
+  }
+}
+
+@keyframes front-wing-flap {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-28deg) translateY(-2px); }
+}
+
+@keyframes back-wing-flap {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(22deg) translateY(-2px); }
+}
+
+.splash-sprite,
+.resurface-sprite {
+  position: absolute;
+  width: 96px;
+  height: 96px;
+  transform: translate(-50%, -70%);
+  pointer-events: none;
+}
+
+.splash-sprite img,
+.resurface-sprite img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.resurface-sprite {
+  opacity: 1;
+  animation: resurface-ripple .70s ease-out forwards;
+}
+
+@keyframes resurface-ripple {
+  0% { opacity: 0; transform: translate(-50%, -70%) scale(.65); }
+  24% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -70%) scale(1.15); }
 }
 
 .destination-marker {
