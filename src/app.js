@@ -45,6 +45,10 @@
       surprised: "assets/duck/swim/face/face-surprised.png",
       angry: "assets/duck/swim/face/face-angry.png"
     },
+    blinks: {
+      neutral: "assets/duck/swim/face/face-neutral-blink.png",
+      sadRoot: "assets/duck/swim/face"
+    },
     wakes: {
       standard: "assets/effects/wake/wake-standard.png",
       golden: "assets/effects/wake/wake-golden.png",
@@ -92,6 +96,14 @@
     return SWIM_ASSETS.faces[faceName] || SWIM_ASSETS.faces.neutral;
   }
 
+  function swimBlinkSrc(faceName, featherTone) {
+    const safeTone = FEATHER_TONES[featherTone] ? featherTone : "white";
+    if (faceName === "sad") {
+      return `${SWIM_ASSETS.blinks.sadRoot}/face-sad-blink-${safeTone}.png`;
+    }
+    return SWIM_ASSETS.blinks.neutral;
+  }
+
 
   function splashFrameSrc(duckType, frameNumber) {
     const safeType = DUCK_TYPES.includes(duckType) ? duckType : "standard";
@@ -103,6 +115,7 @@
   let activeSwimmers = 0;
   const collisionPairs = new Map();
   let nextGlobalCollisionReactionAt = 0;
+  let nextGlobalIdleWingAt = 0;
 
   function randomCollisionGap() {
     return 8000 + Math.random() * 7000;
@@ -707,6 +720,14 @@
   function setDuckFace(duck, faceName) {
     const face = duck.querySelector(".swim-face");
     if (!face) return;
+
+    if (!["neutral", "sad"].includes(faceName)) {
+      cancelBlink(duck, false);
+      cancelIdleWingFlick(duck);
+    } else if (duck.dataset.blinking === "true") {
+      cancelBlink(duck, false);
+    }
+
     face.src = swimFaceSrc(faceName, duck.dataset.featherTone);
     duck.dataset.face = faceName;
   }
@@ -728,13 +749,164 @@
     setDuckFace(duck, duck.dataset.idleFace || "neutral");
   }
 
+  function randomBlinkGap() {
+    return 6500 + Math.random() * 10500;
+  }
+
+  function cancelBlink(duck, restore = false) {
+    clearTimeout(duck._blinkReturnTimer);
+    clearTimeout(duck._doubleBlinkTimer);
+    clearTimeout(duck._doubleBlinkReturnTimer);
+    duck._blinkReturnTimer = null;
+    duck._doubleBlinkTimer = null;
+    duck._doubleBlinkReturnTimer = null;
+    duck.dataset.blinking = "false";
+
+    if (restore && duck.isConnected &&
+        duck.dataset.reacting !== "true" &&
+        duck.dataset.collisionEscaping !== "true") {
+      const idleFace = duck.dataset.idleFace || "neutral";
+      const face = duck.querySelector(".swim-face");
+      if (face) {
+        face.src = swimFaceSrc(idleFace, duck.dataset.featherTone);
+        duck.dataset.face = idleFace;
+      }
+    }
+  }
+
+  function canBlink(duck) {
+    return duck.isConnected &&
+      ["floating", "swimming"].includes(duck.dataset.motionState) &&
+      duck.dataset.reacting !== "true" &&
+      duck.dataset.collisionEscaping !== "true" &&
+      !duck.classList.contains("collision-bump") &&
+      !duck.classList.contains("reacting") &&
+      ["neutral", "sad"].includes(duck.dataset.face || "neutral");
+  }
+
+  function showBlinkFrame(duck) {
+    if (!canBlink(duck)) return false;
+    const face = duck.querySelector(".swim-face");
+    if (!face) return false;
+
+    const idleFace = duck.dataset.idleFace === "sad" ? "sad" : "neutral";
+    face.src = swimBlinkSrc(idleFace, duck.dataset.featherTone);
+    duck.dataset.blinking = "true";
+    return true;
+  }
+
+  function finishBlinkFrame(duck) {
+    if (!duck.isConnected) return;
+    duck.dataset.blinking = "false";
+
+    if (!canBlink(duck)) return;
+
+    const idleFace = duck.dataset.idleFace || "neutral";
+    const face = duck.querySelector(".swim-face");
+    if (face) {
+      face.src = swimFaceSrc(idleFace, duck.dataset.featherTone);
+      duck.dataset.face = idleFace;
+    }
+  }
+
+  function playBlink(duck) {
+    if (!showBlinkFrame(duck)) return;
+
+    const doubleBlink = Math.random() < .14;
+    duck._blinkReturnTimer = setTimeout(() => {
+      finishBlinkFrame(duck);
+
+      if (!doubleBlink || !canBlink(duck)) return;
+
+      duck._doubleBlinkTimer = setTimeout(() => {
+        if (!showBlinkFrame(duck)) return;
+
+        duck._doubleBlinkReturnTimer = setTimeout(() => {
+          finishBlinkFrame(duck);
+        }, 95 + Math.random() * 45);
+      }, 85 + Math.random() * 65);
+    }, 100 + Math.random() * 55);
+  }
+
+  function scheduleBlink(duck, delay = randomBlinkGap()) {
+    clearTimeout(duck._blinkTimer);
+    duck._blinkTimer = setTimeout(() => {
+      if (!duck.isConnected) return;
+
+      if (canBlink(duck)) {
+        playBlink(duck);
+        scheduleBlink(duck, randomBlinkGap());
+      } else {
+        scheduleBlink(duck, 1800 + Math.random() * 3200);
+      }
+    }, delay);
+  }
+
+  function randomIdleWingGap() {
+    return 30000 + Math.random() * 48000;
+  }
+
+  function cancelIdleWingFlick(duck) {
+    clearTimeout(duck._idleWingEndTimer);
+    duck._idleWingEndTimer = null;
+    duck.classList.remove("idle-wing-front-flick", "idle-wing-back-flick");
+  }
+
+  function canIdleWingFlick(duck) {
+    return duck.isConnected &&
+      duck.dataset.motionState === "floating" &&
+      duck.dataset.reacting !== "true" &&
+      duck.dataset.collisionEscaping !== "true" &&
+      duck.dataset.blinking !== "true" &&
+      !duck.classList.contains("collision-bump") &&
+      !duck.classList.contains("reacting") &&
+      ["neutral", "sad"].includes(duck.dataset.face || "neutral");
+  }
+
+  function playIdleWingFlick(duck) {
+    if (!canIdleWingFlick(duck)) return false;
+
+    cancelIdleWingFlick(duck);
+    const backWing = Math.random() < .28;
+    duck.classList.add(backWing ? "idle-wing-back-flick" : "idle-wing-front-flick");
+    duck._idleWingEndTimer = setTimeout(() => {
+      if (!duck.isConnected) return;
+      cancelIdleWingFlick(duck);
+    }, backWing ? 620 : 560);
+    return true;
+  }
+
+  function scheduleIdleWingFlick(duck, delay = randomIdleWingGap()) {
+    clearTimeout(duck._idleWingTimer);
+    duck._idleWingTimer = setTimeout(() => {
+      if (!duck.isConnected) return;
+
+      const now = performance.now();
+      if (canIdleWingFlick(duck) && now >= nextGlobalIdleWingAt) {
+        if (playIdleWingFlick(duck)) {
+          nextGlobalIdleWingAt = now + 1100 + Math.random() * 1300;
+        }
+        scheduleIdleWingFlick(duck, randomIdleWingGap());
+      } else {
+        const globalWait = Math.max(0, nextGlobalIdleWingAt - now);
+        scheduleIdleWingFlick(duck, globalWait + 4500 + Math.random() * 8500);
+      }
+    }, delay);
+  }
+
+  function scheduleIdleLife(duck) {
+    scheduleBlink(duck, 1800 + Math.random() * 8500);
+    scheduleIdleWingFlick(duck, 12000 + Math.random() * 30000);
+  }
+
   function scheduleMoodShift(duck, delay = 8000 + Math.random() * 10000) {
     clearTimeout(duck._moodTimer);
     duck._moodTimer = setTimeout(() => {
       if (!duck.isConnected) return;
 
       if (["floating", "swimming"].includes(duck.dataset.motionState) &&
-          duck.dataset.reacting !== "true") {
+          duck.dataset.reacting !== "true" &&
+          duck.dataset.blinking !== "true") {
         // Most ducks look neutral, but some remain sad and moods can change
         // occasionally so the pond does not feel like a wall of identical faces.
         const forceChange = Math.random() < .42;
@@ -1021,6 +1193,7 @@
     duck.dataset.featherTone = FEATHER_TONES[featherTone] ? featherTone : "white";
     duck.dataset.facing = "left";
     duck.dataset.collisionEscaping = "false";
+    duck.dataset.blinking = "false";
     chooseIdleFace(duck);
     duck.dataset.swimPace = (0.88 + (id % 5) * 0.06).toFixed(2);
     duck.setAttribute(
@@ -1054,6 +1227,7 @@
       duck.classList.add("floating");
       scheduleMoodShift(duck);
       scheduleRoam(duck, 1000 + Math.random() * 9000);
+      scheduleIdleLife(duck);
     }
 
     updateCounts();
@@ -1293,6 +1467,7 @@
     duck.classList.add("floating");
     scheduleMoodShift(duck);
     scheduleRoam(duck);
+    scheduleIdleLife(duck);
   }
 
   function addAnimatedDuck() {
@@ -1310,6 +1485,12 @@
     for (const duck of ducks.values()) {
       clearTimeout(duck._roamTimer);
       clearTimeout(duck._moodTimer);
+      clearTimeout(duck._blinkTimer);
+      clearTimeout(duck._blinkReturnTimer);
+      clearTimeout(duck._doubleBlinkTimer);
+      clearTimeout(duck._doubleBlinkReturnTimer);
+      clearTimeout(duck._idleWingTimer);
+      clearTimeout(duck._idleWingEndTimer);
       if (duck._walkTimer) clearInterval(duck._walkTimer);
       if (duck._moveFrame) cancelAnimationFrame(duck._moveFrame);
       if (duck._entryFrame) cancelAnimationFrame(duck._entryFrame);
@@ -1323,6 +1504,7 @@
     activeSwimmers = 0;
     collisionPairs.clear();
     nextGlobalCollisionReactionAt = performance.now() + 3000 + Math.random() * 4000;
+    nextGlobalIdleWingAt = 0;
     updateCounts();
 
     destinationMarker.hidden = true;

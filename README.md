@@ -1,6 +1,15 @@
-# Taipan Pond v0.57
+# Taipan Pond v0.58
 
-Asset-cleanup build based on v0.55. Behaviour and visuals are intentionally unchanged.
+
+## v0.58 — Idle Life Pass
+
+- Independent neutral/sad blinking using `NeutralBlink.png` and `SadBlink.png`
+- Natural random blink spacing with occasional double blinks
+- Blinks suppressed/cancelled during angry, surprised, collision and click reactions
+- Infrequent subtle idle front/back wing flicks using the existing wing layers
+- Existing bob variation, movement, geometry, collision behaviour, variants and mobile behaviour preserved
+
+v0.57 was the asset-cleanup build based on v0.55. Its production asset structure remains unchanged apart from the two added blink overlays.
 
 ## What changed
 

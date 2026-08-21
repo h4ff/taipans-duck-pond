@@ -341,6 +341,29 @@ body {
   50% { transform: rotate(22deg) translateY(-2px); }
 }
 
+.duck.idle-wing-front-flick .swim-wing-front {
+  transform-origin: 40% 58%;
+  animation: idle-front-wing-flick .54s ease-in-out 1;
+}
+
+.duck.idle-wing-back-flick .swim-wing-back {
+  opacity: .72;
+  transform-origin: 45% 58%;
+  animation: idle-back-wing-flick .60s ease-in-out 1;
+}
+
+@keyframes idle-front-wing-flick {
+  0%, 100% { transform: rotate(0deg); }
+  38% { transform: rotate(-11deg) translateY(-1px); }
+  68% { transform: rotate(-4deg); }
+}
+
+@keyframes idle-back-wing-flick {
+  0%, 100% { transform: rotate(0deg); }
+  38% { transform: rotate(9deg) translateY(-1px); }
+  68% { transform: rotate(3deg); }
+}
+
 .splash-sprite,
 .resurface-sprite {
   position: absolute;
