@@ -993,7 +993,18 @@
       if (!duck.isConnected) return;
       duck.classList.remove("reacting", "reaction-angry", "reaction-surprised");
       duck.dataset.reacting = "false";
-      restoreIdleFace(duck);
+
+      // iOS Safari can briefly retain the composited reaction frame if the
+      // transform animation ends and the face image source is swapped in the
+      // same rendering tick. Restore the idle face on the next painted frame
+      // so the stack returns to its normal transform before the image changes.
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (duck.isConnected && duck.dataset.reacting !== "true") {
+            restoreIdleFace(duck);
+          }
+        });
+      });
     }, angry ? 900 : 820);
   }
 

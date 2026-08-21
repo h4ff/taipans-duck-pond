@@ -153,6 +153,10 @@ body {
   --bob-duration: 4.8s;
   position: absolute;
   width: var(--duck-size);
+  height: var(--duck-size);
+  overflow: visible;
+  -webkit-appearance: none;
+  appearance: none;
   transform: translate(-50%, -50%) scale(var(--duck-scale));
   transform-origin: 50% 72%;
   border: 0;
@@ -168,6 +172,7 @@ body {
 
 .duck-visual {
   display: block;
+  overflow: visible;
   width: 100%;
   transform: scaleX(var(--build-scale-x)) scaleY(var(--build-scale-y));
   transform-origin: 50% 72%;
@@ -224,6 +229,9 @@ body {
   display: block;
   width: 100%;
   aspect-ratio: 1 / 1;
+  overflow: visible;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
   transform: translateY(-27%) rotate(var(--swim-tilt)) scaleX(var(--facing-scale));
   transform-origin: 50% 50%;
   pointer-events: none;
@@ -266,10 +274,6 @@ body {
   }
 }
 
-.duck.reacting {
-  filter: drop-shadow(0 11px 4px rgba(24,39,44,.28)) brightness(1.03);
-}
-
 .duck.reacting .swim-stack {
   animation: duck-startle-shake .12s steps(2, end) 6;
 }
@@ -288,10 +292,6 @@ body {
 
 .duck.reaction-angry .swim-stack {
   animation: duck-angry-jolt .14s ease-in-out 5;
-}
-
-.duck.reaction-angry {
-  filter: drop-shadow(0 11px 4px rgba(24,39,44,.32)) brightness(.98) contrast(1.06);
 }
 
 .duck.reaction-angry .swim-wing-front,
