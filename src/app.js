@@ -27,6 +27,13 @@
   const status = document.getElementById("status");
 
   const WALK_FRAME_ROOT = "assets/duck/walk";
+  const HAT_ASSETS = {
+    walk: "assets/duck/hat/walk-hat.png",
+    swim: {
+      left: "assets/duck/hat/swim-hat-left.png",
+      right: "assets/duck/hat/swim-hat-right.png"
+    }
+  };
 
   function walkFrameSrc(duckType, featherTone, frameNumber) {
     const safeType = DUCK_TYPES.includes(duckType) ? duckType : "standard";
@@ -65,6 +72,10 @@
   function swimWingSrc(which, featherTone) {
     const safeTone = FEATHER_TONES[featherTone] ? featherTone : "white";
     return `${SWIM_ASSETS.wingRoot}/wing-${which}-${safeTone}.png`;
+  }
+
+  function swimHatSrc(facing) {
+    return facing === "right" ? HAT_ASSETS.swim.right : HAT_ASSETS.swim.left;
   }
 
   const DUCK_TYPES = ["standard", "golden", "diamond"];
@@ -542,6 +553,11 @@
     if (duck.dataset.facing === nextFacing) return;
 
     stack.style.setProperty("--facing-scale", nextFacing === "right" ? "-1" : "1");
+    stack.style.setProperty("--hat-counter-scale", nextFacing === "right" ? "-1" : "1");
+
+    const hat = duck.querySelector(".swim-hat");
+    if (hat) hat.src = swimHatSrc(nextFacing);
+
     duck.dataset.facing = nextFacing;
   }
 
@@ -1098,7 +1114,13 @@
     image.className = "entry-frame";
     image.src = walkFrameSrc(duck.dataset.duckType, duck.dataset.featherTone, frameIndex);
     image.alt = "";
-    visual.appendChild(image);
+
+    const hat = document.createElement("img");
+    hat.className = "entry-hat";
+    hat.src = HAT_ASSETS.walk;
+    hat.alt = "";
+
+    visual.append(image, hat);
   }
 
   function setWalkFrame(duck, frameNumber) {
@@ -1114,9 +1136,14 @@
 
     const stack = document.createElement("span");
     stack.className = "swim-stack";
+    const facingRight = duck.dataset.facing === "right";
     stack.style.setProperty(
       "--facing-scale",
-      duck.dataset.facing === "right" ? "-1" : "1"
+      facingRight ? "-1" : "1"
+    );
+    stack.style.setProperty(
+      "--hat-counter-scale",
+      facingRight ? "-1" : "1"
     );
 
     const wake = document.createElement("img");
@@ -1144,7 +1171,12 @@
     wingFront.src = swimWingSrc("front", duck.dataset.featherTone);
     wingFront.alt = "";
 
-    stack.append(wingBack, body, wake, face, wingFront);
+    const hat = document.createElement("img");
+    hat.className = "swim-layer swim-hat";
+    hat.src = swimHatSrc(duck.dataset.facing);
+    hat.alt = "";
+
+    stack.append(wingBack, body, wake, face, wingFront, hat);
     visual.appendChild(stack);
 
     duck.dataset.face = faceName;

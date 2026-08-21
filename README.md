@@ -1,5 +1,13 @@
-# Taipan Pond v0.58
+# Taipan Pond v0.59
 
+
+## v0.59 — Club Hats Pass
+
+- TCC hat shown by default on every duck.
+- Walking hat overlays all walk frames and all duck type/feather/build variants.
+- Dedicated left/right swim hats keep the TCC logo correctly oriented when ducks turn.
+- Hats stay in place through blinking, idle wing flicks, click reactions and collisions.
+- v0.58 pond geometry, mobile behaviour, movement, collisions and idle-life timing are unchanged.
 
 ## v0.58 — Idle Life Pass
 

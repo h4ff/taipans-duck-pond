@@ -195,7 +195,8 @@ body {
   transform-origin: 50% 100%;
 }
 
-.entry-frame {
+.entry-frame,
+.entry-hat {
   display: block;
   width: 100%;
   height: auto;
@@ -206,7 +207,14 @@ body {
   transform-origin: 50% 100%;
 }
 
-.duck.prejump .entry-frame {
+.entry-hat {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+}
+
+.duck.prejump .entry-frame,
+.duck.prejump .entry-hat {
   animation: pre-jump-squash .30s ease-in-out forwards;
 }
 
@@ -224,6 +232,7 @@ body {
 
 .swim-stack {
   --facing-scale: 1;
+  --hat-counter-scale: 1;
   --swim-tilt: 0deg;
   position: relative;
   display: block;
@@ -252,6 +261,11 @@ body {
 .swim-wake { z-index: 3; }
 .swim-face { z-index: 4; }
 .swim-wing-front { z-index: 5; }
+.swim-hat {
+  z-index: 6;
+  transform: scaleX(var(--hat-counter-scale));
+  transform-origin: 50% 50%;
+}
 
 .duck[data-motion-state="floating"] .swim-wake {
   opacity: .72;
