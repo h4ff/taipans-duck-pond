@@ -17,6 +17,10 @@
   const featherToneButton = document.getElementById("featherToneButton");
   const buildVariantButton = document.getElementById("buildVariantButton");
   const load60Button = document.getElementById("load60Button");
+  const testPresidentButton = document.getElementById("testPresidentButton");
+  const testLeaderButton = document.getElementById("testLeaderButton");
+  const testCaptainButton = document.getElementById("testCaptainButton");
+  const testCoachButton = document.getElementById("testCoachButton");
   const resetButton = document.getElementById("resetButton");
 
   const scoreboardCount = document.getElementById("scoreboardCount");
@@ -27,13 +31,59 @@
   const status = document.getElementById("status");
 
   const WALK_FRAME_ROOT = "assets/duck/walk";
-  const HAT_ASSETS = {
-    walk: "assets/duck/hat/walk-hat.png",
-    swim: {
-      left: "assets/duck/hat/swim-hat-left.png",
-      right: "assets/duck/hat/swim-hat-right.png"
+  const HEADWEAR_ASSETS = {
+    normal: {
+      walk: "assets/duck/headwear/normal/walk.png",
+      swim: {
+        left: "assets/duck/headwear/normal/swim-left.png",
+        right: "assets/duck/headwear/normal/swim-right.png"
+      }
+    },
+    leader: {
+      walk: "assets/duck/headwear/leader/walk.png",
+      swim: {
+        left: "assets/duck/headwear/leader/swim-left.png",
+        right: "assets/duck/headwear/leader/swim-right.png"
+      }
+    },
+    crown: {
+      walk: "assets/duck/headwear/crown/walk.png",
+      swim: {
+        left: "assets/duck/headwear/crown/swim-left.png",
+        right: "assets/duck/headwear/crown/swim-right.png"
+      }
     }
   };
+
+  const ROLE_ASSETS = {
+    coach: {
+      walk: "assets/duck/roles/coach/walk.png",
+      swim: {
+        left: "assets/duck/roles/coach/swim-left.png",
+        right: "assets/duck/roles/coach/swim-right.png"
+      }
+    }
+  };
+
+  function normalizedRoles(roles = [], clubRole = "player") {
+    const values = Array.isArray(roles) ? roles : [roles];
+    const safe = new Set(values.filter(role => ["president", "captain", "coach"].includes(role)));
+    if (clubRole === "president") safe.add("president");
+    return [...safe];
+  }
+
+  function duckHasRole(duck, role) {
+    if (!duck || !role) return false;
+    return (duck.dataset.roles || "")
+      .split(",")
+      .filter(Boolean)
+      .includes(role);
+  }
+
+  function coachWhistleSrc(phase, facing = "left") {
+    if (phase === "walk") return ROLE_ASSETS.coach.walk;
+    return facing === "right" ? ROLE_ASSETS.coach.swim.right : ROLE_ASSETS.coach.swim.left;
+  }
 
   function walkFrameSrc(duckType, featherTone, frameNumber) {
     const safeType = DUCK_TYPES.includes(duckType) ? duckType : "standard";
@@ -74,8 +124,21 @@
     return `${SWIM_ASSETS.wingRoot}/wing-${which}-${safeTone}.png`;
   }
 
-  function swimHatSrc(facing) {
-    return facing === "right" ? HAT_ASSETS.swim.right : HAT_ASSETS.swim.left;
+  function resolvedHeadwear(duck) {
+    // Role priority is deliberate: the president's crown always wins, even
+    // if that player also happens to be the current duck leader.
+    if (duckHasRole(duck, "president")) return "crown";
+    if (duck.dataset.isLeader === "true") return "leader";
+    return "normal";
+  }
+
+  function headwearSrc(duck, phase, facing = "left") {
+    const headwear = resolvedHeadwear(duck);
+    const assets = HEADWEAR_ASSETS[headwear] || HEADWEAR_ASSETS.normal;
+    duck.dataset.headwear = headwear;
+
+    if (phase === "walk") return assets.walk;
+    return facing === "right" ? assets.swim.right : assets.swim.left;
   }
 
   const DUCK_TYPES = ["standard", "golden", "diamond"];
@@ -555,8 +618,11 @@
     stack.style.setProperty("--facing-scale", nextFacing === "right" ? "-1" : "1");
     stack.style.setProperty("--hat-counter-scale", nextFacing === "right" ? "-1" : "1");
 
-    const hat = duck.querySelector(".swim-hat");
-    if (hat) hat.src = swimHatSrc(nextFacing);
+    const headwear = duck.querySelector(".swim-headwear");
+    if (headwear) headwear.src = headwearSrc(duck, "swim", nextFacing);
+
+    const whistle = duck.querySelector(".swim-coach-whistle");
+    if (whistle) whistle.src = coachWhistleSrc("swim", nextFacing);
 
     duck.dataset.facing = nextFacing;
   }
@@ -1114,13 +1180,33 @@
     image.className = "entry-frame";
     image.src = walkFrameSrc(duck.dataset.duckType, duck.dataset.featherTone, frameIndex);
     image.alt = "";
+    visual.appendChild(image);
 
-    const hat = document.createElement("img");
-    hat.className = "entry-hat";
-    hat.src = HAT_ASSETS.walk;
-    hat.alt = "";
+    if (duckHasRole(duck, "captain")) {
+      const captainLayer = document.createElement("span");
+      captainLayer.className = "entry-role-overlay entry-captain-layer";
+      captainLayer.setAttribute("aria-hidden", "true");
 
-    visual.append(image, hat);
+      const captainMark = document.createElement("span");
+      captainMark.className = "captain-mark captain-mark-walk";
+      captainMark.textContent = "C";
+      captainLayer.appendChild(captainMark);
+      visual.appendChild(captainLayer);
+    }
+
+    if (duckHasRole(duck, "coach")) {
+      const whistle = document.createElement("img");
+      whistle.className = "entry-role-overlay entry-coach-whistle";
+      whistle.src = coachWhistleSrc("walk");
+      whistle.alt = "";
+      visual.appendChild(whistle);
+    }
+
+    const headwear = document.createElement("img");
+    headwear.className = "entry-hat entry-headwear";
+    headwear.src = headwearSrc(duck, "walk");
+    headwear.alt = "";
+    visual.appendChild(headwear);
   }
 
   function setWalkFrame(duck, frameNumber) {
@@ -1166,17 +1252,38 @@
     face.src = swimFaceSrc(faceName, duck.dataset.featherTone);
     face.alt = "";
 
+    const captainLayer = document.createElement("span");
+    if (duckHasRole(duck, "captain")) {
+      captainLayer.className = "swim-layer swim-role-layer swim-captain-layer";
+      captainLayer.setAttribute("aria-hidden", "true");
+
+      const captainMark = document.createElement("span");
+      captainMark.className = "captain-mark captain-mark-swim";
+      captainMark.textContent = "C";
+      captainLayer.appendChild(captainMark);
+    }
+
+    const whistle = document.createElement("img");
+    if (duckHasRole(duck, "coach")) {
+      whistle.className = "swim-layer swim-role-layer swim-coach-whistle";
+      whistle.src = coachWhistleSrc("swim", duck.dataset.facing);
+      whistle.alt = "";
+    }
+
     const wingFront = document.createElement("img");
     wingFront.className = "swim-layer swim-wing-front";
     wingFront.src = swimWingSrc("front", duck.dataset.featherTone);
     wingFront.alt = "";
 
-    const hat = document.createElement("img");
-    hat.className = "swim-layer swim-hat";
-    hat.src = swimHatSrc(duck.dataset.facing);
-    hat.alt = "";
+    const headwear = document.createElement("img");
+    headwear.className = "swim-layer swim-hat swim-headwear";
+    headwear.src = headwearSrc(duck, "swim", duck.dataset.facing);
+    headwear.alt = "";
 
-    stack.append(wingBack, body, wake, face, wingFront, hat);
+    stack.append(wingBack, body, wake, face);
+    if (duckHasRole(duck, "captain")) stack.appendChild(captainLayer);
+    if (duckHasRole(duck, "coach")) stack.appendChild(whistle);
+    stack.append(wingFront, headwear);
     visual.appendChild(stack);
 
     duck.dataset.face = faceName;
@@ -1212,7 +1319,17 @@
     }, angry ? 900 : 820);
   }
 
-  function makeDuck({ point, instant = false, duckType = selectedDuckType, featherTone = selectedFeatherTone, buildVariant = selectedBuildVariant }) {
+  function makeDuck({
+    point,
+    instant = false,
+    duckType = selectedDuckType,
+    featherTone = selectedFeatherTone,
+    buildVariant = selectedBuildVariant,
+    clubRole = "player",
+    roles = [],
+    isLeader = false,
+    testRole = ""
+  }) {
     const id = nextDuckId++;
     const duck = document.createElement("button");
     duck.type = "button";
@@ -1223,6 +1340,11 @@
     duck.dataset.buildVariant = BUILD_VARIANTS[buildVariant] ? buildVariant : "standard";
     duck.dataset.duckType = DUCK_TYPES.includes(duckType) ? duckType : "standard";
     duck.dataset.featherTone = FEATHER_TONES[featherTone] ? featherTone : "white";
+    const assignedRoles = normalizedRoles(roles, clubRole);
+    duck.dataset.roles = assignedRoles.join(",");
+    duck.dataset.clubRole = assignedRoles.includes("president") ? "president" : "player";
+    duck.dataset.isLeader = isLeader ? "true" : "false";
+    duck.dataset.testRole = testRole || "";
     duck.dataset.facing = "left";
     duck.dataset.collisionEscaping = "false";
     duck.dataset.blinking = "false";
@@ -1513,21 +1635,82 @@
     animateEntry(duck, null);
   }
 
-  function resetPond() {
-    for (const duck of ducks.values()) {
-      clearTimeout(duck._roamTimer);
-      clearTimeout(duck._moodTimer);
-      clearTimeout(duck._blinkTimer);
-      clearTimeout(duck._blinkReturnTimer);
-      clearTimeout(duck._doubleBlinkTimer);
-      clearTimeout(duck._doubleBlinkReturnTimer);
-      clearTimeout(duck._idleWingTimer);
-      clearTimeout(duck._idleWingEndTimer);
-      if (duck._walkTimer) clearInterval(duck._walkTimer);
-      if (duck._moveFrame) cancelAnimationFrame(duck._moveFrame);
-      if (duck._entryFrame) cancelAnimationFrame(duck._entryFrame);
-      duck.getAnimations().forEach(animation => animation.cancel());
+  function disposeDuck(duck) {
+    if (!duck) return;
+    clearTimeout(duck._roamTimer);
+    clearTimeout(duck._moodTimer);
+    clearTimeout(duck._blinkTimer);
+    clearTimeout(duck._blinkReturnTimer);
+    clearTimeout(duck._doubleBlinkTimer);
+    clearTimeout(duck._doubleBlinkReturnTimer);
+    clearTimeout(duck._idleWingTimer);
+    clearTimeout(duck._idleWingEndTimer);
+    if (duck._walkTimer) clearInterval(duck._walkTimer);
+    if (duck._moveFrame) cancelAnimationFrame(duck._moveFrame);
+    if (duck._entryFrame) cancelAnimationFrame(duck._entryFrame);
+    duck.getAnimations().forEach(animation => animation.cancel());
+
+    if (duck.dataset.motionState === "swimming") {
+      activeSwimmers = Math.max(0, activeSwimmers - 1);
     }
+
+    const id = Number(duck.dataset.duckId);
+    ducks.delete(id);
+    for (const key of [...collisionPairs.keys()]) {
+      if (key.startsWith(`${id}:`) || key.endsWith(`:${id}`)) collisionPairs.delete(key);
+    }
+    duck.remove();
+  }
+
+  function existingRoleDuck(role) {
+    for (const duck of ducks.values()) {
+      if (duck.dataset.testRole === role) return duck;
+    }
+
+    // President and current leader are single-instance test concepts for now,
+    // so their Load 60 representatives can be replaced by the replay button.
+    for (const duck of ducks.values()) {
+      if (role === "president" && duckHasRole(duck, "president")) return duck;
+      if (role === "leader" &&
+          duck.dataset.isLeader === "true" &&
+          !duckHasRole(duck, "president")) return duck;
+    }
+    return null;
+  }
+
+  function replayRoleEntry(role) {
+    const existing = existingRoleDuck(role);
+    if (existing) disposeDuck(existing);
+
+    const president = role === "president";
+    const leader = role === "leader";
+    const roles = president ? ["president"] : ["captain", "coach"].filter(item => item === role);
+    const duck = makeDuck({
+      point: { x:37, y:73.6 },
+      instant: false,
+      duckType: president ? "standard" : selectedDuckType,
+      // The president is always the known white duck. Other role tests follow
+      // the current feather/build controls so overlays can be judged broadly.
+      featherTone: president ? "white" : selectedFeatherTone,
+      buildVariant: president ? "standard" : selectedBuildVariant,
+      roles,
+      clubRole: president ? "president" : "player",
+      isLeader: leader,
+      testRole: role
+    });
+
+    const roleStatus = {
+      president: "President re-entering from the pier (white duck, crown).",
+      leader: "Duck leader re-entering from the pier with the yellow leader cap.",
+      captain: "Captain re-entering from the pier with the shirt C marker.",
+      coach: "Coach re-entering from the pier with the whistle and lanyard."
+    };
+    status.textContent = roleStatus[role] || "Role test duck re-entering from the pier.";
+    animateEntry(duck, null);
+  }
+
+  function resetPond() {
+    for (const duck of [...ducks.values()]) disposeDuck(duck);
 
     duckLayer.replaceChildren();
     splashLayer.replaceChildren();
@@ -1546,6 +1729,36 @@
   function loadPopulation(target = 60) {
     resetPond();
     const points = [];
+
+    // Development population includes one president and one current leader so
+    // both role overlays can be judged in a busy pond. Keep them away from the
+    // golden/diamond tail of the fixed stress-test distribution.
+    const presidentIndex = target > 20 ? 18 : 0;
+    const leaderIndex = target > 20 ? 19 : Math.min(1, Math.max(0, target - 1));
+
+    // Repeatable club roles: six captain examples and two coach examples in
+    // the 60-duck stress population. Deliberate overlaps prove roles stack:
+    // the current leader is also a captain, and one captain is also a coach.
+    const captainIndexes = new Set([2, 8, 14, 19, 36, 47].filter(index => index < target));
+    const coachIndexes = new Set([11, 36].filter(index => index < target));
+
+    // Yellow feathering is intentionally rare. For Load 60 this produces
+    // exactly three yellow-feather ducks (never the white president), and no
+    // population generated here can exceed three.
+    const loadFeathers = Array.from({ length: target }, () => {
+      const nonYellow = ["white", "lightBrown", "darkBrown"];
+      return nonYellow[Math.floor(Math.random() * nonYellow.length)];
+    });
+    const yellowCandidates = Array.from({ length: target }, (_, index) => index)
+      .filter(index => index !== presidentIndex && index !== leaderIndex);
+    for (let i = yellowCandidates.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [yellowCandidates[i], yellowCandidates[j]] = [yellowCandidates[j], yellowCandidates[i]];
+    }
+    for (const index of yellowCandidates.slice(0, Math.min(3, yellowCandidates.length))) {
+      loadFeathers[index] = "yellow";
+    }
+    if (target > 0) loadFeathers[presidentIndex] = "white";
 
     for (let i = 0; i < target; i++) {
       let best = null;
@@ -1573,8 +1786,7 @@
       if (i >= target - 1) loadDuckType = "diamond";
       else if (i >= target - 5) loadDuckType = "golden";
 
-      // Feather tone and build are mixed for testing and will eventually come from player data.
-      const featherTone = FEATHER_TONE_KEYS[Math.floor(Math.random() * FEATHER_TONE_KEYS.length)];
+      let featherTone = loadFeathers[i];
 
       // For the 60-duck stress test, exaggeration is deliberately uncommon:
       // one beanpole, a handful of broader ducks, some short ducks, mostly standard.
@@ -1584,11 +1796,35 @@
       else if (i < 10) buildVariant = "big";
       else if (i < 18) buildVariant = "short";
 
-      makeDuck({ point: safeBest, instant: true, duckType: loadDuckType, featherTone, buildVariant });
+      const isPresident = i === presidentIndex;
+      const isLeader = i === leaderIndex && !isPresident;
+      const roles = [];
+      if (isPresident) roles.push("president");
+      if (captainIndexes.has(i)) roles.push("captain");
+      if (coachIndexes.has(i)) roles.push("coach");
+
+      if (isPresident) {
+        loadDuckType = "standard";
+        featherTone = "white";
+        buildVariant = "standard";
+      }
+
+      makeDuck({
+        point: safeBest,
+        instant: true,
+        duckType: loadDuckType,
+        featherTone,
+        buildVariant,
+        roles,
+        clubRole: isPresident ? "president" : "player",
+        isLeader
+      });
     }
 
+    const yellowCount = [...ducks.values()]
+      .filter(duck => duck.dataset.featherTone === "yellow").length;
     status.textContent =
-      `Loaded 60 ducks: 55 standard, 4 golden, 1 diamond, with mixed feather tones and builds.`;
+      `Loaded ${target} ducks with president crown, leader cap, ${captainIndexes.size} captains, ${coachIndexes.size} coaches and ${yellowCount} yellow-feather ducks.`;
   }
 
   function updateDuckTypeButton() {
@@ -1620,6 +1856,10 @@
 
   addDuckButton.addEventListener("click", addAnimatedDuck);
   load60Button.addEventListener("click", () => loadPopulation(60));
+  testPresidentButton.addEventListener("click", () => replayRoleEntry("president"));
+  testLeaderButton.addEventListener("click", () => replayRoleEntry("leader"));
+  testCaptainButton.addEventListener("click", () => replayRoleEntry("captain"));
+  testCoachButton.addEventListener("click", () => replayRoleEntry("coach"));
   resetButton.addEventListener("click", resetPond);
 
   liveScoreboard.addEventListener("click", () => {

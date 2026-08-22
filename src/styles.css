@@ -196,10 +196,10 @@ body {
 }
 
 .entry-frame,
-.entry-hat {
+.entry-hat,
+.entry-role-overlay {
   display: block;
   width: 100%;
-  height: auto;
   pointer-events: none;
   transform:
     rotate(var(--entry-rotation, 0deg))
@@ -207,14 +207,61 @@ body {
   transform-origin: 50% 100%;
 }
 
+.entry-frame,
 .entry-hat {
+  height: auto;
+}
+
+.entry-role-overlay {
   position: absolute;
   inset: 0;
+  height: 100%;
   z-index: 2;
 }
 
+img.entry-role-overlay {
+  object-fit: contain;
+}
+
+.entry-hat {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+}
+
+.entry-captain-layer {
+  z-index: 2;
+}
+
+.entry-coach-whistle {
+  z-index: 2;
+}
+
+.captain-mark {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  font-family: Arial Black, Arial, Helvetica, sans-serif;
+  font-weight: 900;
+  line-height: 1;
+  color: #f6f1df;
+  -webkit-text-stroke: .8px #17262d;
+  text-shadow: 0 0 1px #17262d;
+}
+
+.captain-mark-walk {
+  left: 64.5%;
+  top: 57.5%;
+  width: 12%;
+  height: 13%;
+  font-size: 13px;
+  transform: translate(-50%, -50%);
+}
+
 .duck.prejump .entry-frame,
-.duck.prejump .entry-hat {
+.duck.prejump .entry-hat,
+.duck.prejump .entry-role-overlay {
   animation: pre-jump-squash .30s ease-in-out forwards;
 }
 
@@ -260,10 +307,26 @@ body {
 .swim-body { z-index: 2; }
 .swim-wake { z-index: 3; }
 .swim-face { z-index: 4; }
-.swim-wing-front { z-index: 5; }
+.swim-role-layer { z-index: 5; }
+.swim-wing-front { z-index: 6; }
 .swim-hat {
-  z-index: 6;
+  z-index: 7;
   transform: scaleX(var(--hat-counter-scale));
+  transform-origin: 50% 50%;
+}
+
+.swim-coach-whistle {
+  transform: scaleX(var(--hat-counter-scale));
+  transform-origin: 50% 50%;
+}
+
+.captain-mark-swim {
+  left: 43.5%;
+  top: 64%;
+  width: 12%;
+  height: 13%;
+  font-size: 13px;
+  transform: translate(-50%, -50%) scaleX(var(--hat-counter-scale));
   transform-origin: 50% 50%;
 }
 
