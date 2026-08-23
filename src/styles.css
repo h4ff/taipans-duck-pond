@@ -101,6 +101,72 @@ body {
   isolation: isolate;
 }
 
+
+.loading-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1000000;
+  display: grid;
+  place-items: center;
+  background: rgba(24, 39, 44, .78);
+  opacity: 1;
+  transition: opacity .28s ease;
+}
+
+.loading-overlay[hidden] {
+  display: none;
+}
+
+.loading-overlay.loading-complete {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.loading-overlay.loading-failed {
+  background: rgba(24, 39, 44, .9);
+}
+
+.loading-card {
+  min-width: 170px;
+  padding: 18px 20px;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  border: 3px solid rgba(255,255,255,.88);
+  border-radius: 16px;
+  background: rgba(35, 57, 66, .94);
+  color: white;
+  text-align: center;
+}
+
+.loading-spinner {
+  width: 42px;
+  height: 42px;
+  border: 5px solid rgba(255,255,255,.28);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: pond-spin .8s linear infinite;
+}
+
+.loading-progress {
+  font-variant-numeric: tabular-nums;
+}
+
+#loadingProgress {
+  font-size: .84rem;
+  opacity: .82;
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes pond-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-spinner { animation-duration: 1.6s; }
+  .loading-overlay { transition: none; }
+}
+
 .scene-viewport {
   position: relative;
   width: 100%;
@@ -632,7 +698,7 @@ footer {
   color: #4b5c61;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 900px) and (pointer: coarse) {
   .app-shell { padding: 10px; }
 
   .toolbar {
@@ -718,4 +784,40 @@ footer {
     border-width: 3px;
     border-radius: 12px;
   }
+
 }
+@media (max-width: 900px) and (pointer: coarse) and (orientation: landscape) {
+  .app-shell {
+    padding: 6px;
+  }
+
+  .toolbar {
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+
+  .toolbar-copy {
+    display: none;
+  }
+
+  .mobile-toolbar-actions {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .mobile-toolbar-actions #mobileZoomReset:not([hidden]) {
+    grid-column: auto;
+  }
+
+  .mobile-toolbar-actions button,
+  .controls button {
+    min-height: 42px;
+    padding: .42rem .38rem;
+    font-size: .86rem;
+  }
+
+  .scene-note,
+  footer {
+    display: none;
+  }
+}
+
