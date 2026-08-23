@@ -1,28 +1,29 @@
-# Taipan Pond v0.63
+# Taipan Pond v0.64
 
-## v0.63 — Mobile & Layering Reliability Pass
+## v0.64 — Portrait Pinch-Zoom Stability Pass
 
-Built directly on v0.62.
+Built directly on v0.63.
+
+### Likely cause identified
+The v0.63 resize guards already prevented the production preload, duck creation, timers and listeners from being duplicated during normal visualViewport pinch events. The repeatable iPhone white-screen/reload is therefore most consistent with iOS WebKit compositor/memory pressure: native browser pinch magnifies the entire page/visual viewport while the pond is already a large transformed layer containing 60 independently animated, multi-layer ducks plus decoded sprite resources. At roughly 2–3× Safari can allocate enough additional backing/tile memory for WebKit to terminate and reload the page.
 
 ### Changes
-- Fixed the swimming captain **C** so it sits on the exposed shirt area beneath the front wing instead of appearing printed on top of the wing.
-- Splash and resurfacing effects now participate in the same Y-axis depth ordering as swimming ducks. Ducks lower on screen render in front of the effect; ducks higher on screen render behind it.
-- Reworked production sprite preload into a bounded six-image queue with finite load/decode timeouts and retries, targeting the iPhone/Safari case that could stall at `92/99`.
-- Mobile developer controls are collapsed behind **Test Controls** instead of permanently taking up portrait screen space.
-- Added **Expand Pond** on mobile: hides non-essential header/status/footer UI and increases portrait pond zoom for easier viewing.
-- Normal portrait pond zoom is also modestly increased from the v0.62 level.
-- Pinch zoom is explicitly allowed on the pond, while world rescaling now ignores pinch/browser-chrome resize noise so the scene should no longer reset or snap during a pinch gesture.
+- Replaced native pinch *over the portrait pond* with app-controlled two-finger pond zoom. The actual Safari page viewport stays stable.
+- App zoom ranges from 1× to 2.5× on top of the existing portrait pond view and preserves the pinch focal point while zooming.
+- The zoomed pond can be panned horizontally and vertically inside its clipped viewport.
+- Added **Reset Zoom** when an app zoom is active.
+- Removed the visualViewport resize listener entirely. Layout rescaling now responds only to meaningful page-layout width changes or a debounced orientation change.
+- Pinch updates only change world transform/stage dimensions and scroll position; they do **not** rebuild duck DOM, recreate splash/wake layers, restart timers/listeners or rerun sprite preloading.
+- Preserved the v0.63 six-image bounded preload queue, retries and timeouts unchanged.
 
-### Preserved from v0.62
-- President crown and white President duck.
-- Leader cap and headwear priority: **President crown > leader cap > normal TCC cap**.
-- Multiple captains/coaches and stacked roles.
-- Maximum of three yellow-feather ducks in the `Load 60` test population.
-- Scene geometry and pier behaviour.
-- Swimming movement, turning, wakes and collision interactions.
-- Feather colours and body-build variants.
-- Idle blinks, double blinks, wing flicks and varied bob timing.
-- Mobile click-reaction fix.
+### Preserved from v0.63
+- Desktop behaviour and landscape mobile behaviour.
+- Larger portrait real estate and Expand Pond mode.
+- 60-duck stress test support.
+- All duck geometry, movement, collisions, Y-ordering and pier exclusions.
+- Y-sorted splash/resurface effects.
+- Swimming captain C placement fix.
+- Production artwork/assets unchanged.
 
-### Hosted testing note
-For the cold-load test, use a private/incognito window or clear site data. The preload counter must either reach the full manifest count or report a finite failed-image message; it should never remain indefinitely at an intermediate count.
+### iPhone test
+Load 60 ducks, enter Expand Pond, then two-finger pinch directly on the pond. The pond should zoom to a close-up without Safari itself magnifying the page, and one-finger swipes should pan around the enlarged pond. Use **Reset Zoom** to return to the base expanded view.

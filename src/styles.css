@@ -648,8 +648,12 @@ footer {
   .mobile-toolbar-actions {
     width: 100%;
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
+  }
+
+  .mobile-toolbar-actions #mobileZoomReset:not([hidden]) {
+    grid-column: 1 / -1;
   }
 
   .mobile-toolbar-actions button,
@@ -671,9 +675,11 @@ footer {
   }
 
   .scene-viewport {
-    overflow-x: auto;
-    overflow-y: hidden;
-    touch-action: pan-x pinch-zoom;
+    overflow: auto;
+    /* Preserve one-finger pond panning, but reserve two-finger pinch for the
+       app-controlled scene zoom rather than Safari visual-viewport zoom. */
+    touch-action: pan-x pan-y;
+    overscroll-behavior: contain;
     scrollbar-width: none;
   }
 

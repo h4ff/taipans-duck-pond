@@ -25,6 +25,7 @@
   const developerControls = document.getElementById("developerControls");
   const mobileControlsToggle = document.getElementById("mobileControlsToggle");
   const mobilePondToggle = document.getElementById("mobilePondToggle");
+  const mobileZoomReset = document.getElementById("mobileZoomReset");
 
   const scoreboardCount = document.getElementById("scoreboardCount");
   const panelDuckCount = document.getElementById("panelDuckCount");
@@ -393,6 +394,10 @@
   let worldScale = 1;
   let portraitPanInitialised = false;
   let mobilePondExpanded = false;
+  let portraitUserZoom = 1;
+  const PORTRAIT_USER_ZOOM_MIN = 1;
+  const PORTRAIT_USER_ZOOM_MAX = 2.5;
+  let pinchState = null;
 
   const waterPolygon = [
     [11.5,57.0],[20.0,53.5],[31.0,51.5],[44.0,50.7],
@@ -419,53 +424,77 @@
     ).matches;
   }
 
-  function portraitZoomFactor() {
+  function portraitBaseZoomFactor() {
     if (!portraitZoomEnabled()) return 1;
     return mobilePondExpanded ? 1.92 : 1.60;
   }
 
-  function applyWorldScale() {
-    const previousScrollable = Math.max(
-      0,
-      worldStage.offsetWidth - scene.clientWidth
-    );
-    const previousRatio = previousScrollable > 0
-      ? scene.scrollLeft / previousScrollable
-      : 0;
+  function portraitZoomFactor() {
+    if (!portraitZoomEnabled()) return 1;
+    return portraitBaseZoomFactor() * portraitUserZoom;
+  }
+
+  function updateMobileZoomUi() {
+    if (!mobileZoomReset) return;
+    const zoomed = portraitZoomEnabled() && portraitUserZoom > 1.01;
+    mobileZoomReset.hidden = !zoomed;
+    if (zoomed) mobileZoomReset.textContent = `Reset Zoom (${portraitUserZoom.toFixed(1)}×)`;
+  }
+
+  function applyWorldScale(options = {}) {
+    const preserveWorldPoint = options.preserveWorldPoint || null;
+    const previousScale = worldScale || 1;
+    const previousScrollableX = Math.max(0, worldStage.offsetWidth - scene.clientWidth);
+    const previousScrollableY = Math.max(0, worldStage.offsetHeight - scene.clientHeight);
+    const previousRatioX = previousScrollableX > 0 ? scene.scrollLeft / previousScrollableX : 0;
+    const previousRatioY = previousScrollableY > 0 ? scene.scrollTop / previousScrollableY : 0;
 
     const fitScale = scene.clientWidth / WORLD_WIDTH;
+    const baseZoom = portraitBaseZoomFactor();
     const zoom = portraitZoomFactor();
     worldScale = fitScale * zoom;
 
     const renderedWidth = Math.round(WORLD_WIDTH * worldScale);
     const renderedHeight = Math.round(WORLD_HEIGHT * worldScale);
+    const viewportHeight = portraitZoomEnabled()
+      ? Math.round(WORLD_HEIGHT * fitScale * baseZoom)
+      : renderedHeight;
 
     worldStage.style.width = `${renderedWidth}px`;
     worldStage.style.height = `${renderedHeight}px`;
-    scene.style.height = `${renderedHeight}px`;
+    scene.style.height = `${viewportHeight}px`;
 
     world.style.left = "0";
     world.style.top = "0";
     world.style.transform = `scale(${worldScale})`;
+    updateMobileZoomUi();
 
     requestAnimationFrame(() => {
-      const maxScroll = Math.max(0, renderedWidth - scene.clientWidth);
+      const maxScrollX = Math.max(0, renderedWidth - scene.clientWidth);
+      const maxScrollY = Math.max(0, renderedHeight - scene.clientHeight);
 
       if (portraitZoomEnabled()) {
-        if (!portraitPanInitialised) {
-          // Begin at the pier/entry side. The user can swipe right across
-          // the rest of the pond.
+        if (preserveWorldPoint) {
+          const scaleRatio = worldScale / previousScale;
+          const nextLeft = preserveWorldPoint.contentX * scaleRatio - preserveWorldPoint.viewportX;
+          const nextTop = preserveWorldPoint.contentY * scaleRatio - preserveWorldPoint.viewportY;
+          scene.scrollLeft = Math.max(0, Math.min(maxScrollX, nextLeft));
+          scene.scrollTop = Math.max(0, Math.min(maxScrollY, nextTop));
+        } else if (!portraitPanInitialised) {
+          // Begin at the pier/entry side. The user can pan around the pond.
           scene.scrollLeft = 0;
+          scene.scrollTop = 0;
           portraitPanInitialised = true;
         } else {
-          scene.scrollLeft = Math.max(
-            0,
-            Math.min(maxScroll, previousRatio * maxScroll)
-          );
+          scene.scrollLeft = Math.max(0, Math.min(maxScrollX, previousRatioX * maxScrollX));
+          scene.scrollTop = Math.max(0, Math.min(maxScrollY, previousRatioY * maxScrollY));
         }
       } else {
         scene.scrollLeft = 0;
+        scene.scrollTop = 0;
         portraitPanInitialised = false;
+        portraitUserZoom = 1;
+        updateMobileZoomUi();
       }
     });
   }
@@ -2080,6 +2109,71 @@
     scoreboardPanel.hidden = true;
   });
 
+  function touchDistance(a, b) {
+    return Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
+  }
+
+  function touchMidpoint(a, b) {
+    return {
+      x: (a.clientX + b.clientX) / 2,
+      y: (a.clientY + b.clientY) / 2
+    };
+  }
+
+  function startPondPinch(event) {
+    if (!portraitZoomEnabled() || event.touches.length !== 2) return;
+    const rect = scene.getBoundingClientRect();
+    const midpoint = touchMidpoint(event.touches[0], event.touches[1]);
+    pinchState = {
+      startDistance: Math.max(1, touchDistance(event.touches[0], event.touches[1])),
+      startZoom: portraitUserZoom,
+      viewportX: midpoint.x - rect.left,
+      viewportY: midpoint.y - rect.top,
+      contentX: scene.scrollLeft + (midpoint.x - rect.left),
+      contentY: scene.scrollTop + (midpoint.y - rect.top),
+      lastAppliedZoom: portraitUserZoom
+    };
+    event.preventDefault();
+  }
+
+  function movePondPinch(event) {
+    if (!pinchState || event.touches.length !== 2 || !portraitZoomEnabled()) return;
+    event.preventDefault();
+
+    const distance = Math.max(1, touchDistance(event.touches[0], event.touches[1]));
+    const requested = pinchState.startZoom * (distance / pinchState.startDistance);
+    const nextZoom = Math.max(PORTRAIT_USER_ZOOM_MIN, Math.min(PORTRAIT_USER_ZOOM_MAX, requested));
+
+    // Do not reflow for sub-pixel finger jitter. Each accepted update only
+    // changes the transform/stage dimensions and scroll position; it never
+    // rebuilds ducks, effects, timers, listeners or the preload queue.
+    if (Math.abs(nextZoom - pinchState.lastAppliedZoom) < 0.015) return;
+    portraitUserZoom = nextZoom;
+    pinchState.lastAppliedZoom = nextZoom;
+    applyWorldScale({
+      preserveWorldPoint: {
+        contentX: pinchState.contentX,
+        contentY: pinchState.contentY,
+        viewportX: pinchState.viewportX,
+        viewportY: pinchState.viewportY
+      }
+    });
+  }
+
+  function endPondPinch(event) {
+    if (!pinchState) return;
+    if (event.touches.length < 2) pinchState = null;
+  }
+
+  // On portrait iPhone/iPad, two-finger gestures over the pond are handled
+  // by the app rather than magnifying Safari's visual viewport. Native Safari
+  // pinch was capable of multiplying compositor/tile memory for this already
+  // transformed, animated scene until WebKit killed and reloaded the page.
+  scene.addEventListener("touchstart", startPondPinch, { passive: false });
+  scene.addEventListener("touchmove", movePondPinch, { passive: false });
+  scene.addEventListener("touchend", endPondPinch, { passive: true });
+  scene.addEventListener("touchcancel", endPondPinch, { passive: true });
+
   function setMobileControlsOpen(open) {
     if (!developerControls || !mobileControlsToggle) return;
     developerControls.classList.toggle("mobile-open", open);
@@ -2104,42 +2198,40 @@
     });
   }
 
-  let resizeFrame = null;
-  let lastLayoutWidth = document.documentElement.clientWidth;
-
-  function viewportIsPinchZoomed() {
-    return Boolean(
-      window.visualViewport &&
-      Math.abs((window.visualViewport.scale || 1) - 1) > .02
-    );
+  if (mobileZoomReset) {
+    mobileZoomReset.addEventListener("click", () => {
+      portraitUserZoom = 1;
+      pinchState = null;
+      applyWorldScale();
+    });
   }
 
-  function handleViewportChange(force = false) {
-    // Browser pinch zoom and mobile browser chrome can fire resize events
-    // without changing the actual page layout width. Re-scaling the world in
-    // those cases used to make the pond snap/reset or appear broken mid-pinch.
-    if (!force && viewportIsPinchZoomed()) return;
+  let resizeFrame = null;
+  let orientationTimer = null;
+  let lastLayoutWidth = document.documentElement.clientWidth;
 
+  function handleViewportChange(force = false) {
+    // Only layout-width changes are allowed to rescale the world. Safari's
+    // visualViewport resize stream is intentionally ignored: browser chrome
+    // motion and native pinch can emit dozens of events while the page layout
+    // itself is unchanged.
     const layoutWidth = document.documentElement.clientWidth;
     if (!force && Math.abs(layoutWidth - lastLayoutWidth) < 2) return;
     lastLayoutWidth = layoutWidth;
 
     if (resizeFrame) cancelAnimationFrame(resizeFrame);
-    resizeFrame = requestAnimationFrame(() => {
-      applyWorldScale();
-    });
+    resizeFrame = requestAnimationFrame(() => applyWorldScale());
   }
 
-  window.addEventListener("resize", () => handleViewportChange(false));
+  window.addEventListener("resize", () => handleViewportChange(false), { passive: true });
   window.addEventListener("orientationchange", () => {
-    setTimeout(() => handleViewportChange(true), 120);
-  });
-
-  if (window.visualViewport) {
-    window.visualViewport.addEventListener("resize", () => {
-      if (!viewportIsPinchZoomed()) handleViewportChange(false);
-    });
-  }
+    if (orientationTimer) clearTimeout(orientationTimer);
+    orientationTimer = setTimeout(() => {
+      portraitUserZoom = 1;
+      pinchState = null;
+      handleViewportChange(true);
+    }, 180);
+  }, { passive: true });
 
 
   applyWorldScale();
