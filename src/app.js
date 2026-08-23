@@ -531,6 +531,70 @@
     });
   }
 
+  function setWorldPosition(element, xPct, yPct) {
+    element.style.left = `${pctToWorldX(xPct)}px`;
+    element.style.top = `${pctToWorldY(yPct)}px`;
+  }
+
+  function updateCounts() {
+    const count = ducks.size;
+    scoreboardCount.textContent = String(count);
+    panelDuckCount.textContent = String(count);
+  }
+
+  function maxActiveSwimmers() {
+    return Math.max(4, Math.min(10, Math.round(ducks.size * .15)));
+  }
+
+  function scaleForY(y) {
+    const clamped = Math.max(51, Math.min(89, y));
+    const t = (clamped - 51) / 38;
+    return .45 + t * .43;
+  }
+
+  function applyDuckSize(duck) {
+    const variant = BUILD_VARIANTS[duck.dataset.buildVariant] || BUILD_VARIANTS.standard;
+    // Keep the underlying sprite canvas constant. Build is a deliberate
+    // caricature layer applied separately from pond-perspective scaling.
+    duck.style.setProperty("--duck-size", "130px");
+    duck.style.setProperty("--build-scale-x", variant.scaleX.toFixed(3));
+    duck.style.setProperty("--build-scale-y", variant.scaleY.toFixed(3));
+  }
+
+  // v0.67: restored verbatim from the stable v0.64 simulation/depth path.
+  // These helpers must remain independent of the mobile view/zoom layer.
+  function depthZForY(y) {
+    return 100 + Math.round(y * 10);
+  }
+
+  function setDepth(duck, y) {
+    duck.style.setProperty("--duck-scale", scaleForY(y).toFixed(3));
+
+    // Swimming ducks sort against one another by Y, but remain below the
+    // permanent pier layer (z-index 2200). Entry ducks are explicitly raised
+    // above the pier while waddling and jumping.
+    duck.style.zIndex = String(depthZForY(y));
+  }
+
+  function setEffectDepth(effect, y) {
+    // Splash/resurface effects participate in the same Y-depth field as the
+    // ducks. A duck lower on screen therefore passes in front of the splash;
+    // a duck higher on screen remains behind it.
+    effect.style.zIndex = String(depthZForY(y));
+  }
+
+  function pointOnSegment(x, y, x1, y1, x2, y2, tolerance = .12) {
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const lengthSq = dx * dx + dy * dy;
+    if (lengthSq === 0) return Math.hypot(x - x1, y - y1) <= tolerance;
+
+    const t = Math.max(0, Math.min(1, ((x - x1) * dx + (y - y1) * dy) / lengthSq));
+    const px = x1 + t * dx;
+    const py = y1 + t * dy;
+    return Math.hypot(x - px, y - py) <= tolerance;
+  }
+
   function pointInPolygonInclusive(x, y, polygon) {
     for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
       if (pointOnSegment(x, y, polygon[j][0], polygon[j][1], polygon[i][0], polygon[i][1])) {
@@ -2204,12 +2268,29 @@
   }, { passive: true });
 
 
-  applyWorldScale();
-  updateCounts();
-  updateDuckTypeButton();
-  updateFeatherToneButton();
-  updateBuildVariantButton();
-  initialiseProductionAssets();
+  function showStartupFailure(error) {
+    console.error("Duck Pond startup failed", error);
+    setDuckControlsEnabled(false);
+    if (loadingOverlay) {
+      loadingOverlay.hidden = false;
+      loadingOverlay.classList.remove("loading-complete");
+      loadingOverlay.classList.add("loading-failed");
+    }
+    if (loadingTitle) loadingTitle.textContent = "Pond failed to start";
+    if (loadingProgress) loadingProgress.textContent = "Reload to retry";
+    if (status) status.textContent = `Pond startup error: ${error?.message || error || "Unknown error"}`;
+  }
+
+  try {
+    applyWorldScale();
+    updateCounts();
+    updateDuckTypeButton();
+    updateFeatherToneButton();
+    updateBuildVariantButton();
+    initialiseProductionAssets().catch(showStartupFailure);
+  } catch (error) {
+    showStartupFailure(error);
+  }
 
   window.addEventListener("load", applyWorldScale, { once: true });
 })();
