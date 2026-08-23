@@ -3,19 +3,24 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Taipan Pond — Stress Test v0.62</title>
+  <title>Taipan Pond — Stress Test v0.63</title>
   <link rel="stylesheet" href="src/styles.css">
 </head>
 <body>
   <main class="app-shell">
     <header class="toolbar">
-      <div>
+      <div class="toolbar-copy">
         <p class="eyebrow">Taipans Cricket Club</p>
-        <h1>Duck Pond — Stress Test v0.62</h1>
-        <p class="subtle">Cold-load reliability build: preload/decode all production sprites before duck controls unlock, plus swimming captain C visibility fix.</p>
+        <h1>Duck Pond — Stress Test v0.63</h1>
+        <p class="subtle">Mobile/layering reliability build: bounded sprite preload, Y-sorted splash effects, captain C placement fix and a larger portrait viewing mode.</p>
       </div>
 
-      <div class="controls" aria-label="Developer controls">
+      <div class="mobile-toolbar-actions" aria-label="Mobile pond controls">
+        <button id="mobileControlsToggle" type="button" class="secondary" aria-expanded="false" aria-controls="developerControls">Test Controls</button>
+        <button id="mobilePondToggle" type="button" class="secondary" aria-pressed="false">Expand Pond</button>
+      </div>
+
+      <div id="developerControls" class="controls" aria-label="Developer controls">
         <button id="duckTypeButton" type="button" disabled class="secondary">Duck Type: Standard</button>
         <button id="featherToneButton" type="button" disabled class="secondary">Feather: White</button>
         <button id="buildVariantButton" type="button" disabled class="secondary">Build: Standard</button>
@@ -80,7 +85,7 @@
 
     <footer>
       <strong>What to judge:</strong>
-      first-use jump/splash/swim transitions on GitHub Pages, direction changes, and captain C visibility in the water.
+      mobile portrait readability, pinch stability, splash depth around nearby ducks, captain C placement, and cold-load completion on GitHub Pages.
     </footer>
   </main>
 

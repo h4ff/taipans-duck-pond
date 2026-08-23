@@ -55,7 +55,8 @@ body {
   flex-wrap: wrap;
 }
 
-.controls button {
+.controls button,
+.mobile-toolbar-actions button {
   font: inherit;
   font-weight: 800;
   border: 3px solid var(--ink);
@@ -68,12 +69,14 @@ body {
   touch-action: manipulation;
 }
 
-.controls button:active {
+.controls button:active,
+.mobile-toolbar-actions button:active {
   transform: translateY(3px);
   box-shadow: 0 1px 0 var(--ink);
 }
 
-.controls button.secondary {
+.controls button.secondary,
+.mobile-toolbar-actions button.secondary {
   background: var(--cream);
   color: var(--ink);
 }
@@ -81,6 +84,10 @@ body {
 #directedAddButton[aria-pressed="true"] {
   background: var(--yellow);
   color: var(--ink);
+}
+
+.mobile-toolbar-actions {
+  display: none;
 }
 
 .scene-frame {
@@ -143,7 +150,7 @@ body {
 .near-bank { z-index: 2100; }
 .reeds { z-index: 2140; }
 .pier-depth { z-index: 2200; }
-.splash-layer { z-index: 3000; pointer-events: none; }
+.splash-layer { z-index: auto; pointer-events: none; }
 
 .duck {
   --duck-size: 124px;
@@ -309,7 +316,7 @@ img.entry-role-overlay {
 .swim-face { z-index: 4; }
 .swim-role-layer { z-index: 5; }
 .swim-wing-front { z-index: 6; }
-.swim-captain-layer { z-index: 8; }
+.swim-captain-layer { z-index: 5; }
 .swim-hat {
   z-index: 7;
   transform: scaleX(var(--hat-counter-scale));
@@ -322,7 +329,7 @@ img.entry-role-overlay {
 }
 
 .captain-mark-swim {
-  left: 43.5%;
+  left: 28%;
   top: 64%;
   width: 12%;
   height: 13%;
@@ -638,23 +645,35 @@ footer {
     font-size: clamp(1.65rem, 7.5vw, 2.15rem);
   }
 
-  .controls {
+  .mobile-toolbar-actions {
     width: 100%;
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
   }
 
+  .mobile-toolbar-actions button,
   .controls button {
     width: 100%;
-    min-height: 52px;
+    min-height: 48px;
     padding: .55rem .45rem;
+  }
+
+  .controls {
+    width: 100%;
+    display: none;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .controls.mobile-open {
+    display: grid;
   }
 
   .scene-viewport {
     overflow-x: auto;
     overflow-y: hidden;
-    touch-action: pan-x;
+    touch-action: pan-x pinch-zoom;
     scrollbar-width: none;
   }
 
@@ -671,5 +690,26 @@ footer {
 
   footer {
     font-size: .95rem;
+  }
+
+  body.pond-focus-mode .app-shell {
+    padding: 2px;
+  }
+
+  body.pond-focus-mode .toolbar {
+    gap: 4px;
+    margin-bottom: 4px;
+  }
+
+  body.pond-focus-mode .toolbar-copy,
+  body.pond-focus-mode .controls,
+  body.pond-focus-mode .scene-note,
+  body.pond-focus-mode footer {
+    display: none !important;
+  }
+
+  body.pond-focus-mode .scene-frame {
+    border-width: 3px;
+    border-radius: 12px;
   }
 }

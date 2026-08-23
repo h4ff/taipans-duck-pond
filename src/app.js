@@ -22,6 +22,9 @@
   const testCaptainButton = document.getElementById("testCaptainButton");
   const testCoachButton = document.getElementById("testCoachButton");
   const resetButton = document.getElementById("resetButton");
+  const developerControls = document.getElementById("developerControls");
+  const mobileControlsToggle = document.getElementById("mobileControlsToggle");
+  const mobilePondToggle = document.getElementById("mobilePondToggle");
 
   const scoreboardCount = document.getElementById("scoreboardCount");
   const panelDuckCount = document.getElementById("panelDuckCount");
@@ -235,34 +238,88 @@
     return [...urls];
   }
 
+  const PRELOAD_CONCURRENCY = 6;
+  const PRELOAD_ATTEMPTS = 3;
+  const PRELOAD_LOAD_TIMEOUT_MS = 12000;
+  const PRELOAD_DECODE_TIMEOUT_MS = 7000;
+
+  function promiseWithTimeout(promise, timeoutMs, message) {
+    let timer = null;
+    return Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(message)), timeoutMs);
+      })
+    ]).finally(() => {
+      if (timer) clearTimeout(timer);
+    });
+  }
+
+  async function loadAndDecodeImageOnce(url) {
+    const image = new Image();
+    image.decoding = "async";
+    image.loading = "eager";
+
+    await promiseWithTimeout(
+      new Promise((resolve, reject) => {
+        image.addEventListener("load", resolve, { once: true });
+        image.addEventListener(
+          "error",
+          () => reject(new Error(`Image failed to load: ${url}`)),
+          { once: true }
+        );
+        image.src = url;
+      }),
+      PRELOAD_LOAD_TIMEOUT_MS,
+      `Image load timed out: ${url}`
+    );
+
+    if (!image.naturalWidth || !image.naturalHeight) {
+      throw new Error(`Image loaded without dimensions: ${url}`);
+    }
+
+    // Safari/iOS can occasionally leave decode() pending when a large number
+    // of images are requested together. The bounded queue below avoids that
+    // pressure; this timeout guarantees one sprite can never wedge the whole
+    // page at (for example) 92/99 forever.
+    if (typeof image.decode === "function") {
+      try {
+        await promiseWithTimeout(
+          image.decode(),
+          PRELOAD_DECODE_TIMEOUT_MS,
+          `Image decode timed out: ${url}`
+        );
+      } catch (decodeError) {
+        // A completed image with valid dimensions is still safe to retain.
+        // Give the browser two paint turns to finish its internal decode work.
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        if (!image.complete || !image.naturalWidth || !image.naturalHeight) {
+          throw decodeError;
+        }
+      }
+    }
+
+    return image;
+  }
+
   async function preloadAndDecodeImage(url) {
     if (PRELOADED_IMAGES.has(url)) return PRELOADED_IMAGES.get(url);
 
-    const image = new Image();
-    image.decoding = "async";
-    image.src = url;
-
-    // decode() waits for both the network response and image decoding. The
-    // load fallback covers browsers that reject decode() despite a valid PNG.
-    try {
-      await image.decode();
-    } catch (decodeError) {
-      await new Promise((resolve, reject) => {
-        if (image.complete && image.naturalWidth > 0) {
-          resolve();
-          return;
+    let lastError = null;
+    for (let attempt = 1; attempt <= PRELOAD_ATTEMPTS; attempt++) {
+      try {
+        const image = await loadAndDecodeImageOnce(url);
+        PRELOADED_IMAGES.set(url, image);
+        return image;
+      } catch (error) {
+        lastError = error;
+        if (attempt < PRELOAD_ATTEMPTS) {
+          await sleep(180 * attempt);
         }
-        image.addEventListener("load", resolve, { once: true });
-        image.addEventListener("error", () => reject(decodeError), { once: true });
-      });
+      }
     }
 
-    if (!image.naturalWidth || !image.naturalHeight) {
-      throw new Error(`Image failed to preload: ${url}`);
-    }
-
-    PRELOADED_IMAGES.set(url, image);
-    return image;
+    throw lastError || new Error(`Image failed to preload: ${url}`);
   }
 
   const duckControlButtons = [
@@ -282,23 +339,41 @@
     const manifest = productionImageManifest();
     status.textContent = `Loading duck assets… 0/${manifest.length}`;
 
-    let loaded = 0;
-    try {
-      await Promise.all(manifest.map(async url => {
-        const image = await preloadAndDecodeImage(url);
-        loaded += 1;
-        status.textContent = `Loading duck assets… ${loaded}/${manifest.length}`;
-        return image;
-      }));
+    let cursor = 0;
+    let completed = 0;
+    const failures = [];
 
-      setDuckControlsEnabled(true);
-      status.textContent =
-        `Ready — ${manifest.length} production images preloaded and decoded. Test first-entry transitions on hosted and local builds.`;
-    } catch (error) {
-      console.error("Duck asset preload failed", error);
-      status.textContent =
-        "Asset preload failed. Duck controls remain disabled so an incomplete sprite set cannot animate.";
+    async function worker() {
+      while (true) {
+        const index = cursor++;
+        if (index >= manifest.length) return;
+        const url = manifest[index];
+
+        try {
+          await preloadAndDecodeImage(url);
+        } catch (error) {
+          failures.push({ url, error });
+          console.error("Duck asset preload failed", url, error);
+        } finally {
+          completed += 1;
+          status.textContent = `Loading duck assets… ${completed}/${manifest.length}`;
+        }
+      }
     }
+
+    const workerCount = Math.min(PRELOAD_CONCURRENCY, manifest.length);
+    await Promise.all(Array.from({ length: workerCount }, () => worker()));
+
+    if (failures.length) {
+      setDuckControlsEnabled(false);
+      status.textContent =
+        `Asset preload finished with ${failures.length} failed image${failures.length === 1 ? "" : "s"}. Reload to retry; controls remain disabled.`;
+      return;
+    }
+
+    setDuckControlsEnabled(true);
+    status.textContent =
+      `Ready — ${manifest.length} production images loaded through the mobile-safe preload queue.`;
   }
 
   const ducks = new Map();
@@ -317,6 +392,7 @@
   }
   let worldScale = 1;
   let portraitPanInitialised = false;
+  let mobilePondExpanded = false;
 
   const waterPolygon = [
     [11.5,57.0],[20.0,53.5],[31.0,51.5],[44.0,50.7],
@@ -343,6 +419,11 @@
     ).matches;
   }
 
+  function portraitZoomFactor() {
+    if (!portraitZoomEnabled()) return 1;
+    return mobilePondExpanded ? 1.92 : 1.60;
+  }
+
   function applyWorldScale() {
     const previousScrollable = Math.max(
       0,
@@ -353,7 +434,7 @@
       : 0;
 
     const fitScale = scene.clientWidth / WORLD_WIDTH;
-    const zoom = portraitZoomEnabled() ? 1.45 : 1;
+    const zoom = portraitZoomFactor();
     worldScale = fitScale * zoom;
 
     const renderedWidth = Math.round(WORLD_WIDTH * worldScale);
@@ -419,14 +500,24 @@
     duck.style.setProperty("--build-scale-y", variant.scaleY.toFixed(3));
   }
 
+  function depthZForY(y) {
+    return 100 + Math.round(y * 10);
+  }
+
   function setDepth(duck, y) {
     duck.style.setProperty("--duck-scale", scaleForY(y).toFixed(3));
 
     // Swimming ducks sort against one another by Y, but remain below the
     // permanent pier layer (z-index 2200). Entry ducks are explicitly raised
     // above the pier while waddling and jumping.
-    const z = 100 + Math.round(y * 10);
-    duck.style.zIndex = String(z);
+    duck.style.zIndex = String(depthZForY(y));
+  }
+
+  function setEffectDepth(effect, y) {
+    // Splash/resurface effects participate in the same Y-depth field as the
+    // ducks. A duck lower on screen therefore passes in front of the splash;
+    // a duck higher on screen remains behind it.
+    effect.style.zIndex = String(depthZForY(y));
   }
 
   function pointOnSegment(x, y, x1, y1, x2, y2, tolerance = .12) {
@@ -691,7 +782,8 @@
     splash.appendChild(image);
 
     setWorldPosition(splash, xPct, yPct);
-    splashLayer.appendChild(splash);
+    setEffectDepth(splash, yPct);
+    duckLayer.appendChild(splash);
 
     const timings = [90, 105, 130, 175];
     for (let i = 1; i <= 4; i++) {
@@ -712,7 +804,8 @@
     ripple.appendChild(image);
 
     setWorldPosition(ripple, xPct, yPct);
-    splashLayer.appendChild(ripple);
+    setEffectDepth(ripple, yPct);
+    duckLayer.appendChild(ripple);
     ripple.addEventListener("animationend", () => ripple.remove(), { once: true });
   }
 
@@ -1987,16 +2080,66 @@
     scoreboardPanel.hidden = true;
   });
 
+  function setMobileControlsOpen(open) {
+    if (!developerControls || !mobileControlsToggle) return;
+    developerControls.classList.toggle("mobile-open", open);
+    mobileControlsToggle.setAttribute("aria-expanded", String(open));
+    mobileControlsToggle.textContent = open ? "Hide Controls" : "Test Controls";
+  }
+
+  if (mobileControlsToggle) {
+    mobileControlsToggle.addEventListener("click", () => {
+      setMobileControlsOpen(!developerControls.classList.contains("mobile-open"));
+    });
+  }
+
+  if (mobilePondToggle) {
+    mobilePondToggle.addEventListener("click", () => {
+      mobilePondExpanded = !mobilePondExpanded;
+      document.body.classList.toggle("pond-focus-mode", mobilePondExpanded);
+      mobilePondToggle.setAttribute("aria-pressed", String(mobilePondExpanded));
+      mobilePondToggle.textContent = mobilePondExpanded ? "Normal View" : "Expand Pond";
+      if (mobilePondExpanded) setMobileControlsOpen(false);
+      applyWorldScale();
+    });
+  }
+
   let resizeFrame = null;
-  function handleViewportChange() {
+  let lastLayoutWidth = document.documentElement.clientWidth;
+
+  function viewportIsPinchZoomed() {
+    return Boolean(
+      window.visualViewport &&
+      Math.abs((window.visualViewport.scale || 1) - 1) > .02
+    );
+  }
+
+  function handleViewportChange(force = false) {
+    // Browser pinch zoom and mobile browser chrome can fire resize events
+    // without changing the actual page layout width. Re-scaling the world in
+    // those cases used to make the pond snap/reset or appear broken mid-pinch.
+    if (!force && viewportIsPinchZoomed()) return;
+
+    const layoutWidth = document.documentElement.clientWidth;
+    if (!force && Math.abs(layoutWidth - lastLayoutWidth) < 2) return;
+    lastLayoutWidth = layoutWidth;
+
     if (resizeFrame) cancelAnimationFrame(resizeFrame);
     resizeFrame = requestAnimationFrame(() => {
       applyWorldScale();
     });
   }
 
-  window.addEventListener("resize", handleViewportChange);
-  window.addEventListener("orientationchange", handleViewportChange);
+  window.addEventListener("resize", () => handleViewportChange(false));
+  window.addEventListener("orientationchange", () => {
+    setTimeout(() => handleViewportChange(true), 120);
+  });
+
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", () => {
+      if (!viewportIsPinchZoomed()) handleViewportChange(false);
+    });
+  }
 
 
   applyWorldScale();
