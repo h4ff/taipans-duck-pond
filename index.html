@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Taipan Pond — Stress Test v0.61</title>
+  <title>Taipan Pond — Stress Test v0.62</title>
   <link rel="stylesheet" href="src/styles.css">
 </head>
 <body>
@@ -11,21 +11,21 @@
     <header class="toolbar">
       <div>
         <p class="eyebrow">Taipans Cricket Club</p>
-        <h1>Duck Pond — Stress Test v0.61</h1>
-        <p class="subtle">Role accessory test build with repeatable captains/coaches, coach whistle, captain C, headwear priority and existing pond interactions.</p>
+        <h1>Duck Pond — Stress Test v0.62</h1>
+        <p class="subtle">Cold-load reliability build: preload/decode all production sprites before duck controls unlock, plus swimming captain C visibility fix.</p>
       </div>
 
       <div class="controls" aria-label="Developer controls">
-        <button id="duckTypeButton" type="button" class="secondary">Duck Type: Standard</button>
-        <button id="featherToneButton" type="button" class="secondary">Feather: White</button>
-        <button id="buildVariantButton" type="button" class="secondary">Build: Standard</button>
-        <button id="addDuckButton" type="button">+ Add Duck</button>
-        <button id="load60Button" type="button" class="secondary">Load 60 Ducks</button>
-        <button id="testPresidentButton" type="button" class="secondary">Test President</button>
-        <button id="testLeaderButton" type="button" class="secondary">Test Leader</button>
-        <button id="testCaptainButton" type="button" class="secondary">Test Captain</button>
-        <button id="testCoachButton" type="button" class="secondary">Test Coach</button>
-        <button id="resetButton" type="button" class="secondary">Reset</button>
+        <button id="duckTypeButton" type="button" disabled class="secondary">Duck Type: Standard</button>
+        <button id="featherToneButton" type="button" disabled class="secondary">Feather: White</button>
+        <button id="buildVariantButton" type="button" disabled class="secondary">Build: Standard</button>
+        <button id="addDuckButton" type="button" disabled>+ Add Duck</button>
+        <button id="load60Button" type="button" disabled class="secondary">Load 60 Ducks</button>
+        <button id="testPresidentButton" type="button" disabled class="secondary">Test President</button>
+        <button id="testLeaderButton" type="button" disabled class="secondary">Test Leader</button>
+        <button id="testCaptainButton" type="button" disabled class="secondary">Test Captain</button>
+        <button id="testCoachButton" type="button" disabled class="secondary">Test Coach</button>
+        <button id="resetButton" type="button" disabled class="secondary">Reset</button>
       </div>
     </header>
 
@@ -75,12 +75,12 @@
     </section>
 
     <div id="status" class="scene-note" aria-live="polite">
-      Load 60 ducks, or replay President/Leader/Captain/Coach roles from the pier to test overlays.
+      Loading and decoding production duck assets before first use…
     </div>
 
     <footer>
       <strong>What to judge:</strong>
-      role headwear/accessories in entry and swimming, including multiple captains/coaches, plus existing movement and interactions.
+      first-use jump/splash/swim transitions on GitHub Pages, direction changes, and captain C visibility in the water.
     </footer>
   </main>
 

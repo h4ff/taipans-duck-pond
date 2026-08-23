@@ -184,6 +184,123 @@
     return `assets/effects/splash/${safeType}/splash-${String(frameNumber).padStart(2, "0")}.png`;
   }
 
+  // Keep strong references to decoded production sprites for the lifetime of
+  // the page. GitHub Pages can otherwise expose a one-frame cold-load gap
+  // the first time a walk/swim/splash/accessory variant is requested.
+  const PRELOADED_IMAGES = new Map();
+
+  function productionImageManifest() {
+    const urls = new Set([
+      "assets/scene/background.png",
+      "assets/scene/foreground-near-bank.png",
+      "assets/scene/foreground-reeds.png",
+      "assets/scene/pier-foreground.png",
+      SWIM_ASSETS.faces.neutral,
+      SWIM_ASSETS.faces.surprised,
+      SWIM_ASSETS.faces.angry,
+      SWIM_ASSETS.blinks.neutral,
+      ...Object.values(SWIM_ASSETS.wakes)
+    ]);
+
+    for (const headwear of Object.values(HEADWEAR_ASSETS)) {
+      urls.add(headwear.walk);
+      urls.add(headwear.swim.left);
+      urls.add(headwear.swim.right);
+    }
+
+    urls.add(ROLE_ASSETS.coach.walk);
+    urls.add(ROLE_ASSETS.coach.swim.left);
+    urls.add(ROLE_ASSETS.coach.swim.right);
+
+    for (const duckType of DUCK_TYPES) {
+      for (let frame = 1; frame <= 4; frame++) {
+        urls.add(splashFrameSrc(duckType, frame));
+      }
+
+      for (const featherTone of FEATHER_TONE_KEYS) {
+        for (let frame = 1; frame <= 3; frame++) {
+          urls.add(walkFrameSrc(duckType, featherTone, frame));
+        }
+        urls.add(swimBodySrc(duckType, featherTone));
+      }
+    }
+
+    for (const featherTone of FEATHER_TONE_KEYS) {
+      urls.add(swimWingSrc("front", featherTone));
+      urls.add(swimWingSrc("back", featherTone));
+      urls.add(swimFaceSrc("sad", featherTone));
+      urls.add(swimBlinkSrc("sad", featherTone));
+    }
+
+    return [...urls];
+  }
+
+  async function preloadAndDecodeImage(url) {
+    if (PRELOADED_IMAGES.has(url)) return PRELOADED_IMAGES.get(url);
+
+    const image = new Image();
+    image.decoding = "async";
+    image.src = url;
+
+    // decode() waits for both the network response and image decoding. The
+    // load fallback covers browsers that reject decode() despite a valid PNG.
+    try {
+      await image.decode();
+    } catch (decodeError) {
+      await new Promise((resolve, reject) => {
+        if (image.complete && image.naturalWidth > 0) {
+          resolve();
+          return;
+        }
+        image.addEventListener("load", resolve, { once: true });
+        image.addEventListener("error", () => reject(decodeError), { once: true });
+      });
+    }
+
+    if (!image.naturalWidth || !image.naturalHeight) {
+      throw new Error(`Image failed to preload: ${url}`);
+    }
+
+    PRELOADED_IMAGES.set(url, image);
+    return image;
+  }
+
+  const duckControlButtons = [
+    duckTypeButton, featherToneButton, buildVariantButton, addDuckButton,
+    load60Button, testPresidentButton, testLeaderButton, testCaptainButton,
+    testCoachButton, resetButton
+  ];
+
+  function setDuckControlsEnabled(enabled) {
+    for (const button of duckControlButtons) {
+      if (button) button.disabled = !enabled;
+    }
+  }
+
+  async function initialiseProductionAssets() {
+    setDuckControlsEnabled(false);
+    const manifest = productionImageManifest();
+    status.textContent = `Loading duck assets… 0/${manifest.length}`;
+
+    let loaded = 0;
+    try {
+      await Promise.all(manifest.map(async url => {
+        const image = await preloadAndDecodeImage(url);
+        loaded += 1;
+        status.textContent = `Loading duck assets… ${loaded}/${manifest.length}`;
+        return image;
+      }));
+
+      setDuckControlsEnabled(true);
+      status.textContent =
+        `Ready — ${manifest.length} production images preloaded and decoded. Test first-entry transitions on hosted and local builds.`;
+    } catch (error) {
+      console.error("Duck asset preload failed", error);
+      status.textContent =
+        "Asset preload failed. Duck controls remain disabled so an incomplete sprite set cannot animate.";
+    }
+  }
+
   const ducks = new Map();
   let nextDuckId = 1;
   let activeSwimmers = 0;
@@ -1887,6 +2004,7 @@
   updateDuckTypeButton();
   updateFeatherToneButton();
   updateBuildVariantButton();
+  initialiseProductionAssets();
 
   window.addEventListener("load", applyWorldScale, { once: true });
 })();
