@@ -787,6 +787,10 @@ footer {
 
 }
 @media (max-width: 900px) and (pointer: coarse) and (orientation: landscape) {
+  #mobilePondToggle {
+    display: none;
+  }
+
   .app-shell {
     padding: 6px;
   }

@@ -12,7 +12,8 @@
   const splashLayer = document.getElementById("splashLayer");
   const destinationMarker = document.getElementById("destinationMarker");
 
-  const addDuckButton = document.getElementById("addDuckButton");
+  const addMaleButton = document.getElementById("addMaleButton");
+  const addFemaleButton = document.getElementById("addFemaleButton");
   const duckTypeButton = document.getElementById("duckTypeButton");
   const featherToneButton = document.getElementById("featherToneButton");
   const buildVariantButton = document.getElementById("buildVariantButton");
@@ -72,6 +73,11 @@
     }
   };
 
+  const FEMALE_ASSETS = {
+    walkRoot: "assets/duck/female/walk",
+    swimBodyRoot: "assets/duck/female/swim/body"
+  };
+
   function normalizedRoles(roles = [], clubRole = "player") {
     const values = Array.isArray(roles) ? roles : [roles];
     const safe = new Set(values.filter(role => ["president", "captain", "coach"].includes(role)));
@@ -92,10 +98,13 @@
     return facing === "right" ? ROLE_ASSETS.coach.swim.right : ROLE_ASSETS.coach.swim.left;
   }
 
-  function walkFrameSrc(duckType, featherTone, frameNumber) {
+  function walkFrameSrc(duckType, featherTone, frameNumber, presentation = "male") {
+    const safeFrame = Math.max(1, Math.min(3, frameNumber));
     const safeType = DUCK_TYPES.includes(duckType) ? duckType : "standard";
     const safeTone = FEATHER_TONES[featherTone] ? featherTone : "white";
-    const safeFrame = Math.max(1, Math.min(3, frameNumber));
+    if (presentation === "female") {
+      return `${FEMALE_ASSETS.walkRoot}/${safeType}/${safeTone}/walk-${String(safeFrame).padStart(2, "0")}.png`;
+    }
     return `${WALK_FRAME_ROOT}/${safeType}/${safeTone}/walk-${String(safeFrame).padStart(2, "0")}.png`;
   }
 
@@ -120,10 +129,17 @@
     }
   };
 
-  function swimBodySrc(duckType, featherTone) {
+  function swimBodySrc(duckType, featherTone, presentation = "male") {
     const safeType = DUCK_TYPES.includes(duckType) ? duckType : "standard";
     const safeTone = FEATHER_TONES[featherTone] ? featherTone : "white";
+    if (presentation === "female") {
+      return `${FEMALE_ASSETS.swimBodyRoot}/body-${safeType}-${safeTone}.png`;
+    }
     return `${SWIM_ASSETS.bodyRoot}/body-${safeType}-${safeTone}.png`;
+  }
+
+  function swimWakeSrc(duck) {
+    return SWIM_ASSETS.wakes[duck?.dataset?.duckType] || SWIM_ASSETS.wakes.standard;
   }
 
   function swimWingSrc(which, featherTone) {
@@ -227,8 +243,10 @@
       for (const featherTone of FEATHER_TONE_KEYS) {
         for (let frame = 1; frame <= 3; frame++) {
           urls.add(walkFrameSrc(duckType, featherTone, frame));
+          urls.add(walkFrameSrc(duckType, featherTone, frame, "female"));
         }
         urls.add(swimBodySrc(duckType, featherTone));
+        urls.add(swimBodySrc(duckType, featherTone, "female"));
       }
     }
 
@@ -239,7 +257,7 @@
       urls.add(swimBlinkSrc("sad", featherTone));
     }
 
-    return [...urls];
+    return [...urls].filter(Boolean);
   }
 
   const PRELOAD_CONCURRENCY = 6;
@@ -327,7 +345,7 @@
   }
 
   const duckControlButtons = [
-    duckTypeButton, featherToneButton, buildVariantButton, addDuckButton,
+    duckTypeButton, featherToneButton, buildVariantButton, addMaleButton, addFemaleButton,
     load60Button, testPresidentButton, testLeaderButton, testCaptainButton,
     testCoachButton, resetButton
   ];
@@ -1451,7 +1469,10 @@
 
     const image = document.createElement("img");
     image.className = "entry-frame";
-    image.src = walkFrameSrc(duck.dataset.duckType, duck.dataset.featherTone, frameIndex);
+    const presentation = duck.dataset.presentation === "female" ? "female" : "male";
+    // Walking presentation is mutually exclusive: this single frame is either
+    // the male base or the female base. No opposite-presentation frame exists underneath.
+    image.src = walkFrameSrc(duck.dataset.duckType, duck.dataset.featherTone, frameIndex, presentation);
     image.alt = "";
     visual.appendChild(image);
 
@@ -1485,7 +1506,7 @@
   function setWalkFrame(duck, frameNumber) {
     const image = duck.querySelector(".entry-frame");
     if (!image) return;
-    image.src = walkFrameSrc(duck.dataset.duckType, duck.dataset.featherTone, frameNumber);
+    image.src = walkFrameSrc(duck.dataset.duckType, duck.dataset.featherTone, frameNumber, duck.dataset.presentation);
     duck.dataset.walkFrame = String(frameNumber);
   }
 
@@ -1507,7 +1528,7 @@
 
     const wake = document.createElement("img");
     wake.className = "swim-layer swim-wake";
-    wake.src = SWIM_ASSETS.wakes[duck.dataset.duckType] || SWIM_ASSETS.wakes.standard;
+    wake.src = swimWakeSrc(duck);
     wake.alt = "";
 
     const wingBack = document.createElement("img");
@@ -1517,7 +1538,10 @@
 
     const body = document.createElement("img");
     body.className = "swim-layer swim-body";
-    body.src = swimBodySrc(duck.dataset.duckType, duck.dataset.featherTone);
+    const presentation = duck.dataset.presentation === "female" ? "female" : "male";
+    // Swimming presentation is mutually exclusive: exactly one base body element
+    // is created, selected from the male OR female asset matrix.
+    body.src = swimBodySrc(duck.dataset.duckType, duck.dataset.featherTone, presentation);
     body.alt = "";
 
     const face = document.createElement("img");
@@ -1601,7 +1625,8 @@
     clubRole = "player",
     roles = [],
     isLeader = false,
-    testRole = ""
+    testRole = "",
+    presentation = "male"
   }) {
     const id = nextDuckId++;
     const duck = document.createElement("button");
@@ -1610,6 +1635,7 @@
     duck.dataset.motionState = instant ? "floating" : "entering";
     duck.dataset.reacting = "false";
     duck.dataset.duckId = String(id);
+    duck.dataset.presentation = presentation === "female" ? "female" : "male";
     duck.dataset.buildVariant = BUILD_VARIANTS[buildVariant] ? buildVariant : "standard";
     duck.dataset.duckType = DUCK_TYPES.includes(duckType) ? duckType : "standard";
     duck.dataset.featherTone = FEATHER_TONES[featherTone] ? featherTone : "white";
@@ -1625,7 +1651,7 @@
     duck.dataset.swimPace = (0.88 + (id % 5) * 0.06).toFixed(2);
     duck.setAttribute(
       "aria-label",
-      `Duck ${id}, ${duck.dataset.duckType} duck`
+      `Duck ${id}, ${duck.dataset.presentation} ${duck.dataset.duckType} duck`
     );
 
     applyDuckSize(duck);
@@ -1897,14 +1923,17 @@
     scheduleIdleLife(duck);
   }
 
-  function addAnimatedDuck() {
+  function addAnimatedDuck(presentation = "male") {
+    const resolvedPresentation = presentation === "female" ? "female" : "male";
     const duck = makeDuck({
       point:{x:37,y:73.6},
       instant:false,
       duckType:selectedDuckType,
       featherTone:selectedFeatherTone,
-      buildVariant:selectedBuildVariant
+      buildVariant:selectedBuildVariant,
+      presentation: resolvedPresentation
     });
+    status.textContent = `Adding ${resolvedPresentation} ${selectedDuckType} duck with ${FEATHER_TONES[selectedFeatherTone].label.toLowerCase()} feathers and ${BUILD_VARIANTS[selectedBuildVariant].label.toLowerCase()} build.`;
     animateEntry(duck, null);
   }
 
@@ -2014,6 +2043,18 @@
     // the current leader is also a captain, and one captain is also a coach.
     const captainIndexes = new Set([2, 8, 14, 19, 36, 47].filter(index => index < target));
     const coachIndexes = new Set([11, 36].filter(index => index < target));
+    // Make around 30% of the stress population female-presentation ducks,
+    // spread across the pond rather than clustered together.
+    const femaleTarget = Math.max(0, Math.round(target * 0.3));
+    const femaleCandidates = Array.from({ length: target }, (_, index) => index)
+      .filter(index => index !== presidentIndex);
+    const femaleIndexes = new Set();
+    if (femaleTarget > 0 && femaleCandidates.length > 0) {
+      for (let n = 0; n < Math.min(femaleTarget, femaleCandidates.length); n++) {
+        const pick = Math.floor((n + 0.5) * femaleCandidates.length / Math.min(femaleTarget, femaleCandidates.length));
+        femaleIndexes.add(femaleCandidates[pick]);
+      }
+    }
 
     // Yellow feathering is intentionally rare. For Load 60 this produces
     // exactly three yellow-feather ducks (never the white president), and no
@@ -2071,6 +2112,7 @@
 
       const isPresident = i === presidentIndex;
       const isLeader = i === leaderIndex && !isPresident;
+      const presentation = femaleIndexes.has(i) ? "female" : "male";
       const roles = [];
       if (isPresident) roles.push("president");
       if (captainIndexes.has(i)) roles.push("captain");
@@ -2081,7 +2123,6 @@
         featherTone = "white";
         buildVariant = "standard";
       }
-
       makeDuck({
         point: safeBest,
         instant: true,
@@ -2090,14 +2131,15 @@
         buildVariant,
         roles,
         clubRole: isPresident ? "president" : "player",
-        isLeader
+        isLeader,
+        presentation
       });
     }
 
     const yellowCount = [...ducks.values()]
       .filter(duck => duck.dataset.featherTone === "yellow").length;
     status.textContent =
-      `Loaded ${target} ducks with president crown, leader cap, ${captainIndexes.size} captains, ${coachIndexes.size} coaches and ${yellowCount} yellow-feather ducks.`;
+      `Loaded ${target} ducks with president crown, leader cap, ${captainIndexes.size} captains, ${coachIndexes.size} coaches, ${femaleIndexes.size} female-presentation ducks and ${yellowCount} yellow-feather ducks.`;
   }
 
   function updateDuckTypeButton() {
@@ -2127,7 +2169,8 @@
       `New ducks will be ${selectedDuckType}.`;
   });
 
-  addDuckButton.addEventListener("click", addAnimatedDuck);
+  addMaleButton.addEventListener("click", () => addAnimatedDuck("male"));
+  addFemaleButton.addEventListener("click", () => addAnimatedDuck("female"));
   load60Button.addEventListener("click", () => loadPopulation(60));
   testPresidentButton.addEventListener("click", () => replayRoleEntry("president"));
   testLeaderButton.addEventListener("click", () => replayRoleEntry("leader"));
