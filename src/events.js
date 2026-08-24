@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  // v0.87 fake season events. Each row is one permanent duck event.
+  // v0.88 fake season events. Each row is one permanent duck event.
   // The dataset is deliberately weighted so the cumulative leaderboard has a
   // clear top three for the current-week playback test.
   window.DUCK_POND_TEST_EVENTS = Object.freeze([

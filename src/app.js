@@ -48,6 +48,13 @@
   const liveScoreboard = document.getElementById("liveScoreboard");
   const scoreboardPanel = document.getElementById("scoreboardPanel");
   const closeScoreboard = document.getElementById("closeScoreboard");
+  const playerStatsCard = document.getElementById("playerStatsCard");
+  const playerStatsName = document.getElementById("playerStatsName");
+  const playerStatsMeta = document.getElementById("playerStatsMeta");
+  const playerStatsSummary = document.getElementById("playerStatsSummary");
+  const playerStatsTypes = document.getElementById("playerStatsTypes");
+  const playerStatsLatest = document.getElementById("playerStatsLatest");
+  const closePlayerStats = document.getElementById("closePlayerStats");
   const status = document.getElementById("status");
   const loadingOverlay = document.getElementById("loadingOverlay");
   const loadingTitle = document.getElementById("loadingTitle");
@@ -105,12 +112,26 @@
     return PLAYER_BY_ID.get(playerId) || null;
   }
 
+  function displayPlayerName(player) {
+    if (!player) return "Unknown player";
+    const nickname = String(player.nickname || "").trim();
+    return nickname || player.name || "Unknown player";
+  }
+
+  function playerEventsThrough(playerId, endIso = selectedWeekContext?.end || "9999-12-31") {
+    return TEST_DUCK_EVENTS
+      .filter(event => event.playerId === playerId && event.date <= endIso)
+      .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
+  }
+
   function describePlayer(player) {
     if (!player) return "Unknown player";
     const roleText = (player.roles || []).length ? ` • ${(player.roles || []).join(" + ")}` : "";
     const feather = FEATHER_TONES[player.featherTone]?.label || player.featherTone || "White";
     const build = BUILD_VARIANTS[player.build]?.label || player.build || "Standard";
-    return `${player.name} • ${player.presentation} • ${feather} • ${build}${roleText}`;
+    const display = displayPlayerName(player);
+    const nameText = display !== player.name ? `${display} (${player.name})` : player.name;
+    return `${nameText} • ${player.presentation} • ${feather} • ${build}${roleText}`;
   }
 
   function formatClubDate(isoDate) {
@@ -173,7 +194,7 @@
       totals.set(player.id, current);
     }
     return [...totals.values()].sort((a, b) =>
-      b.count - a.count || a.player.name.localeCompare(b.player.name)
+      b.count - a.count || displayPlayerName(a.player).localeCompare(displayPlayerName(b.player))
     );
   }
 
@@ -205,7 +226,7 @@
     if (scoreboardPrimary) scoreboardPrimary.textContent = String(ducks.size);
     scoreboardMinis.forEach((element, index) => {
       const leader = leaders[index];
-      renderScoreMini(element, index + 1, leader ? `${shortScoreName(leader.player.name)} ${leader.count}` : "—");
+      renderScoreMini(element, index + 1, leader ? `${shortScoreName(displayPlayerName(leader.player))} ${leader.count}` : "—");
     });
     renderScoreboardPanel();
   }
@@ -213,8 +234,8 @@
   function showEntrantScoreboard(player, event, position, total) {
     scoreboardMode = "entrant";
     if (scoreboardLabel) scoreboardLabel.textContent = "NOW ENTERING";
-    if (scoreboardPrimary) scoreboardPrimary.textContent = shortScoreName(player?.name || "DUCK");
-    renderScoreMini(scoreboardMinis[0], 1, player?.name || "Unknown player");
+    if (scoreboardPrimary) scoreboardPrimary.textContent = shortScoreName(player ? displayPlayerName(player) : "DUCK");
+    renderScoreMini(scoreboardMinis[0], 1, player ? displayPlayerName(player) : "Unknown player");
     renderScoreMini(scoreboardMinis[1], 2, `${formatClubDate(event?.date)} • ${event?.team || "—"}`);
     renderScoreMini(scoreboardMinis[2], 3, `${event?.duckType || "standard"} • ${position}/${total}`);
   }
@@ -232,7 +253,7 @@
       medal.className = `medal ${["gold", "silver", "bronze"][index] || ""}`;
       medal.textContent = String(index + 1);
       const name = document.createElement("strong");
-      name.textContent = leader.player.name;
+      name.textContent = displayPlayerName(leader.player);
       const count = document.createElement("span");
       count.textContent = `${leader.count} duck${leader.count === 1 ? "" : "s"}`;
       li.append(medal, name, count);
@@ -258,7 +279,7 @@
     if (dataLeaderboard) {
       dataLeaderboard.innerHTML = tableHtml(
         ["Rank", "Player", "Ducks", "Latest"],
-        leaders.map((leader, index) => [index + 1, leader.player.name, leader.count, formatClubDate(leader.latestDate)])
+        leaders.map((leader, index) => [index + 1, displayPlayerName(leader.player), leader.count, formatClubDate(leader.latestDate)])
       );
     }
     if (dataWeekEvents) {
@@ -266,7 +287,7 @@
         ["Date", "Player", "Team", "Type"],
         weekEvents.map(event => {
           const player = playerById(event.playerId);
-          return [formatClubDate(event.date), player?.name || event.playerId, event.team, event.duckType];
+          return [formatClubDate(event.date), player ? displayPlayerName(player) : event.playerId, event.team, event.duckType];
         })
       );
     }
@@ -278,7 +299,7 @@
           return [
             event.id,
             formatClubDate(event.date),
-            player?.name || event.playerId,
+            player ? displayPlayerName(player) : event.playerId,
             event.team,
             event.duckType,
             player?.presentation || "—",
@@ -1308,7 +1329,9 @@
 
       duck.dataset.motionState = "floating";
       duck.classList.add("floating");
-      scheduleRoam(duck, 3200 + Math.random() * 9000);
+      if (!runPendingClickScoot(duck)) {
+        scheduleRoam(duck, 3200 + Math.random() * 9000);
+      }
     }, delay);
   }
 
@@ -1368,6 +1391,9 @@
     duck._doubleBlinkReturnTimer = null;
     duck.dataset.blinking = "false";
 
+    // v0.89: blink cancellation must not clear click-scoot state.
+    // reactToClick() changes the face immediately, which calls cancelBlink();
+    // clearing these flags here was cancelling the requested scoot before it began.
     if (restore && duck.isConnected &&
         duck.dataset.reacting !== "true" &&
         duck.dataset.collisionEscaping !== "true") {
@@ -1404,6 +1430,8 @@
   function finishBlinkFrame(duck) {
     if (!duck.isConnected) return;
     duck.dataset.blinking = "false";
+    duck.dataset.clickScootPending = "false";
+    duck.dataset.clickScooting = "false";
 
     if (!canBlink(duck)) return;
 
@@ -1612,7 +1640,9 @@
     duck.dataset.collisionEscaping = "false";
     duck.classList.add("floating");
     restoreIdleFace(duck);
-    scheduleRoam(duck, 3600 + Math.random() * 5500);
+    if (!runPendingClickScoot(duck)) {
+      scheduleRoam(duck, 3600 + Math.random() * 5500);
+    }
   }
 
   function triggerCollisionReaction(a, b) {
@@ -1819,10 +1849,131 @@
     duck.dataset.face = faceName;
   }
 
+  function hidePlayerStats() {
+    if (playerStatsCard) playerStatsCard.hidden = true;
+  }
+
+  function showPlayerStatsForDuck(duck) {
+    const player = playerById(duck?.dataset.playerId);
+    if (!player || !playerStatsCard) return;
+
+    const events = playerEventsThrough(player.id);
+    const counts = { standard: 0, golden: 0, diamond: 0 };
+    const teams = new Set();
+    for (const event of events) {
+      if (counts[event.duckType] !== undefined) counts[event.duckType] += 1;
+      if (event.team) teams.add(event.team);
+    }
+
+    const leaders = currentLeaderboard();
+    const rankIndex = leaders.findIndex(entry => entry.player.id === player.id);
+    const rankText = rankIndex >= 0 ? `#${rankIndex + 1} on the pond leaderboard` : "Unranked";
+    const latest = events[events.length - 1] || null;
+    const display = displayPlayerName(player);
+
+    if (playerStatsName) playerStatsName.textContent = display;
+    if (playerStatsMeta) {
+      const realName = display !== player.name ? `${player.name} • ` : "";
+      playerStatsMeta.textContent = `${realName}${rankText}`;
+    }
+    if (playerStatsSummary) {
+      playerStatsSummary.textContent = `${events.length} duck${events.length === 1 ? "" : "s"} this season`;
+    }
+    if (playerStatsTypes) {
+      playerStatsTypes.textContent = `${counts.standard} standard • ${counts.golden} golden • ${counts.diamond} diamond`;
+    }
+    if (playerStatsLatest) {
+      playerStatsLatest.textContent = latest
+        ? `Latest: ${formatClubDate(latest.date)} • ${latest.team || "—"}${teams.size > 1 ? ` • ${teams.size} teams` : ""}`
+        : "No duck events loaded yet.";
+    }
+
+    playerStatsCard.hidden = false;
+  }
+
+  function clickScootPoint(duck) {
+    const from = currentPosition(duck);
+    let best = null;
+    let bestClearance = -1;
+
+    for (let attempt = 0; attempt < 36; attempt++) {
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 10 + Math.random() * 8;
+      const candidate = {
+        x: from.x + Math.cos(angle) * radius,
+        y: from.y + Math.sin(angle) * radius * .68
+      };
+      if (!canDuckStopAt(candidate.x, candidate.y) || !segmentClear(from, candidate)) continue;
+
+      let nearest = Infinity;
+      for (const other of ducks.values()) {
+        if (other === duck || !other.dataset.x) continue;
+        nearest = Math.min(nearest, distance(candidate, currentPosition(other)));
+      }
+      if (nearest > bestClearance) {
+        best = candidate;
+        bestClearance = nearest;
+      }
+    }
+
+    return best || nearbyPoint(from);
+  }
+
+  async function startClickScoot(duck) {
+    if (!duck?.isConnected || duck.dataset.motionState !== "floating") return false;
+    if (duck.dataset.clickScooting === "true") return false;
+
+    duck.dataset.clickScootPending = "false";
+    duck.dataset.clickScooting = "true";
+    clearTimeout(duck._roamTimer);
+
+    const from = currentPosition(duck);
+    const to = clickScootPoint(duck);
+    const distanceAway = distance(from, to);
+    if (distanceAway < .5) {
+      duck.dataset.clickScooting = "false";
+      scheduleRoam(duck, 1400);
+      return false;
+    }
+
+    duck.dataset.motionState = "swimming";
+    duck.classList.remove("floating");
+    activeSwimmers++;
+    await animateRoute(duck, from, to, Math.max(1450, Math.min(2450, 950 + distanceAway * 95)));
+    activeSwimmers = Math.max(0, activeSwimmers - 1);
+    if (!duck.isConnected) return true;
+
+    duck.dataset.motionState = "floating";
+    duck.dataset.clickScooting = "false";
+    duck.classList.add("floating");
+    restoreIdleFace(duck);
+    scheduleRoam(duck, 3000 + Math.random() * 4500);
+    return true;
+  }
+
+  function runPendingClickScoot(duck) {
+    if (!duck?.isConnected || duck.dataset.clickScootPending !== "true") return false;
+    if (duck.dataset.motionState !== "floating") return false;
+    startClickScoot(duck);
+    return true;
+  }
+
   function reactToClick(duck) {
     if (!["floating", "swimming"].includes(duck.dataset.motionState)) return;
-    if (duck.dataset.reacting === "true") return;
 
+    // v0.89: stats + reaction + clearing scoot are one interaction.
+
+    showPlayerStatsForDuck(duck);
+    duck.dataset.clickScootPending = "true";
+    setTimeout(() => {
+      if (!runPendingClickScoot(duck) && duck?.isConnected) {
+        // A duck already swimming finishes its current route first, then takes
+        // the extra clearing scoot when that motion settles.
+        duck.dataset.clickScootPending = "true";
+      }
+    }, 150);
+
+    if (duck.dataset.reacting === "true") return;
     const angry = Math.random() < 0.5;
     duck.dataset.reacting = "true";
     duck.classList.add("reacting");
@@ -1888,6 +2039,8 @@
     duck.dataset.facing = "left";
     duck.dataset.collisionEscaping = "false";
     duck.dataset.blinking = "false";
+    duck.dataset.clickScootPending = "false";
+    duck.dataset.clickScooting = "false";
     chooseIdleFace(duck);
     duck.dataset.swimPace = (0.88 + (id % 5) * 0.06).toFixed(2);
     duck.setAttribute(
@@ -2170,7 +2323,7 @@
     duck.dataset.motionState = "floating";
     duck.classList.add("floating");
     scheduleMoodShift(duck);
-    scheduleRoam(duck);
+    if (!runPendingClickScoot(duck)) scheduleRoam(duck);
     scheduleIdleLife(duck);
   }
 
@@ -2190,7 +2343,7 @@
       clubRole: (player.roles || []).includes("president") ? "president" : "player",
       isLeader: currentLeaderPlayerIds.has(player.id),
       playerId: player.id,
-      playerName: player.name,
+      playerName: displayPlayerName(player),
       eventId: event.id || "",
       eventDate: event.date || ""
     });
@@ -2202,7 +2355,7 @@
     for (const player of PLAYER_PROFILES) {
       const option = document.createElement("option");
       option.value = player.id;
-      option.textContent = player.name;
+      option.textContent = displayPlayerName(player);
       playerSelect.appendChild(option);
     }
     updatePlayerIdentitySummary();
@@ -2264,7 +2417,7 @@
     };
     const duck = makePlayerDuck(player, event, { instant: false });
     if (!duck) return;
-    status.textContent = `Adding ${player.name}: permanent ${player.presentation}/${FEATHER_TONES[player.featherTone]?.label || player.featherTone}/${BUILD_VARIANTS[player.build]?.label || player.build}; ${selectedDuckType} event shirt.`;
+    status.textContent = `Adding ${displayPlayerName(player)}: permanent ${player.presentation}/${FEATHER_TONES[player.featherTone]?.label || player.featherTone}/${BUILD_VARIANTS[player.build]?.label || player.build}; ${selectedDuckType} event shirt.`;
     showEntrantScoreboard(player, event, 1, 1);
     animateEntry(duck, null, { onSplash: showLeaderboardScoreboard });
   }
@@ -2312,7 +2465,7 @@
       if (!duck) continue;
 
       showEntrantScoreboard(player, event, index + 1, weekEvents.length);
-      status.textContent = `${player.name} entering (${index + 1}/${weekEvents.length}) • ${formatClubDate(event.date)} • ${event.duckType}.`;
+      status.textContent = `${displayPlayerName(player)} entering (${index + 1}/${weekEvents.length}) • ${formatClubDate(event.date)} • ${event.duckType}.`;
 
       await new Promise(resolveSplash => {
         let resolved = false;
@@ -2438,6 +2591,7 @@
     nextDuckId = 1;
     activeSwimmers = 0;
     collisionPairs.clear();
+    hidePlayerStats();
     nextGlobalCollisionReactionAt = performance.now() + 3000 + Math.random() * 4000;
     nextGlobalIdleWingAt = 0;
     currentLeaderPlayerIds = new Set();
@@ -2611,6 +2765,13 @@
   closeScoreboard.addEventListener("click", () => {
     scoreboardPanel.hidden = true;
   });
+
+  if (closePlayerStats) {
+    closePlayerStats.addEventListener("click", event => {
+      event.stopPropagation();
+      hidePlayerStats();
+    });
+  }
 
   function touchDistance(a, b) {
     return Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);

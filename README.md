@@ -1,4 +1,19 @@
-# Duck Pond – v0.87
+# Duck Pond – v0.89
+
+## v0.89 – Click Scoot Fix
+
+- Fixed clicked player ducks showing the stats/reaction but staying planted.
+- The reaction face was cancelling blink state, and the blink cleanup was also incorrectly clearing the pending click-scoot flags.
+- Clicked ducks now keep the pending scoot through the angry/scared reaction and move to a clear valid pond location.
+
+## v0.88 – Player Nicknames + Click Stats / Clear-Away Interaction
+
+- Added optional `nickname` to player profiles. Public-facing player labels use nickname when present, while the canonical name remains in the profile.
+- Clicking a real player duck now opens a compact in-pond stats card rather than a full-screen modal.
+- Player card shows cumulative duck count, standard/golden/diamond split, current leaderboard position and latest duck event through the selected week.
+- Clicking a floating duck triggers the existing angry/scared flap and a quick swim away to clear the area. Ducks already moving finish their route, then perform the clearing scoot.
+- Scoreboard click closes the player card so the two overlays do not compete.
+- No artwork/assets changed.
 
 ## v0.87 – Weekly Playback + Live Scoreboard Test
 
