@@ -1,3 +1,11 @@
+# Duck Pond – v0.81
+
+- Mobile landscape now hides the full developer/test rig and behaves as a production-style pond view.
+- Landscape base view fits both available width and height so the outer document does not need vertical scrolling; pinch/pan remains internal to the pond viewport.
+- Visible version labels updated from v0.71 to v0.81.
+- President remains a white-feather duck but is no longer forced to Standard: Test President and Load 60 can use the selected Standard/Golden/Diamond duck type.
+- Female v0.80 assets and all existing simulation behaviour are preserved.
+
 # Duck Pond – v0.80
 
 - Normalised all 12 user-supplied female swim body variants back to the standard 512×512 production canvas.

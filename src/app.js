@@ -497,16 +497,27 @@
     const previousRatioX = previousScrollableX > 0 ? scene.scrollLeft / previousScrollableX : 0;
     const previousRatioY = previousScrollableY > 0 ? scene.scrollTop / previousScrollableY : 0;
 
-    const fitScale = scene.clientWidth / WORLD_WIDTH;
+    const widthFitScale = scene.clientWidth / WORLD_WIDTH;
+    const landscapeViewportHeight = landscapeMobileMode()
+      ? Math.max(180, window.innerHeight - 12)
+      : null;
+    // In mobile landscape the pond must fit the actual visible browser height
+    // at 1x so the DOCUMENT never needs vertical scrolling. Zoomed views grow
+    // only inside this clipped scene viewport and are panned internally.
+    const fitScale = landscapeViewportHeight
+      ? Math.min(widthFitScale, landscapeViewportHeight / WORLD_HEIGHT)
+      : widthFitScale;
     const baseZoom = mobileBaseZoomFactor();
     const zoom = mobileZoomFactor();
     worldScale = fitScale * zoom;
 
     const renderedWidth = Math.round(WORLD_WIDTH * worldScale);
     const renderedHeight = Math.round(WORLD_HEIGHT * worldScale);
-    const viewportHeight = mobilePondEnabled()
-      ? Math.round(WORLD_HEIGHT * fitScale * baseZoom)
-      : renderedHeight;
+    const viewportHeight = landscapeViewportHeight
+      ? Math.round(WORLD_HEIGHT * fitScale)
+      : mobilePondEnabled()
+        ? Math.round(WORLD_HEIGHT * fitScale * baseZoom)
+        : renderedHeight;
 
     worldStage.style.width = `${renderedWidth}px`;
     worldStage.style.height = `${renderedHeight}px`;
@@ -1990,11 +2001,11 @@
     const duck = makeDuck({
       point: { x:37, y:73.6 },
       instant: false,
-      duckType: president ? "standard" : selectedDuckType,
+      duckType: selectedDuckType,
       // The president is always the known white duck. Other role tests follow
       // the current feather/build controls so overlays can be judged broadly.
       featherTone: president ? "white" : selectedFeatherTone,
-      buildVariant: president ? "standard" : selectedBuildVariant,
+      buildVariant: selectedBuildVariant,
       roles,
       clubRole: president ? "president" : "player",
       isLeader: leader,
@@ -2002,7 +2013,7 @@
     });
 
     const roleStatus = {
-      president: "President re-entering from the pier (white duck, crown).",
+      president: `President re-entering from the pier (white duck, ${selectedDuckType} shirt, crown).`,
       leader: "Duck leader re-entering from the pier with the yellow leader cap.",
       captain: "Captain re-entering from the pier with the shirt C marker.",
       coach: "Coach re-entering from the pier with the whistle and lanyard."
@@ -2119,9 +2130,10 @@
       if (coachIndexes.has(i)) roles.push("coach");
 
       if (isPresident) {
-        loadDuckType = "standard";
+        // President is a role/headwear rule, not a duck-type rule. Keep white
+        // feathers, but allow the current selected standard/golden/diamond type.
+        loadDuckType = selectedDuckType;
         featherTone = "white";
-        buildVariant = "standard";
       }
       makeDuck({
         point: safeBest,
