@@ -1,4 +1,26 @@
-# Duck Pond – v0.81
+# Duck Pond – v0.85
+
+## v0.85 – Resurface Ring Depth Fix
+
+- Raised the resurfacing splash/ring above the resurfacing duck so it renders in front during the fade-up from the water.
+- Left the v0.84 entry path, splash size and resurfacing motion unchanged.
+
+## v0.84 – Swim Resurface Direction Fix
+
+- Fixed the post-splash swimming sprite so it rises upward from beneath the water into its final pond position instead of appearing above the landing point and moving downward.
+- Pier walk, jump, splash position, splash scale and final swim position remain unchanged from v0.83.
+
+
+## v0.83 – Pier Entry Position + Splash Scale
+
+- Lowered the larger hero-entry duck path on the pier so the walk sits noticeably further down the Y-axis.
+- Kept the same overall hero-entry concept but moved the jump/splash/entry location down to match.
+- Increased splash/resurface effect size by 25% so the pond entry reads more clearly.
+
+- Pier-walking ducks render at approximately 1.6× the previous entry scale.
+- Duck size now transitions down smoothly during the jump, reaching the existing splash/pond scale before entering the water.
+- Walk path, timing, splash location, swimming size and pond behaviour are unchanged.
+- No artwork/assets changed.
 
 - Mobile landscape now hides the full developer/test rig and behaves as a production-style pond view.
 - Landscape base view fits both available width and height so the outer document does not need vertical scrolling; pinch/pan remains internal to the pond viewport.

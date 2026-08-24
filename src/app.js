@@ -897,6 +897,9 @@
 
     setWorldPosition(ripple, xPct, yPct);
     setEffectDepth(ripple, yPct);
+    // v0.85: the resurfacing ring should sit in front of the duck while the
+    // swimming sprite fades/rises into place, rather than sorting behind it.
+    ripple.style.zIndex = String(depthZForY(yPct) + 6);
     duckLayer.appendChild(ripple);
     ripple.addEventListener("animationend", () => ripple.remove(), { once: true });
   }
@@ -1772,15 +1775,19 @@
     duck.style.zIndex = "2600";
     duck.style.opacity = "1";
 
+    // v0.83 hero-entry follow-up: keep the larger pier walk but push it lower on the pier and make the splash read bigger.
+    // The duck is ~60% larger than the old entry scale while walking, then
+    // smoothly shrinks during the jump back to the existing splash/pond scale.
+    const HERO_WALK_SCALE = 1.31;
     const walkFrames = [
-      { at:0,    x:-11, y:72.75, rotation:-2, scale:.82, opacity:1 },
-      { at:.16,  x:-4,  y:72.58, rotation:2,  scale:.82, opacity:1 },
-      { at:.33,  x:3,   y:72.75, rotation:-2, scale:.82, opacity:1 },
-      { at:.50,  x:10,  y:72.58, rotation:2,  scale:.82, opacity:1 },
-      { at:.67,  x:17,  y:72.75, rotation:-2, scale:.82, opacity:1 },
-      { at:.82,  x:23.5,y:72.58, rotation:2,  scale:.82, opacity:1 },
-      { at:.94,  x:28.5,y:72.70, rotation:-1, scale:.82, opacity:1 },
-      { at:1,    x:31,  y:72.45, rotation:0,  scale:.82, opacity:1 }
+      { at:0,    x:-11, y:76.75, rotation:-2, scale:HERO_WALK_SCALE, opacity:1 },
+      { at:.16,  x:-4,  y:76.58, rotation:2,  scale:HERO_WALK_SCALE, opacity:1 },
+      { at:.33,  x:3,   y:76.75, rotation:-2, scale:HERO_WALK_SCALE, opacity:1 },
+      { at:.50,  x:10,  y:76.58, rotation:2,  scale:HERO_WALK_SCALE, opacity:1 },
+      { at:.67,  x:17,  y:76.75, rotation:-2, scale:HERO_WALK_SCALE, opacity:1 },
+      { at:.82,  x:23.5,y:76.58, rotation:2,  scale:HERO_WALK_SCALE, opacity:1 },
+      { at:.94,  x:28.5,y:76.70, rotation:-1, scale:HERO_WALK_SCALE, opacity:1 },
+      { at:1,    x:31,  y:76.45, rotation:0,  scale:HERO_WALK_SCALE, opacity:1 }
     ];
 
     // Requested walk cycle: 1 -> 2 -> 3 -> 2 -> 1, repeating.
@@ -1806,9 +1813,9 @@
     duck.classList.remove("prejump");
 
     const jumpFrames = [
-      { at:0,   x:31,   y:72.45, rotation:0, scale:.82, opacity:1 },
-      { at:.38, x:33.8, y:65.5,  rotation:5, scale:.80, opacity:1 },
-      { at:1,   x:37,   y:73.6,  rotation:8, scale:.64, opacity:0 }
+      { at:0,   x:31,   y:76.45, rotation:0, scale:HERO_WALK_SCALE, opacity:1 },
+      { at:.38, x:33.8, y:69.5,  rotation:5, scale:1.05, opacity:1 },
+      { at:1,   x:37,   y:77.6,  rotation:8, scale:.64, opacity:0 }
     ];
 
     let splashCreated = false;
@@ -1848,7 +1855,7 @@
         if (!splashCreated && raw >= .68) {
           splashCreated = true;
           duck.style.opacity = "0";
-          createSplashAnimation(37, 73.6, duck.dataset.duckType);
+          createSplashAnimation(37, 77.6, duck.dataset.duckType);
         } else if (!splashCreated) {
           duck.style.opacity = "1";
         }
@@ -1872,7 +1879,7 @@
     clearEntryVisual(duck);
     buildSwimVisual(duck, duck.dataset.idleFace || "neutral");
 
-    const entry = { x: 37, y: 73.6 };
+    const entry = { x: 37, y: 77.6 };
     setWorldPosition(duck, entry.x, entry.y);
     duck.dataset.x = entry.x.toFixed(3);
     duck.dataset.y = entry.y.toFixed(3);
@@ -1890,7 +1897,10 @@
 
         const raw = Math.min(1, (now - appearStarted) / 520);
         const eased = 1 - Math.pow(1 - raw, 3);
-        const y = 74.6 + (entry.y - 74.6) * eased;
+        // v0.84: the swim sprite should surface upward from beneath the water,
+        // not drift down from above the final resting point.
+        const submergedStartY = entry.y + 3.0;
+        const y = submergedStartY + (entry.y - submergedStartY) * eased;
 
         setWorldPosition(duck, entry.x, y);
         duck.style.opacity = String(eased);
