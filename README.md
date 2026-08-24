@@ -1,4 +1,30 @@
-# Duck Pond – v0.85
+# Duck Pond – v0.87
+
+## v0.87 – Weekly Playback + Live Scoreboard Test
+
+- Replaced the temporary From/To date controls with a single **Week** dropdown.
+- The dropdown selects an "as at Monday" marker; that option plays the completed club week immediately before it (previous Monday through Sunday inclusive).
+- The most recent Monday is selected automatically on startup and its completed prior week auto-loads after assets are ready.
+- Earlier duck events are already swimming, selected-week events enter via the pier, and future events remain absent.
+- Expanded the fake season dataset to 24 events and deliberately created a clear cumulative leader/top three for testing.
+- Added cumulative leaderboard logic based on all duck events in the pond through the selected week's Sunday. Ties are supported.
+- Current leader player duck(s) receive the yellow leader headwear; President crown still overrides leader headwear.
+- Reworked the in-scene scoreboard so it shows the **player currently entering** while they walk/jump, then advances to the next entrant or returns to the cumulative top-three leaderboard after the splash.
+- Reworked the scoreboard popup to use the same live cumulative leaderboard data.
+- Added a development-only data view below the pond showing the selected playback window, cumulative leaderboard, selected-week entrants and every event represented in the pond for easy comparison.
+- The data/debug view remains hidden in mobile landscape so the v0.81 production-style no-page-scroll landscape behaviour is preserved.
+- No production artwork changed.
+
+## v0.86 – Player Identity + Date Range Foundation
+
+- Added a fake player roster in `src/players.js` with persistent presentation, feather tone, build and permanent club roles.
+- Added fake duck-event rows in `src/events.js`; event date and standard/golden/diamond type are separate from player identity.
+- Added a clearly separated **Player / Date Test** rig while retaining the older manual/asset controls.
+- **Add Selected Player** proves the same player keeps the same appearance while the event duck type can change.
+- **Load Date Range** rebuilds the pond cumulatively: events before the range are already swimming, events inside the range enter one-by-one via the pier, and future events are absent.
+- Multiple events for the same player create multiple permanent ducks while keeping that player's visual identity.
+- Mobile landscape still hides the full test rig and remains the production-style pond view.
+- No production artwork changed.
 
 ## v0.85 – Resurface Ring Depth Fix
 

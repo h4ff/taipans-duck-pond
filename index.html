@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Taipan Pond — Stress Test v0.85</title>
+  <title>Taipan Pond — Stress Test v0.87</title>
   <link rel="stylesheet" href="src/styles.css">
 </head>
 <body>
@@ -11,8 +11,8 @@
     <header class="toolbar">
       <div class="toolbar-copy">
         <p class="eyebrow">Taipans Cricket Club</p>
-        <h1>Duck Pond — Stress Test v0.85</h1>
-        <p class="subtle">Mobile landscape stability pass: production-style landscape view with internal pond zoom/pan.</p>
+        <h1>Duck Pond — Stress Test v0.87</h1>
+        <p class="subtle">Production-style weekly playback test: cumulative pond, automatic week selection, live entrant scoreboard and leaderboard.</p>
       </div>
 
       <div class="mobile-toolbar-actions" aria-label="Mobile pond controls">
@@ -22,17 +22,37 @@
       </div>
 
       <div id="developerControls" class="controls" aria-label="Developer controls">
-        <button id="duckTypeButton" type="button" disabled class="secondary">Duck Type: Standard</button>
-        <button id="featherToneButton" type="button" disabled class="secondary">Feather: White</button>
-        <button id="buildVariantButton" type="button" disabled class="secondary">Build: Standard</button>
-        <button id="addMaleButton" type="button" disabled>+ Add Male</button>
-        <button id="addFemaleButton" type="button" disabled>+ Add Female</button>
-        <button id="load60Button" type="button" disabled class="secondary">Load 60 Ducks</button>
-        <button id="testPresidentButton" type="button" disabled class="secondary">Test President</button>
-        <button id="testLeaderButton" type="button" disabled class="secondary">Test Leader</button>
-        <button id="testCaptainButton" type="button" disabled class="secondary">Test Captain</button>
-        <button id="testCoachButton" type="button" disabled class="secondary">Test Coach</button>
-        <button id="resetButton" type="button" disabled class="secondary">Reset</button>
+        <section class="control-group player-data-controls" aria-labelledby="playerTestHeading">
+          <strong id="playerTestHeading" class="control-group-title">Player / Week Test</strong>
+          <label class="control-field player-field">
+            <span>Player</span>
+            <select id="playerSelect" disabled></select>
+          </label>
+          <button id="addPlayerButton" type="button" disabled>Add Selected Player</button>
+          <p id="playerIdentitySummary" class="control-summary">Select a player to inspect their permanent appearance.</p>
+
+          <label class="control-field player-field">
+            <span>Week</span>
+            <select id="weekSelect" disabled></select>
+          </label>
+          <button id="loadWeekButton" type="button" disabled class="secondary">Load Selected Week</button>
+          <p id="weekSummary" class="control-summary">The selected Monday represents the previous Monday–Sunday. Earlier ducks are already in the pond; that week's ducks enter via the pier.</p>
+        </section>
+
+        <section class="control-group legacy-controls" aria-labelledby="legacyTestHeading">
+          <strong id="legacyTestHeading" class="control-group-title">Manual / Asset Test</strong>
+          <button id="duckTypeButton" type="button" disabled class="secondary">Duck Type: Standard</button>
+          <button id="featherToneButton" type="button" disabled class="secondary">Feather: White</button>
+          <button id="buildVariantButton" type="button" disabled class="secondary">Build: Standard</button>
+          <button id="addMaleButton" type="button" disabled>+ Add Male</button>
+          <button id="addFemaleButton" type="button" disabled>+ Add Female</button>
+          <button id="load60Button" type="button" disabled class="secondary">Load 60 Ducks</button>
+          <button id="testPresidentButton" type="button" disabled class="secondary">Test President</button>
+          <button id="testLeaderButton" type="button" disabled class="secondary">Test Leader</button>
+          <button id="testCaptainButton" type="button" disabled class="secondary">Test Captain</button>
+          <button id="testCoachButton" type="button" disabled class="secondary">Test Coach</button>
+          <button id="resetButton" type="button" disabled class="secondary">Reset</button>
+        </section>
       </div>
     </header>
 
@@ -44,11 +64,11 @@
 
         <button id="liveScoreboard" class="live-scoreboard" type="button"
                 aria-label="Open pond scoreboard">
-          <span class="score-label">POND</span>
-          <strong id="scoreboardCount">0</strong>
-          <span class="score-mini"><b>1</b> HATH 6</span>
-          <span class="score-mini"><b>2</b> SMITH 5</span>
-          <span class="score-mini"><b>3</b> JONES 4</span>
+          <span id="scoreboardLabel" class="score-label">POND</span>
+          <strong id="scoreboardPrimary">0</strong>
+          <span id="scoreboardMini1" class="score-mini"><b>1</b><span>—</span></span>
+          <span id="scoreboardMini2" class="score-mini"><b>2</b><span>—</span></span>
+          <span id="scoreboardMini3" class="score-mini"><b>3</b><span>—</span></span>
         </button>
 
         <div id="destinationMarker" class="destination-marker" hidden aria-hidden="true"></div>
@@ -78,16 +98,37 @@
       <div id="scoreboardPanel" class="scoreboard-panel" hidden>
         <button id="closeScoreboard" class="scoreboard-close" type="button"
                 aria-label="Close scoreboard">×</button>
-        <p>ROUND TEST</p>
+        <p id="panelWeekLabel">WEEK TEST</p>
         <h2><span id="panelDuckCount">0</span> ducks in the pond</h2>
-        <ol>
-          <li><span class="medal gold">1</span><strong>Hathaway</strong><span>6 ducks</span></li>
-          <li><span class="medal silver">2</span><strong>Smith</strong><span>5 ducks</span></li>
-          <li><span class="medal bronze">3</span><strong>Jones</strong><span>4 ducks</span></li>
-        </ol>
-        <small>Placeholder player data for the population test.</small>
+        <ol id="panelLeaderboard"></ol>
+        <small>Leaderboard is calculated from all duck events in the pond up to the selected week's Sunday.</small>
       </div>
 
+    </section>
+
+
+    <section id="dataDebugPanel" class="data-debug-panel" aria-labelledby="dataDebugHeading">
+      <div class="data-debug-heading">
+        <div>
+          <p class="eyebrow">Development data view</p>
+          <h2 id="dataDebugHeading">Weekly playback data</h2>
+        </div>
+        <p id="dataDebugRange" class="subtle">No week loaded yet.</p>
+      </div>
+      <div class="data-debug-grid">
+        <article>
+          <h3>Leaderboard</h3>
+          <div id="dataLeaderboard"></div>
+        </article>
+        <article>
+          <h3>Selected-week entrants</h3>
+          <div id="dataWeekEvents"></div>
+        </article>
+        <article class="data-debug-wide">
+          <h3>All ducks currently represented in the pond</h3>
+          <div id="dataPondEvents"></div>
+        </article>
+      </div>
     </section>
 
     <div id="status" class="scene-note" aria-live="polite">
@@ -96,10 +137,12 @@
 
     <footer>
       <strong>What to judge:</strong>
-      landscape production view, stable internal pinch/pan, orientation changes, splash depth, and 60-duck behaviour.
+      the current Monday is selected automatically, prior ducks are already swimming, the previous Monday–Sunday entrants come down the pier, and the scoreboard swaps between entrant name and the cumulative top three.
     </footer>
   </main>
 
+  <script src="src/players.js"></script>
+  <script src="src/events.js"></script>
   <script src="src/app.js"></script>
 </body>
 </html>

@@ -28,8 +28,23 @@
   const mobilePondToggle = document.getElementById("mobilePondToggle");
   const mobileZoomReset = document.getElementById("mobileZoomReset");
 
-  const scoreboardCount = document.getElementById("scoreboardCount");
+  const playerSelect = document.getElementById("playerSelect");
+  const addPlayerButton = document.getElementById("addPlayerButton");
+  const playerIdentitySummary = document.getElementById("playerIdentitySummary");
+  const weekSelect = document.getElementById("weekSelect");
+  const loadWeekButton = document.getElementById("loadWeekButton");
+  const weekSummary = document.getElementById("weekSummary");
+
+  const scoreboardLabel = document.getElementById("scoreboardLabel");
+  const scoreboardPrimary = document.getElementById("scoreboardPrimary");
+  const scoreboardMinis = [1, 2, 3].map(index => document.getElementById(`scoreboardMini${index}`));
   const panelDuckCount = document.getElementById("panelDuckCount");
+  const panelWeekLabel = document.getElementById("panelWeekLabel");
+  const panelLeaderboard = document.getElementById("panelLeaderboard");
+  const dataDebugRange = document.getElementById("dataDebugRange");
+  const dataLeaderboard = document.getElementById("dataLeaderboard");
+  const dataWeekEvents = document.getElementById("dataWeekEvents");
+  const dataPondEvents = document.getElementById("dataPondEvents");
   const liveScoreboard = document.getElementById("liveScoreboard");
   const scoreboardPanel = document.getElementById("scoreboardPanel");
   const closeScoreboard = document.getElementById("closeScoreboard");
@@ -77,6 +92,204 @@
     walkRoot: "assets/duck/female/walk",
     swimBodyRoot: "assets/duck/female/swim/body"
   };
+
+  const PLAYER_PROFILES = Array.isArray(window.DUCK_POND_PLAYERS) ? window.DUCK_POND_PLAYERS : [];
+  const TEST_DUCK_EVENTS = Array.isArray(window.DUCK_POND_TEST_EVENTS) ? window.DUCK_POND_TEST_EVENTS : [];
+  const PLAYER_BY_ID = new Map(PLAYER_PROFILES.map(player => [player.id, player]));
+  let dateRangeLoadToken = 0;
+  let selectedWeekContext = null;
+  let scoreboardMode = "leaderboard";
+  let currentLeaderPlayerIds = new Set();
+
+  function playerById(playerId) {
+    return PLAYER_BY_ID.get(playerId) || null;
+  }
+
+  function describePlayer(player) {
+    if (!player) return "Unknown player";
+    const roleText = (player.roles || []).length ? ` • ${(player.roles || []).join(" + ")}` : "";
+    const feather = FEATHER_TONES[player.featherTone]?.label || player.featherTone || "White";
+    const build = BUILD_VARIANTS[player.build]?.label || player.build || "Standard";
+    return `${player.name} • ${player.presentation} • ${feather} • ${build}${roleText}`;
+  }
+
+  function formatClubDate(isoDate) {
+    if (!isoDate) return "—";
+    const [year, month, day] = isoDate.split("-").map(Number);
+    return new Intl.DateTimeFormat("en-AU", { day: "numeric", month: "short", year: "numeric" })
+      .format(new Date(year, month - 1, day));
+  }
+
+  function isoFromLocalDate(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+
+  function localDateFromIso(isoDate) {
+    const [year, month, day] = isoDate.split("-").map(Number);
+    return new Date(year, month - 1, day, 12, 0, 0, 0);
+  }
+
+  function addLocalDays(isoDate, days) {
+    const date = localDateFromIso(isoDate);
+    date.setDate(date.getDate() + days);
+    return isoFromLocalDate(date);
+  }
+
+  function mostRecentMonday(reference = new Date()) {
+    const date = new Date(reference.getFullYear(), reference.getMonth(), reference.getDate(), 12, 0, 0, 0);
+    const day = date.getDay();
+    const daysSinceMonday = (day + 6) % 7;
+    date.setDate(date.getDate() - daysSinceMonday);
+    return isoFromLocalDate(date);
+  }
+
+  function weekContextForMonday(mondayIso) {
+    // The dropdown Monday is the "as at" marker. Its playback window is the
+    // complete club week immediately before it: Monday through Sunday.
+    return {
+      monday: mondayIso,
+      start: addLocalDays(mondayIso, -7),
+      end: addLocalDays(mondayIso, -1)
+    };
+  }
+
+  function eventsThrough(endIso) {
+    return [...TEST_DUCK_EVENTS]
+      .filter(event => event.date <= endIso)
+      .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
+  }
+
+  function leaderboardForEvents(events) {
+    const totals = new Map();
+    for (const event of events) {
+      const player = playerById(event.playerId);
+      if (!player) continue;
+      const current = totals.get(player.id) || { player, count: 0, latestDate: "" };
+      current.count += 1;
+      if (event.date > current.latestDate) current.latestDate = event.date;
+      totals.set(player.id, current);
+    }
+    return [...totals.values()].sort((a, b) =>
+      b.count - a.count || a.player.name.localeCompare(b.player.name)
+    );
+  }
+
+  function shortScoreName(name) {
+    if (!name) return "—";
+    const parts = name.trim().split(/\s+/);
+    return parts.length > 1 ? parts[parts.length - 1].toUpperCase() : name.toUpperCase();
+  }
+
+  function currentLeaderboard() {
+    if (!selectedWeekContext) return [];
+    return leaderboardForEvents(eventsThrough(selectedWeekContext.end));
+  }
+
+  function renderScoreMini(element, rank, text) {
+    if (!element) return;
+    element.replaceChildren();
+    const rankNode = document.createElement("b");
+    rankNode.textContent = String(rank);
+    const textNode = document.createElement("span");
+    textNode.textContent = text;
+    element.append(rankNode, textNode);
+  }
+
+  function showLeaderboardScoreboard() {
+    scoreboardMode = "leaderboard";
+    const leaders = currentLeaderboard().slice(0, 3);
+    if (scoreboardLabel) scoreboardLabel.textContent = "LEADERS";
+    if (scoreboardPrimary) scoreboardPrimary.textContent = String(ducks.size);
+    scoreboardMinis.forEach((element, index) => {
+      const leader = leaders[index];
+      renderScoreMini(element, index + 1, leader ? `${shortScoreName(leader.player.name)} ${leader.count}` : "—");
+    });
+    renderScoreboardPanel();
+  }
+
+  function showEntrantScoreboard(player, event, position, total) {
+    scoreboardMode = "entrant";
+    if (scoreboardLabel) scoreboardLabel.textContent = "NOW ENTERING";
+    if (scoreboardPrimary) scoreboardPrimary.textContent = shortScoreName(player?.name || "DUCK");
+    renderScoreMini(scoreboardMinis[0], 1, player?.name || "Unknown player");
+    renderScoreMini(scoreboardMinis[1], 2, `${formatClubDate(event?.date)} • ${event?.team || "—"}`);
+    renderScoreMini(scoreboardMinis[2], 3, `${event?.duckType || "standard"} • ${position}/${total}`);
+  }
+
+  function renderScoreboardPanel() {
+    if (panelDuckCount) panelDuckCount.textContent = String(ducks.size);
+    if (panelWeekLabel && selectedWeekContext) {
+      panelWeekLabel.textContent = `${formatClubDate(selectedWeekContext.start)}–${formatClubDate(selectedWeekContext.end)}`;
+    }
+    if (!panelLeaderboard) return;
+    panelLeaderboard.replaceChildren();
+    currentLeaderboard().slice(0, 3).forEach((leader, index) => {
+      const li = document.createElement("li");
+      const medal = document.createElement("span");
+      medal.className = `medal ${["gold", "silver", "bronze"][index] || ""}`;
+      medal.textContent = String(index + 1);
+      const name = document.createElement("strong");
+      name.textContent = leader.player.name;
+      const count = document.createElement("span");
+      count.textContent = `${leader.count} duck${leader.count === 1 ? "" : "s"}`;
+      li.append(medal, name, count);
+      panelLeaderboard.appendChild(li);
+    });
+  }
+
+  function tableHtml(headers, rows) {
+    const escape = value => String(value ?? "—")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;");
+    return `<div class="data-table-wrap"><table class="data-table"><thead><tr>${headers.map(header => `<th>${escape(header)}</th>`).join("")}</tr></thead><tbody>${rows.map(row => `<tr>${row.map(cell => `<td>${escape(cell)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+  }
+
+  function renderDataDebug(context, weekEvents, pondEvents) {
+    if (!context) return;
+    const leaders = leaderboardForEvents(pondEvents);
+    if (dataDebugRange) {
+      dataDebugRange.textContent = `Selected Monday ${formatClubDate(context.monday)} → playback ${formatClubDate(context.start)}–${formatClubDate(context.end)} • ${pondEvents.length} cumulative ducks`;
+    }
+    if (dataLeaderboard) {
+      dataLeaderboard.innerHTML = tableHtml(
+        ["Rank", "Player", "Ducks", "Latest"],
+        leaders.map((leader, index) => [index + 1, leader.player.name, leader.count, formatClubDate(leader.latestDate)])
+      );
+    }
+    if (dataWeekEvents) {
+      dataWeekEvents.innerHTML = tableHtml(
+        ["Date", "Player", "Team", "Type"],
+        weekEvents.map(event => {
+          const player = playerById(event.playerId);
+          return [formatClubDate(event.date), player?.name || event.playerId, event.team, event.duckType];
+        })
+      );
+    }
+    if (dataPondEvents) {
+      dataPondEvents.innerHTML = tableHtml(
+        ["Event", "Date", "Player", "Team", "Type", "Presentation", "Feather", "Build", "Roles"],
+        pondEvents.map(event => {
+          const player = playerById(event.playerId);
+          return [
+            event.id,
+            formatClubDate(event.date),
+            player?.name || event.playerId,
+            event.team,
+            event.duckType,
+            player?.presentation || "—",
+            FEATHER_TONES[player?.featherTone]?.label || player?.featherTone || "—",
+            BUILD_VARIANTS[player?.build]?.label || player?.build || "—",
+            (player?.roles || []).join(", ") || "—"
+          ];
+        })
+      );
+    }
+  }
 
   function normalizedRoles(roles = [], clubRole = "player") {
     const values = Array.isArray(roles) ? roles : [roles];
@@ -347,12 +560,13 @@
   const duckControlButtons = [
     duckTypeButton, featherToneButton, buildVariantButton, addMaleButton, addFemaleButton,
     load60Button, testPresidentButton, testLeaderButton, testCaptainButton,
-    testCoachButton, resetButton
+    testCoachButton, resetButton, addPlayerButton, loadWeekButton,
+    playerSelect, weekSelect
   ];
 
   function setDuckControlsEnabled(enabled) {
-    for (const button of duckControlButtons) {
-      if (button) button.disabled = !enabled;
+    for (const control of duckControlButtons) {
+      if (control) control.disabled = !enabled;
     }
   }
 
@@ -412,7 +626,12 @@
       loadingOverlay.classList.add("loading-complete");
       window.setTimeout(() => {
         loadingOverlay.hidden = true;
+        // v0.87 production-style default: the most recent Monday is already
+        // selected, so load its completed prior Monday–Sunday week automatically.
+        loadSelectedWeek();
       }, 320);
+    } else {
+      loadSelectedWeek();
     }
   }
 
@@ -567,8 +786,8 @@
 
   function updateCounts() {
     const count = ducks.size;
-    scoreboardCount.textContent = String(count);
-    panelDuckCount.textContent = String(count);
+    if (panelDuckCount) panelDuckCount.textContent = String(count);
+    if (scoreboardMode === "leaderboard") showLeaderboardScoreboard();
   }
 
   function maxActiveSwimmers() {
@@ -1640,7 +1859,11 @@
     roles = [],
     isLeader = false,
     testRole = "",
-    presentation = "male"
+    presentation = "male",
+    playerId = "",
+    playerName = "",
+    eventId = "",
+    eventDate = ""
   }) {
     const id = nextDuckId++;
     const duck = document.createElement("button");
@@ -1658,6 +1881,10 @@
     duck.dataset.clubRole = assignedRoles.includes("president") ? "president" : "player";
     duck.dataset.isLeader = isLeader ? "true" : "false";
     duck.dataset.testRole = testRole || "";
+    duck.dataset.playerId = playerId || "";
+    duck.dataset.playerName = playerName || "";
+    duck.dataset.eventId = eventId || "";
+    duck.dataset.eventDate = eventDate || "";
     duck.dataset.facing = "left";
     duck.dataset.collisionEscaping = "false";
     duck.dataset.blinking = "false";
@@ -1665,7 +1892,9 @@
     duck.dataset.swimPace = (0.88 + (id % 5) * 0.06).toFixed(2);
     duck.setAttribute(
       "aria-label",
-      `Duck ${id}, ${duck.dataset.presentation} ${duck.dataset.duckType} duck`
+      playerName
+        ? `${playerName}, ${duck.dataset.presentation} ${duck.dataset.duckType} duck`
+        : `Duck ${id}, ${duck.dataset.presentation} ${duck.dataset.duckType} duck`
     );
 
     applyDuckSize(duck);
@@ -1770,7 +1999,7 @@
     });
   }
 
-  async function animateEntry(duck, requestedDestination = null) {
+  async function animateEntry(duck, requestedDestination = null, hooks = {}) {
     duck.classList.add("entrying");
     duck.style.zIndex = "2600";
     duck.style.opacity = "1";
@@ -1856,6 +2085,7 @@
           splashCreated = true;
           duck.style.opacity = "0";
           createSplashAnimation(37, 77.6, duck.dataset.duckType);
+          if (typeof hooks.onSplash === "function") hooks.onSplash(duck);
         } else if (!splashCreated) {
           duck.style.opacity = "1";
         }
@@ -1942,6 +2172,172 @@
     scheduleMoodShift(duck);
     scheduleRoam(duck);
     scheduleIdleLife(duck);
+  }
+
+  function makePlayerDuck(player, event = {}, { instant = false, point = null } = {}) {
+    if (!player) return null;
+    const duckType = DUCK_TYPES.includes(event.duckType) ? event.duckType : selectedDuckType;
+    const spawnPoint = point || (instant ? distributedPoint() : { x: 37, y: 77.6 });
+
+    return makeDuck({
+      point: spawnPoint,
+      instant,
+      duckType,
+      featherTone: player.featherTone,
+      buildVariant: player.build,
+      presentation: player.presentation,
+      roles: player.roles || [],
+      clubRole: (player.roles || []).includes("president") ? "president" : "player",
+      isLeader: currentLeaderPlayerIds.has(player.id),
+      playerId: player.id,
+      playerName: player.name,
+      eventId: event.id || "",
+      eventDate: event.date || ""
+    });
+  }
+
+  function populatePlayerSelect() {
+    if (!playerSelect) return;
+    playerSelect.replaceChildren();
+    for (const player of PLAYER_PROFILES) {
+      const option = document.createElement("option");
+      option.value = player.id;
+      option.textContent = player.name;
+      playerSelect.appendChild(option);
+    }
+    updatePlayerIdentitySummary();
+  }
+
+  function updatePlayerIdentitySummary() {
+    if (!playerIdentitySummary) return;
+    const player = playerById(playerSelect?.value);
+    playerIdentitySummary.textContent = player
+      ? `${describePlayer(player)} • event shirt currently ${selectedDuckType}`
+      : "No player profile loaded.";
+  }
+
+  function populateWeekSelect() {
+    if (!weekSelect) return;
+    weekSelect.replaceChildren();
+    const currentMonday = mostRecentMonday(new Date());
+    const earliestEvent = TEST_DUCK_EVENTS.reduce((earliest, event) => !earliest || event.date < earliest ? event.date : earliest, "");
+    const earliestMonday = earliestEvent ? mostRecentMonday(localDateFromIso(earliestEvent)) : currentMonday;
+
+    // Show every Monday from the current one back through the fake season data.
+    let monday = currentMonday;
+    const options = [];
+    for (let guard = 0; guard < 30; guard++) {
+      const context = weekContextForMonday(monday);
+      options.push(context);
+      if (monday <= earliestMonday) break;
+      monday = addLocalDays(monday, -7);
+    }
+
+    for (const context of options) {
+      const option = document.createElement("option");
+      option.value = context.monday;
+      option.textContent = `${formatClubDate(context.monday)} — ${formatClubDate(context.start)} to ${formatClubDate(context.end)}`;
+      weekSelect.appendChild(option);
+    }
+    weekSelect.value = currentMonday;
+    updateWeekSummary();
+  }
+
+  function updateWeekSummary() {
+    if (!weekSummary || !weekSelect?.value) return;
+    const context = weekContextForMonday(weekSelect.value);
+    const earlier = TEST_DUCK_EVENTS.filter(event => event.date < context.start).length;
+    const entering = TEST_DUCK_EVENTS.filter(event => event.date >= context.start && event.date <= context.end).length;
+    const future = TEST_DUCK_EVENTS.filter(event => event.date > context.end).length;
+    weekSummary.textContent = `Monday ${formatClubDate(context.monday)} → ${formatClubDate(context.start)}–${formatClubDate(context.end)} • ${earlier} already in pond • ${entering} enter via pier • ${future} not yet in pond`;
+  }
+
+  function addSelectedPlayerDuck() {
+    const player = playerById(playerSelect?.value);
+    if (!player) return;
+    const event = {
+      id: `manual-${Date.now()}`,
+      playerId: player.id,
+      date: "",
+      team: "Test",
+      duckType: selectedDuckType
+    };
+    const duck = makePlayerDuck(player, event, { instant: false });
+    if (!duck) return;
+    status.textContent = `Adding ${player.name}: permanent ${player.presentation}/${FEATHER_TONES[player.featherTone]?.label || player.featherTone}/${BUILD_VARIANTS[player.build]?.label || player.build}; ${selectedDuckType} event shirt.`;
+    showEntrantScoreboard(player, event, 1, 1);
+    animateEntry(duck, null, { onSplash: showLeaderboardScoreboard });
+  }
+
+  async function loadSelectedWeek() {
+    const monday = weekSelect?.value || "";
+    if (!monday) {
+      status.textContent = "Choose a week first.";
+      return;
+    }
+
+    const context = weekContextForMonday(monday);
+    selectedWeekContext = context;
+    resetPond();
+    // resetPond increments the cancellation token, so capture the fresh value afterwards.
+    const loadToken = dateRangeLoadToken;
+    selectedWeekContext = context;
+
+    const events = [...TEST_DUCK_EVENTS].sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
+    const earlierEvents = events.filter(event => event.date < context.start);
+    const weekEvents = events.filter(event => event.date >= context.start && event.date <= context.end);
+    const pondEvents = events.filter(event => event.date <= context.end);
+    const leaderboard = leaderboardForEvents(pondEvents);
+    const leadCount = leaderboard[0]?.count || 0;
+    currentLeaderPlayerIds = new Set(
+      leaderboard.filter(entry => leadCount > 0 && entry.count === leadCount).map(entry => entry.player.id)
+    );
+
+    for (const event of earlierEvents) {
+      const player = playerById(event.playerId);
+      if (!player) continue;
+      makePlayerDuck(player, event, { instant: true, point: distributedPoint() });
+    }
+
+    renderDataDebug(context, weekEvents, pondEvents);
+    showLeaderboardScoreboard();
+    status.textContent = `${earlierEvents.length} earlier ducks are already in the pond. ${weekEvents.length} ducks from ${formatClubDate(context.start)}–${formatClubDate(context.end)} will enter via the pier.`;
+
+    for (let index = 0; index < weekEvents.length; index++) {
+      if (loadToken !== dateRangeLoadToken) return;
+      const event = weekEvents[index];
+      const player = playerById(event.playerId);
+      if (!player) continue;
+      const duck = makePlayerDuck(player, event, { instant: false });
+      if (!duck) continue;
+
+      showEntrantScoreboard(player, event, index + 1, weekEvents.length);
+      status.textContent = `${player.name} entering (${index + 1}/${weekEvents.length}) • ${formatClubDate(event.date)} • ${event.duckType}.`;
+
+      await new Promise(resolveSplash => {
+        let resolved = false;
+        const finish = () => {
+          if (resolved) return;
+          resolved = true;
+          resolveSplash();
+        };
+        animateEntry(duck, null, { onSplash: finish });
+        // Defensive fallback only; normal progression is driven by the actual splash hook.
+        setTimeout(finish, 6200);
+      });
+
+      if (loadToken !== dateRangeLoadToken) return;
+      if (index < weekEvents.length - 1) {
+        const nextEvent = weekEvents[index + 1];
+        const nextPlayer = playerById(nextEvent.playerId);
+        showEntrantScoreboard(nextPlayer, nextEvent, index + 2, weekEvents.length);
+        await sleep(500);
+      }
+    }
+
+    if (loadToken !== dateRangeLoadToken) return;
+    showLeaderboardScoreboard();
+    status.textContent = `${formatClubDate(context.start)}–${formatClubDate(context.end)} loaded. ${pondEvents.length} cumulative ducks are now represented in the pond.`;
   }
 
   function addAnimatedDuck(presentation = "male") {
@@ -2033,6 +2429,7 @@
   }
 
   function resetPond() {
+    dateRangeLoadToken++;
     for (const duck of [...ducks.values()]) disposeDuck(duck);
 
     duckLayer.replaceChildren();
@@ -2043,6 +2440,7 @@
     collisionPairs.clear();
     nextGlobalCollisionReactionAt = performance.now() + 3000 + Math.random() * 4000;
     nextGlobalIdleWingAt = 0;
+    currentLeaderPlayerIds = new Set();
     updateCounts();
 
     destinationMarker.hidden = true;
@@ -2189,7 +2587,13 @@
     updateDuckTypeButton();
     status.textContent =
       `New ducks will be ${selectedDuckType}.`;
+    updatePlayerIdentitySummary();
   });
+
+  if (playerSelect) playerSelect.addEventListener("change", updatePlayerIdentitySummary);
+  if (addPlayerButton) addPlayerButton.addEventListener("click", addSelectedPlayerDuck);
+  if (weekSelect) weekSelect.addEventListener("change", updateWeekSummary);
+  if (loadWeekButton) loadWeekButton.addEventListener("click", loadSelectedWeek);
 
   addMaleButton.addEventListener("click", () => addAnimatedDuck("male"));
   addFemaleButton.addEventListener("click", () => addAnimatedDuck("female"));
@@ -2352,6 +2756,8 @@
     updateDuckTypeButton();
     updateFeatherToneButton();
     updateBuildVariantButton();
+    populatePlayerSelect();
+    populateWeekSelect();
     initialiseProductionAssets().catch(showStartupFailure);
   } catch (error) {
     showStartupFailure(error);
