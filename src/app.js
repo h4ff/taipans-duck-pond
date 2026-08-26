@@ -55,6 +55,10 @@
   const playerStatsTypes = document.getElementById("playerStatsTypes");
   const playerStatsLatest = document.getElementById("playerStatsLatest");
   const closePlayerStats = document.getElementById("closePlayerStats");
+  let playerStatsDuck = null;
+  let playerStatsFollowFrame = null;
+  let playerStatsHideTimer = null;
+  const PLAYER_STATS_TIMEOUT_MS = 5000;
   const status = document.getElementById("status");
   const loadingOverlay = document.getElementById("loadingOverlay");
   const loadingTitle = document.getElementById("loadingTitle");
@@ -1850,7 +1854,87 @@
   }
 
   function hidePlayerStats() {
-    if (playerStatsCard) playerStatsCard.hidden = true;
+    if (playerStatsHideTimer) {
+      clearTimeout(playerStatsHideTimer);
+      playerStatsHideTimer = null;
+    }
+    if (playerStatsFollowFrame) {
+      cancelAnimationFrame(playerStatsFollowFrame);
+      playerStatsFollowFrame = null;
+    }
+    playerStatsDuck = null;
+    if (playerStatsCard) {
+      playerStatsCard.hidden = true;
+      playerStatsCard.classList.remove(
+        "callout-above-right", "callout-above-left",
+        "callout-below-right", "callout-below-left"
+      );
+    }
+  }
+
+  function positionPlayerStatsCallout() {
+    if (!playerStatsCard || playerStatsCard.hidden || !playerStatsDuck?.isConnected) {
+      hidePlayerStats();
+      return;
+    }
+
+    const duckRect = playerStatsDuck.getBoundingClientRect();
+    const frameRect = sceneFrame.getBoundingClientRect();
+    const sceneRect = scene.getBoundingClientRect();
+    const cardRect = playerStatsCard.getBoundingClientRect();
+
+    // Keep the callout inside the visible pond viewport, not merely inside the
+    // outer scene frame. This also behaves correctly while mobile zoom/pan is active.
+    const minX = sceneRect.left - frameRect.left + 7;
+    const maxX = sceneRect.right - frameRect.left - 7;
+    const minY = sceneRect.top - frameRect.top + 7;
+    const maxY = sceneRect.bottom - frameRect.top - 7;
+    const gap = 12;
+
+    const duckLeft = duckRect.left - frameRect.left;
+    const duckRight = duckRect.right - frameRect.left;
+    const duckTop = duckRect.top - frameRect.top;
+    const duckBottom = duckRect.bottom - frameRect.top;
+
+    let horizontal = "right";
+    let vertical = "above";
+    let left = duckRight + gap;
+    let top = duckTop - cardRect.height - gap;
+
+    if (left + cardRect.width > maxX) {
+      horizontal = "left";
+      left = duckLeft - cardRect.width - gap;
+    }
+    if (left < minX) {
+      // If neither diagonal side has full room, clamp to the viewport while
+      // retaining the tail on the closest useful side.
+      left = Math.max(minX, Math.min(maxX - cardRect.width, left));
+    }
+
+    if (top < minY) {
+      vertical = "below";
+      top = duckBottom + gap;
+    }
+    if (top + cardRect.height > maxY) {
+      // Prefer above if below overflows and above can fit; otherwise clamp.
+      const aboveTop = duckTop - cardRect.height - gap;
+      if (aboveTop >= minY) {
+        vertical = "above";
+        top = aboveTop;
+      } else {
+        top = Math.max(minY, Math.min(maxY - cardRect.height, top));
+      }
+    }
+
+    playerStatsCard.style.left = `${Math.round(left)}px`;
+    playerStatsCard.style.top = `${Math.round(top)}px`;
+    playerStatsCard.classList.remove(
+      "callout-above-right", "callout-above-left",
+      "callout-below-right", "callout-below-left"
+    );
+    playerStatsCard.classList.add(`callout-${vertical}-${horizontal}`);
+
+    playerStatsFollowFrame = requestAnimationFrame(positionPlayerStatsCallout);
   }
 
   function showPlayerStatsForDuck(duck) {
@@ -1867,7 +1951,7 @@
 
     const leaders = currentLeaderboard();
     const rankIndex = leaders.findIndex(entry => entry.player.id === player.id);
-    const rankText = rankIndex >= 0 ? `#${rankIndex + 1} on the pond leaderboard` : "Unranked";
+    const rankText = rankIndex >= 0 ? `#${rankIndex + 1} on pond leaderboard` : "Unranked";
     const latest = events[events.length - 1] || null;
     const display = displayPlayerName(player);
 
@@ -1888,7 +1972,16 @@
         : "No duck events loaded yet.";
     }
 
+    if (playerStatsHideTimer) clearTimeout(playerStatsHideTimer);
+    if (playerStatsFollowFrame) cancelAnimationFrame(playerStatsFollowFrame);
+    playerStatsDuck = duck;
     playerStatsCard.hidden = false;
+    playerStatsCard.style.left = "0px";
+    playerStatsCard.style.top = "0px";
+    // Position once immediately after layout, then keep following the duck as
+    // it scoots or resumes normal swimming.
+    positionPlayerStatsCallout();
+    playerStatsHideTimer = setTimeout(hidePlayerStats, PLAYER_STATS_TIMEOUT_MS);
   }
 
   function clickScootPoint(duck) {

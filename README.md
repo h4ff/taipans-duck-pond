@@ -1,4 +1,12 @@
-# Duck Pond – v0.89
+# Duck Pond – v0.90
+
+## v0.90 – Duck-following Player Stats Callout
+
+- Replaced the fixed player stats card with a compact translucent callout that follows the clicked duck.
+- Callout defaults diagonally above-right of the duck and automatically flips left/below when the visible pond edge leaves insufficient room.
+- The callout follows the duck during the click scoot and subsequent movement without inheriting sprite scale/rotation.
+- Added manual close plus automatic 5-second timeout; clicking another duck transfers the callout and restarts the timer.
+- Preserved v0.89 click reaction, scoot, weekly playback, scoreboard and player logic.
 
 ## v0.89 – Click Scoot Fix
 
