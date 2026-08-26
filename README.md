@@ -1,4 +1,14 @@
-# Duck Pond – v0.90
+# Duck Pond – v0.91
+
+## v0.91 – Layered Walking Duck Architecture
+
+- Replaced whole-frame pier walking sprites with layered 512×512 walking components.
+- Added code-driven alternating front/rear leg movement and subtle wing counter-movement.
+- Uses separate male and female bodies and wing sets; the raised male rear wing is layered behind the body.
+- Added feather-colour variants for white, yellow, light brown and dark brown while preserving white eye whites; blink overlays reveal the feather-coloured eyelid area beneath.
+- Preserved the larger hero pier walk, waddle path, pre-jump squash, jump shrink, splash/resurface and existing pond entry location.
+- Added natural walking blinks using the new neutral/sad blink overlays.
+- Player stats callout no longer has the diamond pointer and is slightly more transparent.
 
 ## v0.90 – Duck-following Player Stats Callout
 

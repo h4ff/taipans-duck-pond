@@ -64,7 +64,7 @@
   const loadingTitle = document.getElementById("loadingTitle");
   const loadingProgress = document.getElementById("loadingProgress");
 
-  const WALK_FRAME_ROOT = "assets/duck/walk";
+  const WALK_LAYER_ROOT = "assets/duck/walk-layered";
   const HEADWEAR_ASSETS = {
     normal: {
       walk: "assets/duck/headwear/normal/walk.png",
@@ -336,14 +336,35 @@
     return facing === "right" ? ROLE_ASSETS.coach.swim.right : ROLE_ASSETS.coach.swim.left;
   }
 
-  function walkFrameSrc(duckType, featherTone, frameNumber, presentation = "male") {
-    const safeFrame = Math.max(1, Math.min(3, frameNumber));
-    const safeType = DUCK_TYPES.includes(duckType) ? duckType : "standard";
+  function walkBodySrc(featherTone, presentation = "male") {
     const safeTone = FEATHER_TONES[featherTone] ? featherTone : "white";
-    if (presentation === "female") {
-      return `${FEMALE_ASSETS.walkRoot}/${safeType}/${safeTone}/walk-${String(safeFrame).padStart(2, "0")}.png`;
-    }
-    return `${WALK_FRAME_ROOT}/${safeType}/${safeTone}/walk-${String(safeFrame).padStart(2, "0")}.png`;
+    const safePresentation = presentation === "female" ? "female" : "male";
+    return `${WALK_LAYER_ROOT}/${safePresentation}/body-${safeTone}.png`;
+  }
+
+  function walkShirtSrc(duckType, presentation = "male") {
+    const safeType = DUCK_TYPES.includes(duckType) ? duckType : "standard";
+    const safePresentation = presentation === "female" ? "female" : "male";
+    return `${WALK_LAYER_ROOT}/${safePresentation}/shirt-${safeType}.png`;
+  }
+
+  function walkWingSrc(which, featherTone, presentation = "male") {
+    const safeTone = FEATHER_TONES[featherTone] ? featherTone : "white";
+    const safePresentation = presentation === "female" ? "female" : "male";
+    return `${WALK_LAYER_ROOT}/${safePresentation}/wing-${which}-${safeTone}.png`;
+  }
+
+  function walkLegSrc(which, featherTone) {
+    const safeTone = FEATHER_TONES[featherTone] ? featherTone : "white";
+    if (which === "rear") return `${WALK_LAYER_ROOT}/shared/leg-rear.png`;
+    return `${WALK_LAYER_ROOT}/shared/leg-front-${safeTone}.png`;
+  }
+
+  function walkFaceSrc(faceName) {
+    const safeFace = ["neutral", "sad", "angry", "surprised", "neutral-blink", "sad-blink"].includes(faceName)
+      ? faceName
+      : "neutral";
+    return `${WALK_LAYER_ROOT}/faces/${safeFace}.png`;
   }
 
   const SWIM_ASSETS = {
@@ -460,7 +481,13 @@
       SWIM_ASSETS.faces.surprised,
       SWIM_ASSETS.faces.angry,
       SWIM_ASSETS.blinks.neutral,
-      ...Object.values(SWIM_ASSETS.wakes)
+      ...Object.values(SWIM_ASSETS.wakes),
+      walkFaceSrc("neutral"),
+      walkFaceSrc("sad"),
+      walkFaceSrc("angry"),
+      walkFaceSrc("surprised"),
+      walkFaceSrc("neutral-blink"),
+      walkFaceSrc("sad-blink")
     ]);
 
     for (const headwear of Object.values(HEADWEAR_ASSETS)) {
@@ -479,10 +506,14 @@
       }
 
       for (const featherTone of FEATHER_TONE_KEYS) {
-        for (let frame = 1; frame <= 3; frame++) {
-          urls.add(walkFrameSrc(duckType, featherTone, frame));
-          urls.add(walkFrameSrc(duckType, featherTone, frame, "female"));
+        for (const presentation of ["male", "female"]) {
+          urls.add(walkBodySrc(featherTone, presentation));
+          urls.add(walkShirtSrc(duckType, presentation));
+          urls.add(walkWingSrc("front", featherTone, presentation));
+          urls.add(walkWingSrc("rear", featherTone, presentation));
         }
+        urls.add(walkLegSrc("front", featherTone));
+        urls.add(walkLegSrc("rear", featherTone));
         urls.add(swimBodySrc(duckType, featherTone));
         urls.add(swimBodySrc(duckType, featherTone, "female"));
       }
@@ -1730,18 +1761,36 @@
     }
   }
 
+  function appendEntryImage(stack, className, src) {
+    const image = document.createElement("img");
+    image.className = `entry-layer ${className}`;
+    image.src = src;
+    image.alt = "";
+    stack.appendChild(image);
+    return image;
+  }
+
   function buildEntryVisual(duck, frameIndex = 1) {
     const visual = duck.querySelector(".duck-visual");
     visual.replaceChildren();
 
-    const image = document.createElement("img");
-    image.className = "entry-frame";
     const presentation = duck.dataset.presentation === "female" ? "female" : "male";
-    // Walking presentation is mutually exclusive: this single frame is either
-    // the male base or the female base. No opposite-presentation frame exists underneath.
-    image.src = walkFrameSrc(duck.dataset.duckType, duck.dataset.featherTone, frameIndex, presentation);
-    image.alt = "";
-    visual.appendChild(image);
+    const tone = duck.dataset.featherTone;
+    const stack = document.createElement("span");
+    stack.className = `entry-stack entry-${presentation}`;
+    visual.appendChild(stack);
+
+    // Layered walking architecture (v0.91). The supplied 512px components stay
+    // aligned on one canvas while the legs and wings move independently in code/CSS.
+    appendEntryImage(stack, "entry-leg entry-leg-rear", walkLegSrc("rear", tone));
+    appendEntryImage(stack, "entry-shirt", walkShirtSrc(duck.dataset.duckType, presentation));
+    appendEntryImage(stack, "entry-body", walkBodySrc(tone, presentation));
+    appendEntryImage(stack, "entry-wing entry-wing-rear", walkWingSrc("rear", tone, presentation));
+    appendEntryImage(stack, "entry-leg entry-leg-front", walkLegSrc("front", tone));
+    appendEntryImage(stack, "entry-wing entry-wing-front", walkWingSrc("front", tone, presentation));
+
+    const idleFace = duck.dataset.idleFace === "sad" ? "sad" : "neutral";
+    appendEntryImage(stack, "entry-face", walkFaceSrc(idleFace));
 
     if (duckHasRole(duck, "captain")) {
       const captainLayer = document.createElement("span");
@@ -1752,29 +1801,62 @@
       captainMark.className = "captain-mark captain-mark-walk";
       captainMark.textContent = "C";
       captainLayer.appendChild(captainMark);
-      visual.appendChild(captainLayer);
+      stack.appendChild(captainLayer);
     }
 
     if (duckHasRole(duck, "coach")) {
       const whistle = document.createElement("img");
-      whistle.className = "entry-role-overlay entry-coach-whistle";
+      whistle.className = "entry-layer entry-role-overlay entry-coach-whistle";
       whistle.src = coachWhistleSrc("walk");
       whistle.alt = "";
-      visual.appendChild(whistle);
+      stack.appendChild(whistle);
     }
 
     const headwear = document.createElement("img");
-    headwear.className = "entry-hat entry-headwear";
+    headwear.className = "entry-layer entry-hat entry-headwear";
     headwear.src = headwearSrc(duck, "walk");
     headwear.alt = "";
-    visual.appendChild(headwear);
+    stack.appendChild(headwear);
+
+    setWalkFrame(duck, frameIndex);
+  }
+
+  function setEntryFace(duck, faceName) {
+    const face = duck.querySelector(".entry-face");
+    if (!face) return;
+    face.src = walkFaceSrc(faceName);
   }
 
   function setWalkFrame(duck, frameNumber) {
-    const image = duck.querySelector(".entry-frame");
-    if (!image) return;
-    image.src = walkFrameSrc(duck.dataset.duckType, duck.dataset.featherTone, frameNumber, duck.dataset.presentation);
-    duck.dataset.walkFrame = String(frameNumber);
+    const safeFrame = Math.max(1, Math.min(3, Number(frameNumber) || 2));
+    const stack = duck.querySelector(".entry-stack");
+    if (!stack) return;
+    stack.dataset.walkStep = String(safeFrame);
+    duck.dataset.walkFrame = String(safeFrame);
+  }
+
+  function cancelEntryBlink(duck, restore = true) {
+    clearTimeout(duck._entryBlinkTimer);
+    clearTimeout(duck._entryBlinkReturnTimer);
+    duck._entryBlinkTimer = null;
+    duck._entryBlinkReturnTimer = null;
+    if (restore && duck.isConnected) {
+      setEntryFace(duck, duck.dataset.idleFace === "sad" ? "sad" : "neutral");
+    }
+  }
+
+  function scheduleEntryBlink(duck, delay = 850 + Math.random() * 1500) {
+    clearTimeout(duck._entryBlinkTimer);
+    duck._entryBlinkTimer = setTimeout(() => {
+      if (!duck.isConnected || duck.dataset.motionState !== "entering") return;
+      const idle = duck.dataset.idleFace === "sad" ? "sad" : "neutral";
+      setEntryFace(duck, `${idle}-blink`);
+      duck._entryBlinkReturnTimer = setTimeout(() => {
+        if (!duck.isConnected || duck.dataset.motionState !== "entering") return;
+        setEntryFace(duck, idle);
+        scheduleEntryBlink(duck, 1200 + Math.random() * 1900);
+      }, 105 + Math.random() * 45);
+    }, delay);
   }
 
   function buildSwimVisual(duck, faceName = "sad") {
@@ -2270,6 +2352,7 @@
     const walkCycle = [1, 2, 3, 2, 1];
     let walkIndex = 0;
     setWalkFrame(duck, walkCycle[walkIndex]);
+    scheduleEntryBlink(duck);
 
     duck._walkTimer = setInterval(() => {
       if (!duck.isConnected) return;
@@ -2280,6 +2363,7 @@
     await animateEntrySegment(duck, walkFrames, 4600, t => t, "feet");
     clearInterval(duck._walkTimer);
     duck._walkTimer = null;
+    cancelEntryBlink(duck, true);
     setWalkFrame(duck, 2);
 
     // Brief anticipation squash at the pier edge.
