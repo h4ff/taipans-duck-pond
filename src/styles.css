@@ -371,30 +371,32 @@ body {
 }
 
 .entry-leg-rear { z-index: 0; transform-origin: 54% 79%; }
-.entry-shirt { z-index: 1; }
-.entry-body { z-index: 2; }
-.entry-wing-rear { z-index: 3; transform-origin: 66% 52%; }
-.entry-stack.entry-male .entry-wing-rear { z-index: 0; }
+.entry-wing-rear { z-index: 1; transform-origin: 66% 52%; }
+.entry-shirt { z-index: 2; }
+.entry-body { z-index: 3; }
 .entry-leg-front { z-index: 4; transform-origin: 43% 78%; }
 .entry-wing-front { z-index: 5; transform-origin: 48% 59%; }
 .entry-face { z-index: 6; }
+.entry-face-blink { z-index: 6; }
+.entry-face-blink[hidden] { display: none !important; }
 .entry-role-overlay { z-index: 7; }
 .entry-hat { z-index: 8; }
 
-/* Straight supplied leg art becomes the walking cycle here.  The front leg
-   has the feathered thigh, so its transform pivot stays at the top of that
-   section rather than rotating the whole sprite around its centre. */
+/* v0.92: broader, more committed stride. The supplied straight leg/foot art
+   stays intact; translation + rotation + a small lift creates the step before
+   asking for separate foot artwork. Male stride is deliberately a little
+   broader/heavier than female to suit the wider body proportions. */
 .entry-stack[data-walk-step="1"] .entry-leg-front {
-  transform: translate(-2px, -1px) rotate(12deg);
+  transform: translate(-8px, -4px) rotate(23deg);
 }
 .entry-stack[data-walk-step="1"] .entry-leg-rear {
-  transform: translate(2px, 1px) rotate(-11deg);
+  transform: translate(9px, 3px) rotate(-21deg);
 }
 .entry-stack[data-walk-step="1"] .entry-wing-front {
-  transform: rotate(-2.5deg) translateY(1px);
+  transform: rotate(-3.5deg) translateY(1px);
 }
 .entry-stack[data-walk-step="1"] .entry-wing-rear {
-  transform: rotate(6deg) translateY(-1px);
+  transform: rotate(-8deg) translate(-1px, 2px);
 }
 
 .entry-stack[data-walk-step="2"] .entry-leg-front,
@@ -405,27 +407,52 @@ body {
   transform: rotate(0deg);
 }
 .entry-stack[data-walk-step="2"] .entry-wing-rear {
-  transform: rotate(8deg);
+  transform: rotate(-10deg) translateY(2px);
 }
 
 .entry-stack[data-walk-step="3"] .entry-leg-front {
-  transform: translate(2px, 1px) rotate(-12deg);
+  transform: translate(8px, 3px) rotate(-23deg);
 }
 .entry-stack[data-walk-step="3"] .entry-leg-rear {
-  transform: translate(-2px, -1px) rotate(11deg);
+  transform: translate(-9px, -4px) rotate(21deg);
 }
 .entry-stack[data-walk-step="3"] .entry-wing-front {
-  transform: rotate(2.5deg) translateY(-1px);
+  transform: rotate(3.5deg) translateY(-1px);
 }
 .entry-stack[data-walk-step="3"] .entry-wing-rear {
-  transform: rotate(10deg) translateY(1px);
+  transform: rotate(-12deg) translate(-1px, 1px);
 }
 
-/* Female walking wings were supplied in a natural down/rest position. Keep
-   their rear wing movement subtler than the raised male rear-wing source. */
-.entry-stack.entry-female[data-walk-step="1"] .entry-wing-rear { transform: rotate(-1.5deg); }
-.entry-stack.entry-female[data-walk-step="2"] .entry-wing-rear { transform: rotate(0deg); }
-.entry-stack.entry-female[data-walk-step="3"] .entry-wing-rear { transform: rotate(1.5deg); }
+/* Female proportions suit a slightly tighter stride, but still much broader
+   than v0.91's shuffle. The female rear wing is explicitly kept BEHIND the
+   shirt/body and uses the supplied natural down/rest pose. */
+.entry-stack.entry-female .entry-wing-rear { z-index: 1; }
+.entry-stack.entry-female[data-walk-step="1"] .entry-leg-front {
+  transform: translate(-6px, -3px) rotate(19deg);
+}
+.entry-stack.entry-female[data-walk-step="1"] .entry-leg-rear {
+  transform: translate(7px, 2px) rotate(-18deg);
+}
+.entry-stack.entry-female[data-walk-step="2"] .entry-leg-front,
+.entry-stack.entry-female[data-walk-step="2"] .entry-leg-rear {
+  transform: translate(0, 0) rotate(0deg);
+}
+.entry-stack.entry-female[data-walk-step="3"] .entry-leg-front {
+  transform: translate(6px, 2px) rotate(-19deg);
+}
+.entry-stack.entry-female[data-walk-step="3"] .entry-leg-rear {
+  transform: translate(-7px, -3px) rotate(18deg);
+}
+.entry-stack.entry-female[data-walk-step="1"] .entry-wing-rear { transform: translate(-3px, 4px) rotate(-11deg); }
+.entry-stack.entry-female[data-walk-step="2"] .entry-wing-rear { transform: translate(-1px, 1px) rotate(-3deg); }
+.entry-stack.entry-female[data-walk-step="3"] .entry-wing-rear { transform: translate(-3px, -5px) rotate(11deg); }
+
+/* Male rear-wing source is supplied raised. Bias it down/in and keep the
+   motion subtle while body occlusion does the rest. */
+.entry-stack.entry-male .entry-wing-rear { z-index: 1; transform-origin: 66% 56%; }
+.entry-stack.entry-male[data-walk-step="1"] .entry-wing-rear { transform: translate(-3px, 5px) rotate(-18deg); }
+.entry-stack.entry-male[data-walk-step="2"] .entry-wing-rear { transform: translate(-3px, 5px) rotate(-20deg); }
+.entry-stack.entry-male[data-walk-step="3"] .entry-wing-rear { transform: translate(-3px, 5px) rotate(-22deg); }
 
 .entry-captain-layer {
   z-index: 7;

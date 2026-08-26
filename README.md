@@ -1,4 +1,24 @@
-# Duck Pond – v0.91
+# Duck Pond – v0.94
+
+## v0.94 – Sad Blink Colour + Female Rear-Wing Motion
+
+- Added tone-specific walking sad-blink faces for white, yellow, light-brown and dark-brown ducks so the closed eyelids match feather colour while retaining the sad expression.
+- Increased female rear-wing travel substantially so the smaller rear wing produces a visible rhythmic lift while remaining behind the body.
+- Preserved the v0.93 gait, male wing rhythm, pier entry, player systems and stats interaction unchanged.
+
+## v0.93 – Walking Blink Fix + Female Rear-Wing Lift
+
+- Fixed layered walking blinks so the face no longer ghosts or disappears; blinks now use full blink-face assets with the eye area cleared so the duck feather colour shows through naturally.
+- Made walking blinks slightly more noticeable by extending the blink hold very slightly.
+- Added a more readable rear-wing lift for female walking ducks while keeping the improved gait and male rear-wing rhythm from v0.92.
+
+## v0.92 – Walking Gait / Blink / Wing Layering Refinement
+
+- Walking blink assets now overlay the persistent neutral/sad face, preventing the beak/brows/full face from disappearing during blinks.
+- Broadened the code-driven walking stride substantially to remove the v0.91 shuffle; male stride is slightly broader than female to suit the different body proportions.
+- Female rear walking wing is now explicitly layered behind the shirt/body.
+- Male raised rear-wing source is biased down/in with subtler motion while remaining behind the body.
+- Preserves the larger pier entry, squash, jump, in-air resize, splash/resurface and all v0.91 player/data behaviour.
 
 ## v0.91 – Layered Walking Duck Architecture
 

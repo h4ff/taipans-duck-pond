@@ -360,10 +360,14 @@
     return `${WALK_LAYER_ROOT}/shared/leg-front-${safeTone}.png`;
   }
 
-  function walkFaceSrc(faceName) {
+  function walkFaceSrc(faceName, featherTone = "white") {
     const safeFace = ["neutral", "sad", "angry", "surprised", "neutral-blink", "sad-blink"].includes(faceName)
       ? faceName
       : "neutral";
+    const safeTone = FEATHER_TONES[featherTone] ? featherTone : "white";
+    if (safeFace === "sad-blink") {
+      return `${WALK_LAYER_ROOT}/faces/sad-blink-${safeTone}.png`;
+    }
     return `${WALK_LAYER_ROOT}/faces/${safeFace}.png`;
   }
 
@@ -486,8 +490,7 @@
       walkFaceSrc("sad"),
       walkFaceSrc("angry"),
       walkFaceSrc("surprised"),
-      walkFaceSrc("neutral-blink"),
-      walkFaceSrc("sad-blink")
+      walkFaceSrc("neutral-blink")
     ]);
 
     for (const headwear of Object.values(HEADWEAR_ASSETS)) {
@@ -514,6 +517,7 @@
         }
         urls.add(walkLegSrc("front", featherTone));
         urls.add(walkLegSrc("rear", featherTone));
+        urls.add(walkFaceSrc("sad-blink", featherTone));
         urls.add(swimBodySrc(duckType, featherTone));
         urls.add(swimBodySrc(duckType, featherTone, "female"));
       }
@@ -1780,7 +1784,7 @@
     stack.className = `entry-stack entry-${presentation}`;
     visual.appendChild(stack);
 
-    // Layered walking architecture (v0.91). The supplied 512px components stay
+    // Layered walking architecture (v0.93 blink/wing refinement). The supplied 512px components stay
     // aligned on one canvas while the legs and wings move independently in code/CSS.
     appendEntryImage(stack, "entry-leg entry-leg-rear", walkLegSrc("rear", tone));
     appendEntryImage(stack, "entry-shirt", walkShirtSrc(duck.dataset.duckType, presentation));
@@ -1791,6 +1795,8 @@
 
     const idleFace = duck.dataset.idleFace === "sad" ? "sad" : "neutral";
     appendEntryImage(stack, "entry-face", walkFaceSrc(idleFace));
+    const blinkOverlay = appendEntryImage(stack, "entry-face-blink", walkFaceSrc(`${idleFace}-blink`, tone));
+    blinkOverlay.hidden = true;
 
     if (duckHasRole(duck, "captain")) {
       const captainLayer = document.createElement("span");
@@ -1823,7 +1829,19 @@
 
   function setEntryFace(duck, faceName) {
     const face = duck.querySelector(".entry-face");
+    const blink = duck.querySelector(".entry-face-blink");
     if (!face) return;
+
+    // v0.93: walking blinks now use full blink-face assets that retain the
+    // beak/brows while clearing the eye area so the feather-coloured head shows
+    // through naturally. This mirrors the pond fix: no vanishing face, no ghosting.
+    if (faceName === "neutral-blink" || faceName === "sad-blink") {
+      if (blink) blink.hidden = true;
+      face.src = walkFaceSrc(faceName, duck.dataset.featherTone);
+      return;
+    }
+
+    if (blink) blink.hidden = true;
     face.src = walkFaceSrc(faceName);
   }
 
@@ -1855,7 +1873,7 @@
         if (!duck.isConnected || duck.dataset.motionState !== "entering") return;
         setEntryFace(duck, idle);
         scheduleEntryBlink(duck, 1200 + Math.random() * 1900);
-      }, 105 + Math.random() * 45);
+      }, 130 + Math.random() * 60);
     }, delay);
   }
 
