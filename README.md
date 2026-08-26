@@ -1,4 +1,17 @@
-# Duck Pond – v0.94
+# Duck Pond – v0.96
+
+## v0.96 – Tone-Specific Walking Sad Faces
+
+- Added proper tone-specific RESTING walking sad faces for white, yellow, light-brown and dark-brown ducks, matching the established swimming-face architecture.
+- Only the sad eyelid/feather fill is recoloured; the eyeball whites remain white.
+- Wired initial walking sad state and all returns from blink/reaction states to use the duck's own feather-tone sad face.
+- Female rear wing remains down as fixed in v0.95.
+
+## v0.95 – Sad Blink Eyelid Fix + Female Rear Wing Down
+
+- Rebuilt the walking sad-blink face assets so the eye area is properly transparent and the duck feather tone shows through as the closed eyelids.
+- Returned the female rear wing to a natural down/resting pose throughout the walk cycle.
+- Left the gait, blink timing, male rear-wing rhythm and the rest of the player/pond systems unchanged.
 
 ## v0.94 – Sad Blink Colour + Female Rear-Wing Motion
 

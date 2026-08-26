@@ -365,6 +365,11 @@
       ? faceName
       : "neutral";
     const safeTone = FEATHER_TONES[featherTone] ? featherTone : "white";
+    // v0.96: resting sad faces need tone-specific feather-coloured eyelids,
+    // just like the established swimming sad-face set. Eye whites remain white.
+    if (safeFace === "sad") {
+      return `${WALK_LAYER_ROOT}/faces/sad-${safeTone}.png`;
+    }
     if (safeFace === "sad-blink") {
       return `${WALK_LAYER_ROOT}/faces/sad-blink-${safeTone}.png`;
     }
@@ -487,7 +492,6 @@
       SWIM_ASSETS.blinks.neutral,
       ...Object.values(SWIM_ASSETS.wakes),
       walkFaceSrc("neutral"),
-      walkFaceSrc("sad"),
       walkFaceSrc("angry"),
       walkFaceSrc("surprised"),
       walkFaceSrc("neutral-blink")
@@ -517,6 +521,7 @@
         }
         urls.add(walkLegSrc("front", featherTone));
         urls.add(walkLegSrc("rear", featherTone));
+        urls.add(walkFaceSrc("sad", featherTone));
         urls.add(walkFaceSrc("sad-blink", featherTone));
         urls.add(swimBodySrc(duckType, featherTone));
         urls.add(swimBodySrc(duckType, featherTone, "female"));
@@ -1794,7 +1799,7 @@
     appendEntryImage(stack, "entry-wing entry-wing-front", walkWingSrc("front", tone, presentation));
 
     const idleFace = duck.dataset.idleFace === "sad" ? "sad" : "neutral";
-    appendEntryImage(stack, "entry-face", walkFaceSrc(idleFace));
+    appendEntryImage(stack, "entry-face", walkFaceSrc(idleFace, tone));
     const blinkOverlay = appendEntryImage(stack, "entry-face-blink", walkFaceSrc(`${idleFace}-blink`, tone));
     blinkOverlay.hidden = true;
 
@@ -1842,7 +1847,7 @@
     }
 
     if (blink) blink.hidden = true;
-    face.src = walkFaceSrc(faceName);
+    face.src = walkFaceSrc(faceName, duck.dataset.featherTone);
   }
 
   function setWalkFrame(duck, frameNumber) {

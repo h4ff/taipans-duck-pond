@@ -443,9 +443,9 @@ body {
 .entry-stack.entry-female[data-walk-step="3"] .entry-leg-rear {
   transform: translate(-7px, -3px) rotate(18deg);
 }
-.entry-stack.entry-female[data-walk-step="1"] .entry-wing-rear { transform: translate(-3px, 4px) rotate(-11deg); }
-.entry-stack.entry-female[data-walk-step="2"] .entry-wing-rear { transform: translate(-1px, 1px) rotate(-3deg); }
-.entry-stack.entry-female[data-walk-step="3"] .entry-wing-rear { transform: translate(-3px, -5px) rotate(11deg); }
+.entry-stack.entry-female[data-walk-step="1"] .entry-wing-rear { transform: translate(-1px, 1px) rotate(-2deg); }
+.entry-stack.entry-female[data-walk-step="2"] .entry-wing-rear { transform: translate(-1px, 1px) rotate(-2deg); }
+.entry-stack.entry-female[data-walk-step="3"] .entry-wing-rear { transform: translate(-1px, 1px) rotate(-2deg); }
 
 /* Male rear-wing source is supplied raised. Bias it down/in and keep the
    motion subtle while body occlusion does the rest. */
