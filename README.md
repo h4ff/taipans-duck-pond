@@ -1,4 +1,20 @@
-# Duck Pond – v0.96
+# Duck Pond – v0.98
+
+## v0.98 – Nervous Pier Entry
+
+- Replaced the shared walking sad-blink PNG with the corrected user-supplied asset.
+- Added a random nervous-entry branch for roughly 22% of entrants; most ducks still use the normal entry.
+- Nervous ducks stop at the pier edge, switch to their feather-tone nervous face, tremble for about 2.4 seconds, then close their eyes using the corrected sad blink.
+- With eyes closed, the whole assembled walking duck takes two slow code-driven breaths before the existing squash and jump.
+- Nervous ducks keep their eyes closed through the squat and jump; the existing splash, resize and swimming transition are unchanged.
+
+## v0.97 – Corrected Walking Assets + Dead Asset Cleanup
+
+- Replaced male and female layered walking body assets with the corrected supplied versions, including the extended head coverage around the eyes.
+- Replaced walking neutral/sad blink artwork with the two corrected shared blink PNGs exactly as supplied. The code no longer creates or requests per-feather blink variants.
+- Added the supplied feather-tone nervous walking faces to the asset architecture for a later nervous-before-jump behaviour pass.
+- Removed obsolete duplicated walking blink assets and legacy whole-frame walking asset folders that are no longer referenced by the layered walking system.
+- Preserved gait, wing behaviour, pier entry, jump/splash, player data, scoreboard and pond behaviour from v0.96.
 
 ## v0.96 – Tone-Specific Walking Sad Faces
 
@@ -511,7 +527,7 @@ v0.57 was the asset-cleanup build based on v0.55. Its production asset structure
 Older versioned asset folders and superseded sprite copies were removed. The live build now uses a single organised asset tree:
 
 - `assets/scene/` — background and foreground scene layers
-- `assets/duck/walk/` — current walking sprites for duck type + feather tone
+- `assets/duck/walk-layered/` — current layered walking body/wing/leg/face assets
 - `assets/duck/swim/body/` — current swimming body variants
 - `assets/duck/swim/wing/` — current swimming wing variants
 - `assets/duck/swim/face/` — current face overlays, including feather-aware sad eyelids
@@ -548,7 +564,7 @@ v0.57 was the asset-cleanup build based on v0.55. Its production asset structure
 Older versioned asset folders and superseded sprite copies were removed. The live build now uses a single organised asset tree:
 
 - `assets/scene/` — background and foreground scene layers
-- `assets/duck/walk/` — current walking sprites for duck type + feather tone
+- `assets/duck/walk-layered/` — current layered walking body/wing/leg/face assets
 - `assets/duck/swim/body/` — current swimming body variants
 - `assets/duck/swim/wing/` — current swimming wing variants
 - `assets/duck/swim/face/` — current face overlays, including feather-aware sad eyelids
@@ -577,7 +593,7 @@ Asset-cleanup build based on v0.55. Behaviour and visuals are intentionally unch
 Older versioned asset folders and superseded sprite copies were removed. The live build now uses a single organised asset tree:
 
 - `assets/scene/` — background and foreground scene layers
-- `assets/duck/walk/` — current walking sprites for duck type + feather tone
+- `assets/duck/walk-layered/` — current layered walking body/wing/leg/face assets
 - `assets/duck/swim/body/` — current swimming body variants
 - `assets/duck/swim/wing/` — current swimming wing variants
 - `assets/duck/swim/face/` — current face overlays, including feather-aware sad eyelids

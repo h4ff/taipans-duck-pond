@@ -100,7 +100,6 @@
   };
 
   const FEMALE_ASSETS = {
-    walkRoot: "assets/duck/female/walk",
     swimBodyRoot: "assets/duck/female/swim/body"
   };
 
@@ -361,18 +360,17 @@
   }
 
   function walkFaceSrc(faceName, featherTone = "white") {
-    const safeFace = ["neutral", "sad", "angry", "surprised", "neutral-blink", "sad-blink"].includes(faceName)
+    const safeFace = ["neutral", "sad", "angry", "surprised", "nervous", "neutral-blink", "sad-blink"].includes(faceName)
       ? faceName
       : "neutral";
     const safeTone = FEATHER_TONES[featherTone] ? featherTone : "white";
-    // v0.96: resting sad faces need tone-specific feather-coloured eyelids,
-    // just like the established swimming sad-face set. Eye whites remain white.
-    if (safeFace === "sad") {
-      return `${WALK_LAYER_ROOT}/faces/sad-${safeTone}.png`;
+
+    if (safeFace === "sad" || safeFace === "nervous") {
+      return `${WALK_LAYER_ROOT}/faces/${safeFace}-${safeTone}.png`;
     }
-    if (safeFace === "sad-blink") {
-      return `${WALK_LAYER_ROOT}/faces/sad-blink-${safeTone}.png`;
-    }
+
+    // v0.97: use the corrected shared blink artwork exactly as supplied.
+    // Neutral and sad blink PNGs are not feather-tone variants and are not recoloured.
     return `${WALK_LAYER_ROOT}/faces/${safeFace}.png`;
   }
 
@@ -494,7 +492,8 @@
       walkFaceSrc("neutral"),
       walkFaceSrc("angry"),
       walkFaceSrc("surprised"),
-      walkFaceSrc("neutral-blink")
+      walkFaceSrc("neutral-blink"),
+      walkFaceSrc("sad-blink")
     ]);
 
     for (const headwear of Object.values(HEADWEAR_ASSETS)) {
@@ -522,7 +521,7 @@
         urls.add(walkLegSrc("front", featherTone));
         urls.add(walkLegSrc("rear", featherTone));
         urls.add(walkFaceSrc("sad", featherTone));
-        urls.add(walkFaceSrc("sad-blink", featherTone));
+        urls.add(walkFaceSrc("nervous", featherTone));
         urls.add(swimBodySrc(duckType, featherTone));
         urls.add(swimBodySrc(duckType, featherTone, "female"));
       }
@@ -1837,15 +1836,6 @@
     const blink = duck.querySelector(".entry-face-blink");
     if (!face) return;
 
-    // v0.93: walking blinks now use full blink-face assets that retain the
-    // beak/brows while clearing the eye area so the feather-coloured head shows
-    // through naturally. This mirrors the pond fix: no vanishing face, no ghosting.
-    if (faceName === "neutral-blink" || faceName === "sad-blink") {
-      if (blink) blink.hidden = true;
-      face.src = walkFaceSrc(faceName, duck.dataset.featherTone);
-      return;
-    }
-
     if (blink) blink.hidden = true;
     face.src = walkFaceSrc(faceName, duck.dataset.featherTone);
   }
@@ -2389,7 +2379,25 @@
     cancelEntryBlink(duck, true);
     setWalkFrame(duck, 2);
 
-    // Brief anticipation squash at the pier edge.
+    // v0.98: most ducks use the normal confident entry. A minority pause at
+    // the edge, look nervous, tremble, close their eyes and take a slow breath
+    // before committing to the existing squash/jump sequence.
+    const nervousEntry = Math.random() < 0.22;
+    if (nervousEntry) {
+      setEntryFace(duck, "nervous");
+      duck.classList.add("nervous-entry-shake");
+      await sleep(2400);
+      duck.classList.remove("nervous-entry-shake");
+
+      // Eyes stay closed from the calming breath through the jump itself.
+      setEntryFace(duck, "sad-blink");
+      duck.classList.add("nervous-entry-breathe");
+      await sleep(1500);
+      duck.classList.remove("nervous-entry-breathe");
+    }
+
+    // Brief anticipation squash at the pier edge. Nervous ducks keep their
+    // eyes closed here and throughout the jump; normal ducks retain their face.
     duck.classList.add("prejump");
     await sleep(300);
     duck.classList.remove("prejump");
