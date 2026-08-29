@@ -1,4 +1,13 @@
-# Duck Pond – v0.100
+# Duck Pond – v0.102
+
+## v0.102 – Production CSV Parsing + Week/Scoreboard Fixes
+
+- Duck event CSV dates now accept Australian `D/M/YYYY` / `DD/MM/YYYY` as well as ISO `YYYY-MM-DD`, then normalise internally to ISO for sorting and playback.
+- Week selector now spans all relevant Monday markers represented by the loaded duck-event history (including future test data if present) while still selecting the current Monday automatically.
+- Restored cumulative leaderboard/leader-cap behaviour for Australian-format production data by ensuring those event rows are no longer silently rejected.
+- Developer player selector and manual Add Selected Player path now show the canonical roster `name`; nickname overrides remain reserved for public-facing scoreboard, leaderboard and player-stat displays.
+- Reworked the small entrant scoreboard rows so TEAM / DATE / TYPE have dedicated label space and no longer overlap their values.
+- Added visible CSV load diagnostics beneath the pond so accepted events and warning/rejected-row counts are obvious during testing.
 
 ## v0.100 – Production CSV Data + Weekly Playback
 

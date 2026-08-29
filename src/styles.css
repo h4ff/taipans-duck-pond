@@ -810,7 +810,7 @@ body {
 .score-mini {
   width: 100%;
   display: grid;
-  grid-template-columns: 17px minmax(0, 1fr);
+  grid-template-columns: 31px minmax(0, 1fr);
   align-items: center;
   gap: 4px;
   line-height: 1.1;
@@ -1133,6 +1133,15 @@ footer {
   gap: 16px;
   margin-bottom: 14px;
 }
+
+
+.data-debug-status {
+  display: grid;
+  gap: 3px;
+  justify-items: end;
+}
+
+.data-debug-status p { margin: 0; }
 
 .data-debug-heading h2,
 .data-debug-panel h3 {

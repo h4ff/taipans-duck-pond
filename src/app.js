@@ -43,6 +43,7 @@
   const panelWeekLabel = document.getElementById("panelWeekLabel");
   const panelLeaderboard = document.getElementById("panelLeaderboard");
   const dataDebugRange = document.getElementById("dataDebugRange");
+  const dataLoadStatus = document.getElementById("dataLoadStatus");
   const dataLeaderboard = document.getElementById("dataLeaderboard");
   const dataWeekEvents = document.getElementById("dataWeekEvents");
   const dataPondEvents = document.getElementById("dataPondEvents");
@@ -216,11 +217,44 @@
     };
   }
 
+  function normaliseCsvDate(value) {
+    const raw = String(value || "").trim();
+    if (!raw) return "";
+
+    // Accept the production spreadsheet format used by the club (D/M/YYYY or
+    // DD/MM/YYYY) as well as ISO YYYY-MM-DD, then normalise everything to ISO.
+    let year;
+    let month;
+    let day;
+    let match = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (match) {
+      year = Number(match[1]);
+      month = Number(match[2]);
+      day = Number(match[3]);
+    } else {
+      match = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      if (!match) return "";
+      day = Number(match[1]);
+      month = Number(match[2]);
+      year = Number(match[3]);
+    }
+
+    const candidate = new Date(year, month - 1, day, 12, 0, 0, 0);
+    if (
+      candidate.getFullYear() !== year ||
+      candidate.getMonth() !== month - 1 ||
+      candidate.getDate() !== day
+    ) return "";
+
+    return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  }
+
   function normaliseEventRow(row, index) {
     const playerId = String(row.playerId || "").trim();
-    const date = String(row.date || "").trim();
-    if (!playerId || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      DATA_WARNINGS.push(`ducks.csv row ${index + 2}: valid date (YYYY-MM-DD) and playerId are required.`);
+    const rawDate = String(row.date || "").trim();
+    const date = normaliseCsvDate(rawDate);
+    if (!playerId || !date) {
+      DATA_WARNINGS.push(`ducks.csv row ${index + 2}: valid date (D/M/YYYY, DD/MM/YYYY or YYYY-MM-DD) and playerId are required.`);
       return null;
     }
     if (!PLAYER_BY_ID.has(playerId)) {
@@ -264,7 +298,9 @@
       .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
 
     if (!PLAYER_PROFILES.length) throw new Error("players.csv did not contain any valid player records.");
-    console.info(`Duck Pond data: ${PLAYER_PROFILES.length} players, ${DUCK_EVENTS.length} duck events.`);
+    const diagnostic = `${PLAYER_PROFILES.length} players • ${DUCK_EVENTS.length} duck events loaded${DATA_WARNINGS.length ? ` • ${DATA_WARNINGS.length} warning${DATA_WARNINGS.length === 1 ? "" : "s"}` : " • no rejected rows"}`;
+    if (dataLoadStatus) dataLoadStatus.textContent = diagnostic;
+    console.info(`Duck Pond data: ${diagnostic}`);
     if (DATA_WARNINGS.length) console.warn("Duck Pond data warnings", DATA_WARNINGS);
   }
 
@@ -279,9 +315,8 @@
     const roleText = (player.roles || []).length ? ` • ${(player.roles || []).join(" + ")}` : "";
     const feather = FEATHER_TONES[player.featherTone]?.label || player.featherTone || "White";
     const build = BUILD_VARIANTS[player.build]?.label || player.build || "Standard";
-    const display = displayPlayerName(player);
-    const nameText = display !== player.name ? `${display} (${player.name})` : player.name;
-    return `${nameText} • ${player.presentation} • ${feather} • ${build}${roleText}`;
+    const nicknameText = player.nickname ? ` • public nickname: ${player.nickname}` : "";
+    return `${player.name} • ${player.presentation} • ${feather} • ${build}${roleText}${nicknameText}`;
   }
 
   function formatClubDate(isoDate) {
@@ -2731,7 +2766,9 @@
     for (const player of PLAYER_PROFILES) {
       const option = document.createElement("option");
       option.value = player.id;
-      option.textContent = displayPlayerName(player);
+      // Developer/player test controls always show the canonical roster name.
+      // Nickname overrides are reserved for public pond displays.
+      option.textContent = player.name || player.id;
       playerSelect.appendChild(option);
     }
     updatePlayerIdentitySummary();
@@ -2750,12 +2787,20 @@
     weekSelect.replaceChildren();
     const currentMonday = mostRecentMonday(new Date());
     const earliestEvent = DUCK_EVENTS.reduce((earliest, event) => !earliest || event.date < earliest ? event.date : earliest, "");
+    const latestEvent = DUCK_EVENTS.reduce((latest, event) => !latest || event.date > latest ? event.date : latest, "");
     const earliestMonday = earliestEvent ? mostRecentMonday(localDateFromIso(earliestEvent)) : currentMonday;
+    // To include an event in a playback week we need the Monday immediately
+    // AFTER its Monday-Sunday club week (the dropdown is the as-at marker).
+    const latestEventWeekMonday = latestEvent ? mostRecentMonday(localDateFromIso(latestEvent)) : currentMonday;
+    const latestMarkerMonday = latestEvent ? addLocalDays(latestEventWeekMonday, 7) : currentMonday;
+    const firstMonday = latestMarkerMonday > currentMonday ? latestMarkerMonday : currentMonday;
 
-    // Show every Monday from the current one back through the season data.
-    let monday = currentMonday;
+    // Show every relevant Monday marker across the loaded dataset. The real
+    // current Monday remains selected automatically, even if test data includes
+    // future-dated rows.
+    let monday = firstMonday;
     const options = [];
-    for (let guard = 0; guard < 30; guard++) {
+    for (let guard = 0; guard < 60; guard++) {
       const context = weekContextForMonday(monday);
       options.push(context);
       if (monday <= earliestMonday) break;
@@ -2768,7 +2813,7 @@
       option.textContent = `${formatClubDate(context.monday)} — ${formatClubDate(context.start)} to ${formatClubDate(context.end)}`;
       weekSelect.appendChild(option);
     }
-    weekSelect.value = currentMonday;
+    weekSelect.value = [...weekSelect.options].some(option => option.value === currentMonday) ? currentMonday : options[0]?.monday || "";
     updateWeekSummary();
   }
 
@@ -2793,7 +2838,7 @@
     };
     const duck = makePlayerDuck(player, event, { instant: false });
     if (!duck) return;
-    status.textContent = `Adding ${displayPlayerName(player)}: permanent ${player.presentation}/${FEATHER_TONES[player.featherTone]?.label || player.featherTone}/${BUILD_VARIANTS[player.build]?.label || player.build}; ${selectedDuckType} event shirt.`;
+    status.textContent = `Adding ${player.name}: permanent ${player.presentation}/${FEATHER_TONES[player.featherTone]?.label || player.featherTone}/${BUILD_VARIANTS[player.build]?.label || player.build}; ${selectedDuckType} event shirt.`;
     showEntrantScoreboard(player, event, 1, 1);
     animateEntry(duck, null, { onSplash: showLeaderboardScoreboard });
   }
