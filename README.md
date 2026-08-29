@@ -1,4 +1,15 @@
-# Duck Pond – v0.98
+# Duck Pond – v0.99
+
+## v0.99 – Expanded Scoreboard Redesign
+
+- Replaced the scene background with the new user-supplied expanded-scoreboard artwork.
+- Reworked the in-scene live scoreboard to fit the larger physical board frame cleanly instead of the previous small floating panel.
+- Leaderboard mode now shows a clearer “Pond Leaders” header, total ducks in the pond, and the current top three leaders in the expanded black display area.
+- Entrant mode now shows the incoming duck more clearly with name, week entrant progress, team, date and duck type while preserving the existing click-to-open detailed leaderboard panel.
+- Added the supplied standalone scoreboard shell asset to the scene assets for future use, though the current build renders directly against the new background board.
+- Preserved current duck movement, player system, nervous entry behaviour, pond stats callout and scoreboard panel interaction.
+
+# Duck Pond – v0.99
 
 ## v0.98 – Nervous Pier Entry
 

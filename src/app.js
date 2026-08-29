@@ -37,6 +37,7 @@
 
   const scoreboardLabel = document.getElementById("scoreboardLabel");
   const scoreboardPrimary = document.getElementById("scoreboardPrimary");
+  const scoreboardSecondary = document.getElementById("scoreboardSecondary");
   const scoreboardMinis = [1, 2, 3].map(index => document.getElementById(`scoreboardMini${index}`));
   const panelDuckCount = document.getElementById("panelDuckCount");
   const panelWeekLabel = document.getElementById("panelWeekLabel");
@@ -212,35 +213,43 @@
     return leaderboardForEvents(eventsThrough(selectedWeekContext.end));
   }
 
-  function renderScoreMini(element, rank, text) {
+  function renderScoreMini(element, label, text) {
     if (!element) return;
     element.replaceChildren();
     const rankNode = document.createElement("b");
-    rankNode.textContent = String(rank);
+    rankNode.textContent = String(label);
     const textNode = document.createElement("span");
     textNode.textContent = text;
     element.append(rankNode, textNode);
   }
 
+  function scoreboardDuckType(type) {
+    return String(type || "standard").replace(/^./, char => char.toUpperCase());
+  }
+
   function showLeaderboardScoreboard() {
     scoreboardMode = "leaderboard";
+    liveScoreboard?.setAttribute("data-mode", "leaderboard");
     const leaders = currentLeaderboard().slice(0, 3);
-    if (scoreboardLabel) scoreboardLabel.textContent = "LEADERS";
+    if (scoreboardLabel) scoreboardLabel.textContent = "POND LEADERS";
     if (scoreboardPrimary) scoreboardPrimary.textContent = String(ducks.size);
+    if (scoreboardSecondary) scoreboardSecondary.textContent = `DUCK${ducks.size === 1 ? "" : "S"} IN POND`;
     scoreboardMinis.forEach((element, index) => {
       const leader = leaders[index];
-      renderScoreMini(element, index + 1, leader ? `${shortScoreName(displayPlayerName(leader.player))} ${leader.count}` : "—");
+      renderScoreMini(element, index + 1, leader ? `${shortScoreName(displayPlayerName(leader.player))} • ${leader.count}` : "—");
     });
     renderScoreboardPanel();
   }
 
   function showEntrantScoreboard(player, event, position, total) {
     scoreboardMode = "entrant";
+    liveScoreboard?.setAttribute("data-mode", "entrant");
     if (scoreboardLabel) scoreboardLabel.textContent = "NOW ENTERING";
-    if (scoreboardPrimary) scoreboardPrimary.textContent = shortScoreName(player ? displayPlayerName(player) : "DUCK");
-    renderScoreMini(scoreboardMinis[0], 1, player ? displayPlayerName(player) : "Unknown player");
-    renderScoreMini(scoreboardMinis[1], 2, `${formatClubDate(event?.date)} • ${event?.team || "—"}`);
-    renderScoreMini(scoreboardMinis[2], 3, `${event?.duckType || "standard"} • ${position}/${total}`);
+    if (scoreboardPrimary) scoreboardPrimary.textContent = player ? displayPlayerName(player) : "Unknown duck";
+    if (scoreboardSecondary) scoreboardSecondary.textContent = `WEEK ENTRANT ${position}/${total}`;
+    renderScoreMini(scoreboardMinis[0], "TEAM", event?.team || "—");
+    renderScoreMini(scoreboardMinis[1], "DATE", formatClubDate(event?.date));
+    renderScoreMini(scoreboardMinis[2], "TYPE", scoreboardDuckType(event?.duckType));
   }
 
   function renderScoreboardPanel() {
