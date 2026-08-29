@@ -420,13 +420,34 @@
     return String(type || "standard").replace(/^./, char => char.toUpperCase());
   }
 
+  function fitScoreboardPrimary() {
+    if (!liveScoreboard || !scoreboardPrimary) return;
+    const entrant = scoreboardMode === "entrant";
+    const maxSize = entrant ? 20 : 27;
+    const minSize = entrant ? 10 : 20;
+    scoreboardPrimary.style.fontSize = `${maxSize}px`;
+    scoreboardPrimary.style.lineHeight = entrant ? "1.02" : "1.05";
+
+    // Measure in the unscaled world DOM and progressively reduce only when
+    // a long entrant name or large count would otherwise clip the board.
+    let size = maxSize;
+    while (size > minSize && (
+      scoreboardPrimary.scrollWidth > scoreboardPrimary.clientWidth + 1 ||
+      scoreboardPrimary.scrollHeight > scoreboardPrimary.clientHeight + 1
+    )) {
+      size -= 1;
+      scoreboardPrimary.style.fontSize = `${size}px`;
+    }
+  }
+
   function showLeaderboardScoreboard() {
     scoreboardMode = "leaderboard";
     liveScoreboard?.setAttribute("data-mode", "leaderboard");
     const leaders = currentLeaderboard().slice(0, 3);
     if (scoreboardLabel) scoreboardLabel.textContent = "POND LEADERS";
-    if (scoreboardPrimary) scoreboardPrimary.textContent = String(ducks.size);
-    if (scoreboardSecondary) scoreboardSecondary.textContent = `DUCK${ducks.size === 1 ? "" : "S"} IN POND`;
+    if (scoreboardPrimary) scoreboardPrimary.textContent = `${ducks.size} DUCK${ducks.size === 1 ? "" : "S"}`;
+    if (scoreboardSecondary) scoreboardSecondary.textContent = "";
+    fitScoreboardPrimary();
     scoreboardMinis.forEach((element, index) => {
       const leader = leaders[index];
       renderScoreMini(element, leader?.rank || index + 1, leader ? `${shortScoreName(displayPlayerName(leader.player))} • ${leader.count}` : "—");
@@ -440,6 +461,7 @@
     if (scoreboardLabel) scoreboardLabel.textContent = "NOW ENTERING";
     if (scoreboardPrimary) scoreboardPrimary.textContent = player ? displayPlayerName(player) : "Unknown duck";
     if (scoreboardSecondary) scoreboardSecondary.textContent = `WEEK ENTRANT ${position}/${total}`;
+    fitScoreboardPrimary();
     renderScoreMini(scoreboardMinis[0], "TEAM", event?.team || "—");
     renderScoreMini(scoreboardMinis[1], "DATE", formatClubDate(event?.date));
     renderScoreMini(scoreboardMinis[2], "TYPE", scoreboardDuckType(event?.duckType));

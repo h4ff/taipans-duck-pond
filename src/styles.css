@@ -756,11 +756,11 @@ body {
   height: 9.46%;
   z-index: 500;
   display: grid;
-  grid-template-rows: auto auto auto 1fr 1fr 1fr;
+  grid-template-rows: 12px 28px 9px repeat(3, 1fr);
   align-content: start;
   gap: 1px;
   border: 0;
-  padding: 5px 7px 6px;
+  padding: 4px 7px 5px;
   background: transparent;
   color: #f6e9c6;
   cursor: pointer;
@@ -773,7 +773,7 @@ body {
   color: var(--yellow);
   font-weight: 900;
   letter-spacing: .12em;
-  font-size: 9.5px;
+  font-size: 8.5px;
   text-align: center;
 }
 
@@ -781,36 +781,35 @@ body {
   display: block;
   color: #f6e9c6;
   text-align: center;
-  line-height: .95;
+  line-height: 1.05;
   overflow: hidden;
+  min-width: 0;
+  min-height: 0;
 }
 
 .live-scoreboard[data-mode="leaderboard"] strong {
-  font-size: 29px;
+  font-size: 27px;
   white-space: nowrap;
 }
 
 .live-scoreboard[data-mode="entrant"] strong {
-  font-size: 19px;
-  line-height: 1.00;
-  white-space: normal;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  min-height: 29px;
+  font-size: 20px;
+  line-height: 1.02;
+  white-space: nowrap;
+  text-overflow: clip;
 }
 
 .score-secondary {
   color: rgba(246, 233, 198, .86);
   letter-spacing: .10em;
-  font-size: 8px;
+  font-size: 7px;
   text-align: center;
 }
 
 .score-mini {
   width: 100%;
   display: grid;
-  grid-template-columns: 31px minmax(0, 1fr);
+  grid-template-columns: 28px minmax(0, 1fr);
   align-items: center;
   gap: 4px;
   line-height: 1.1;
@@ -819,7 +818,7 @@ body {
 
 .score-mini b {
   color: var(--yellow);
-  font-size: 8.5px;
+  font-size: 7.5px;
   letter-spacing: .04em;
 }
 
@@ -1206,8 +1205,6 @@ footer {
 .live-scoreboard strong {
   max-width: 100%;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .score-mini span {

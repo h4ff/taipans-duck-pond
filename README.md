@@ -1,4 +1,12 @@
-# Duck Pond – v0.102
+# Duck Pond – v0.103
+
+## v0.103 – Scoreboard Fit + Readability
+
+- Added automatic in-scene scoreboard name sizing so long incoming player names shrink only as much as needed to fit the available frame.
+- Reworked the scoreboard row heights to prevent large pond duck totals from being vertically clipped.
+- Simplified leaderboard count presentation to a single readable “N DUCKS” line and preserved the three ranked leaders below it.
+- Tightened entrant TEAM/DATE/TYPE rows so labels and values stay separated and readable within the physical scoreboard.
+- No changes to player data, duck identity, week logic, movement or artwork.
 
 ## v0.102 – Production CSV Parsing + Week/Scoreboard Fixes
 
