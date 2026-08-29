@@ -104,9 +104,10 @@
     swimBodyRoot: "assets/duck/female/swim/body"
   };
 
-  const PLAYER_PROFILES = Array.isArray(window.DUCK_POND_PLAYERS) ? window.DUCK_POND_PLAYERS : [];
-  const TEST_DUCK_EVENTS = Array.isArray(window.DUCK_POND_TEST_EVENTS) ? window.DUCK_POND_TEST_EVENTS : [];
-  const PLAYER_BY_ID = new Map(PLAYER_PROFILES.map(player => [player.id, player]));
+  let PLAYER_PROFILES = [];
+  let DUCK_EVENTS = [];
+  let PLAYER_BY_ID = new Map();
+  let DATA_WARNINGS = [];
   let dateRangeLoadToken = 0;
   let selectedWeekContext = null;
   let scoreboardMode = "leaderboard";
@@ -122,8 +123,153 @@
     return nickname || player.name || "Unknown player";
   }
 
+  function parseCsv(text) {
+    const rows = [];
+    let row = [];
+    let field = "";
+    let quoted = false;
+
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      if (quoted) {
+        if (char === '"') {
+          if (text[i + 1] === '"') {
+            field += '"';
+            i += 1;
+          } else {
+            quoted = false;
+          }
+        } else {
+          field += char;
+        }
+        continue;
+      }
+
+      if (char === '"') {
+        quoted = true;
+      } else if (char === ",") {
+        row.push(field);
+        field = "";
+      } else if (char === "\n") {
+        row.push(field.replace(/\r$/, ""));
+        rows.push(row);
+        row = [];
+        field = "";
+      } else {
+        field += char;
+      }
+    }
+
+    if (field.length || row.length) {
+      row.push(field.replace(/\r$/, ""));
+      rows.push(row);
+    }
+
+    const nonEmpty = rows.filter(values => values.some(value => String(value).trim() !== ""));
+    if (!nonEmpty.length) return [];
+    const headers = nonEmpty[0].map(value => String(value).trim());
+    return nonEmpty.slice(1).map(values => {
+      const record = {};
+      headers.forEach((header, index) => {
+        record[header] = String(values[index] ?? "").trim();
+      });
+      return record;
+    });
+  }
+
+  function csvBoolean(value) {
+    return ["1", "true", "yes", "y"].includes(String(value || "").trim().toLowerCase());
+  }
+
+  async function fetchCsv(path) {
+    const separator = path.includes("?") ? "&" : "?";
+    const response = await fetch(`${path}${separator}v=${Date.now()}`, { cache: "no-store" });
+    if (!response.ok) throw new Error(`Could not load ${path} (${response.status})`);
+    return parseCsv(await response.text());
+  }
+
+  function normalisePlayerRow(row, index) {
+    const id = String(row.playerId || row.id || "").trim();
+    const name = String(row.name || "").trim();
+    if (!id || !name) {
+      DATA_WARNINGS.push(`players.csv row ${index + 2}: playerId and name are required.`);
+      return null;
+    }
+
+    const presentation = row.presentation === "female" ? "female" : "male";
+    const featherTone = FEATHER_TONES[row.featherTone] ? row.featherTone : "white";
+    const build = BUILD_VARIANTS[row.build] ? row.build : "standard";
+    const roles = [];
+    if (csvBoolean(row.president)) roles.push("president");
+    if (csvBoolean(row.captain)) roles.push("captain");
+    if (csvBoolean(row.coach)) roles.push("coach");
+
+    return {
+      id,
+      name,
+      nickname: String(row.nickname || "").trim(),
+      presentation,
+      featherTone: roles.includes("president") ? "white" : featherTone,
+      build,
+      roles,
+      swimAccessory: String(row.swimAccessory || "").trim()
+    };
+  }
+
+  function normaliseEventRow(row, index) {
+    const playerId = String(row.playerId || "").trim();
+    const date = String(row.date || "").trim();
+    if (!playerId || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      DATA_WARNINGS.push(`ducks.csv row ${index + 2}: valid date (YYYY-MM-DD) and playerId are required.`);
+      return null;
+    }
+    if (!PLAYER_BY_ID.has(playerId)) {
+      DATA_WARNINGS.push(`ducks.csv row ${index + 2}: unknown playerId ${playerId}.`);
+      return null;
+    }
+
+    const requestedType = String(row.duckType || "standard").trim().toLowerCase();
+    const duckType = DUCK_TYPES.includes(requestedType) ? requestedType : "standard";
+    if (requestedType && requestedType !== duckType) {
+      DATA_WARNINGS.push(`ducks.csv row ${index + 2}: unknown duckType ${requestedType}; using standard.`);
+    }
+
+    return {
+      id: String(row.eventId || row.id || `${date}-${playerId}-${index + 1}`).trim(),
+      playerId,
+      date,
+      team: String(row.team || "—").trim() || "—",
+      duckType
+    };
+  }
+
+  async function loadProductionData() {
+    DATA_WARNINGS = [];
+    if (status) status.textContent = "Loading player roster and duck events…";
+    const playerRows = await fetchCsv("data/players.csv");
+    const players = playerRows.map(normalisePlayerRow).filter(Boolean);
+    const seenPlayers = new Set();
+    PLAYER_PROFILES = players.filter(player => {
+      if (seenPlayers.has(player.id)) {
+        DATA_WARNINGS.push(`players.csv: duplicate playerId ${player.id}; later duplicate ignored.`);
+        return false;
+      }
+      seenPlayers.add(player.id);
+      return true;
+    });
+    PLAYER_BY_ID = new Map(PLAYER_PROFILES.map(player => [player.id, player]));
+
+    const eventRows = await fetchCsv("data/ducks.csv");
+    DUCK_EVENTS = eventRows.map(normaliseEventRow).filter(Boolean)
+      .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
+
+    if (!PLAYER_PROFILES.length) throw new Error("players.csv did not contain any valid player records.");
+    console.info(`Duck Pond data: ${PLAYER_PROFILES.length} players, ${DUCK_EVENTS.length} duck events.`);
+    if (DATA_WARNINGS.length) console.warn("Duck Pond data warnings", DATA_WARNINGS);
+  }
+
   function playerEventsThrough(playerId, endIso = selectedWeekContext?.end || "9999-12-31") {
-    return TEST_DUCK_EVENTS
+    return DUCK_EVENTS
       .filter(event => event.playerId === playerId && event.date <= endIso)
       .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
   }
@@ -182,7 +328,7 @@
   }
 
   function eventsThrough(endIso) {
-    return [...TEST_DUCK_EVENTS]
+    return [...DUCK_EVENTS]
       .filter(event => event.date <= endIso)
       .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
   }
@@ -197,9 +343,21 @@
       if (event.date > current.latestDate) current.latestDate = event.date;
       totals.set(player.id, current);
     }
-    return [...totals.values()].sort((a, b) =>
+    const leaders = [...totals.values()].sort((a, b) =>
       b.count - a.count || displayPlayerName(a.player).localeCompare(displayPlayerName(b.player))
     );
+    let previousCount = null;
+    let previousRank = 0;
+    leaders.forEach((leader, index) => {
+      if (leader.count === previousCount) {
+        leader.rank = previousRank;
+      } else {
+        leader.rank = index + 1;
+        previousRank = leader.rank;
+        previousCount = leader.count;
+      }
+    });
+    return leaders;
   }
 
   function shortScoreName(name) {
@@ -236,7 +394,7 @@
     if (scoreboardSecondary) scoreboardSecondary.textContent = `DUCK${ducks.size === 1 ? "" : "S"} IN POND`;
     scoreboardMinis.forEach((element, index) => {
       const leader = leaders[index];
-      renderScoreMini(element, index + 1, leader ? `${shortScoreName(displayPlayerName(leader.player))} • ${leader.count}` : "—");
+      renderScoreMini(element, leader?.rank || index + 1, leader ? `${shortScoreName(displayPlayerName(leader.player))} • ${leader.count}` : "—");
     });
     renderScoreboardPanel();
   }
@@ -262,8 +420,9 @@
     currentLeaderboard().slice(0, 3).forEach((leader, index) => {
       const li = document.createElement("li");
       const medal = document.createElement("span");
-      medal.className = `medal ${["gold", "silver", "bronze"][index] || ""}`;
-      medal.textContent = String(index + 1);
+      const medalClass = { 1: "gold", 2: "silver", 3: "bronze" }[leader.rank] || "";
+      medal.className = `medal ${medalClass}`;
+      medal.textContent = String(leader.rank || index + 1);
       const name = document.createElement("strong");
       name.textContent = displayPlayerName(leader.player);
       const count = document.createElement("span");
@@ -2590,10 +2749,10 @@
     if (!weekSelect) return;
     weekSelect.replaceChildren();
     const currentMonday = mostRecentMonday(new Date());
-    const earliestEvent = TEST_DUCK_EVENTS.reduce((earliest, event) => !earliest || event.date < earliest ? event.date : earliest, "");
+    const earliestEvent = DUCK_EVENTS.reduce((earliest, event) => !earliest || event.date < earliest ? event.date : earliest, "");
     const earliestMonday = earliestEvent ? mostRecentMonday(localDateFromIso(earliestEvent)) : currentMonday;
 
-    // Show every Monday from the current one back through the fake season data.
+    // Show every Monday from the current one back through the season data.
     let monday = currentMonday;
     const options = [];
     for (let guard = 0; guard < 30; guard++) {
@@ -2616,9 +2775,9 @@
   function updateWeekSummary() {
     if (!weekSummary || !weekSelect?.value) return;
     const context = weekContextForMonday(weekSelect.value);
-    const earlier = TEST_DUCK_EVENTS.filter(event => event.date < context.start).length;
-    const entering = TEST_DUCK_EVENTS.filter(event => event.date >= context.start && event.date <= context.end).length;
-    const future = TEST_DUCK_EVENTS.filter(event => event.date > context.end).length;
+    const earlier = DUCK_EVENTS.filter(event => event.date < context.start).length;
+    const entering = DUCK_EVENTS.filter(event => event.date >= context.start && event.date <= context.end).length;
+    const future = DUCK_EVENTS.filter(event => event.date > context.end).length;
     weekSummary.textContent = `Monday ${formatClubDate(context.monday)} → ${formatClubDate(context.start)}–${formatClubDate(context.end)} • ${earlier} already in pond • ${entering} enter via pier • ${future} not yet in pond`;
   }
 
@@ -2653,7 +2812,7 @@
     const loadToken = dateRangeLoadToken;
     selectedWeekContext = context;
 
-    const events = [...TEST_DUCK_EVENTS].sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
+    const events = [...DUCK_EVENTS].sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
     const earlierEvents = events.filter(event => event.date < context.start);
     const weekEvents = events.filter(event => event.date >= context.start && event.date <= context.end);
     const pondEvents = events.filter(event => event.date <= context.end);
@@ -2963,7 +3122,10 @@
 
   if (playerSelect) playerSelect.addEventListener("change", updatePlayerIdentitySummary);
   if (addPlayerButton) addPlayerButton.addEventListener("click", addSelectedPlayerDuck);
-  if (weekSelect) weekSelect.addEventListener("change", updateWeekSummary);
+  if (weekSelect) weekSelect.addEventListener("change", () => {
+    updateWeekSummary();
+    loadSelectedWeek();
+  });
   if (loadWeekButton) loadWeekButton.addEventListener("click", loadSelectedWeek);
 
   addMaleButton.addEventListener("click", () => addAnimatedDuck("male"));
@@ -3134,9 +3296,14 @@
     updateDuckTypeButton();
     updateFeatherToneButton();
     updateBuildVariantButton();
-    populatePlayerSelect();
-    populateWeekSelect();
-    initialiseProductionAssets().catch(showStartupFailure);
+    setDuckControlsEnabled(false);
+    loadProductionData()
+      .then(() => {
+        populatePlayerSelect();
+        populateWeekSelect();
+        return initialiseProductionAssets();
+      })
+      .catch(showStartupFailure);
   } catch (error) {
     showStartupFailure(error);
   }

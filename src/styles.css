@@ -773,7 +773,7 @@ body {
   color: var(--yellow);
   font-weight: 900;
   letter-spacing: .12em;
-  font-size: 7px;
+  font-size: 9.5px;
   text-align: center;
 }
 
@@ -786,13 +786,13 @@ body {
 }
 
 .live-scoreboard[data-mode="leaderboard"] strong {
-  font-size: 24px;
+  font-size: 29px;
   white-space: nowrap;
 }
 
 .live-scoreboard[data-mode="entrant"] strong {
-  font-size: 14px;
-  line-height: 1.02;
+  font-size: 19px;
+  line-height: 1.00;
   white-space: normal;
   display: -webkit-box;
   -webkit-box-orient: vertical;
@@ -803,7 +803,7 @@ body {
 .score-secondary {
   color: rgba(246, 233, 198, .86);
   letter-spacing: .10em;
-  font-size: 6px;
+  font-size: 8px;
   text-align: center;
 }
 
@@ -819,13 +819,13 @@ body {
 
 .score-mini b {
   color: var(--yellow);
-  font-size: 6.2px;
-  letter-spacing: .06em;
+  font-size: 8.5px;
+  letter-spacing: .04em;
 }
 
 .score-mini span:last-child {
   color: #f6e9c6;
-  font-size: 6.5px;
+  font-size: 9px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

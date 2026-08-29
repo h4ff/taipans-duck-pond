@@ -1,4 +1,21 @@
-# Duck Pond – v0.99
+# Duck Pond – v0.100
+
+## v0.100 – Production CSV Data + Weekly Playback
+
+- Replaced hard-coded `src/players.js` / `src/events.js` test data with `data/players.csv` and `data/ducks.csv`.
+- `players.csv` is the persistent roster/appearance file; `ducks.csv` is the season event ledger and is normally the only file that needs updating each week.
+- The app fetches both CSVs with cache-busting/no-store behaviour so GitHub Pages is less likely to show stale weekly data after an upload.
+- The latest Monday is selected automatically. A Monday represents the completed Monday–Sunday immediately before it; changing the dropdown automatically reloads that historical pond state.
+- Ducks before the selected week appear already swimming, selected-week ducks enter via the pier, and future ducks are hidden.
+- Leaderboard ranking now has explicit tie ranks; every player tied for the lead receives leader state/cap, with President crown still taking visual priority.
+- Enlarged the expanded physical scoreboard typography and retained the incoming-player display.
+- Removed the now-dead JS test-data files and unused standalone scoreboard shell asset.
+
+### Weekly operating model
+
+1. Keep `data/players.csv` as the long-lived roster. Add/edit a player only when identity, nickname, role or permanent appearance changes.
+2. Add one row to `data/ducks.csv` for each new duck event: `date,playerId,team,duckType`.
+3. Upload the updated `data/ducks.csv` to GitHub. The app derives the week, cumulative pond, leaders, stats and entry sequence automatically.
 
 ## v0.99 – Expanded Scoreboard Redesign
 
