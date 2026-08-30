@@ -1,4 +1,12 @@
-# Duck Pond – v0.103
+# Duck Pond – v0.104
+
+## v0.104 – Hair Overlay Personalisation
+
+- Added a new optional `hair` field to `data/players.csv` so permanent player appearance can include a hair overlay without creating new body-model combinations.
+- Supported values are `none`, `buzz`, `short-black`, `short-blonde`, `short-brown`, `short-red`, `short-gray`, `part-black`, `part-blonde`, `part-brown`, `part-red`, `part-gray`, `mullet-black`, `mullet-blonde`, `mullet-brown`, `mullet-red`, `mullet-gray`, `ponytail-black`, `ponytail-blonde`, `ponytail-brown`, `ponytail-red`, `ponytail-gray`, `unkept-black`, `unkept-blonde`, `unkept-brown`, `unkept-red`, `unkept-gray`.
+- Hair overlays now render for both pier walking ducks and pond swimming ducks. Hair sits above the body, below hats/crown/leader caps, and uses the supplied aligned walk/swim assets.
+- The sample roster has been updated with example hair values, and the Load 60 stress test now uses a mixed hair distribution so the new layer can be judged quickly.
+- Player summaries/data-debug output now include hair information when present. Invalid hair values fall back safely to `none` and log a warning.
 
 ## v0.103 – Scoreboard Fit + Readability
 

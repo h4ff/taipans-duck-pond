@@ -1,29 +1,25 @@
 date,playerId,team,duckType
-4/07/2026,P003,5th XI,standard
-5/07/2026,P001,1st XI,standard
-11/07/2026,P076,Women,standard
-12/07/2026,P094,Women,golden
-18/07/2026,P029,2nd XI,standard
-19/07/2026,P061,3rd XI,standard
-25/07/2026,P001,1st XI,golden
-1/08/2026,P078,Women,standard
-2/08/2026,P069,2nd XI,diamond
-3/08/2026,P077,Women,standard
-8/08/2026,P001,1st XI,standard
-9/08/2026,P003,5th XI,standard
-10/08/2026,P007,1st XI,golden
-15/08/2026,P061,4th XI,standard
-18/08/2026,P078,Women,golden
-19/08/2026,P003,5th XI,standard
-20/08/2026,P001,1st XI,diamond
-21/08/2026,P093,Women,standard
-22/08/2026,P011,2nd XI,golden
-23/08/2026,P054,3rd XI,standard
-25/08/2026,P095,Women,standard
-29/08/2026,P008,4th XI,golden
-2/09/2026,P001,1st XI,standard
-5/09/2026,P003,5th XI,diamond
-12/09/2026,P095,5th XI,standard
-12/09/2026,P041,2nd XI,standard
-13/09/2026,P095,Women,standard
-19/09/2026,P095,Women,standard
+2026-07-04,P003,2nd XI,standard
+2026-07-05,P001,1st XI,standard
+2026-07-11,P002,Women,standard
+2026-07-12,P004,Women,golden
+2026-07-18,P003,2nd XI,standard
+2026-07-19,P005,3rd XI,standard
+2026-07-25,P001,1st XI,golden
+2026-08-01,P002,Women,standard
+2026-08-02,P003,2nd XI,diamond
+2026-08-03,P006,Women,standard
+2026-08-08,P001,1st XI,standard
+2026-08-09,P003,2nd XI,standard
+2026-08-10,P007,1st XI,golden
+2026-08-15,P008,4th XI,standard
+2026-08-18,P002,Women,golden
+2026-08-19,P003,2nd XI,standard
+2026-08-20,P001,1st XI,diamond
+2026-08-21,P004,Women,standard
+2026-08-22,P003,2nd XI,golden
+2026-08-23,P005,3rd XI,standard
+2026-08-25,P006,Women,standard
+2026-08-29,P008,4th XI,golden
+2026-09-02,P001,1st XI,standard
+2026-09-05,P003,2nd XI,diamond

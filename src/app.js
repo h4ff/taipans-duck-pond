@@ -67,6 +67,7 @@
   const loadingProgress = document.getElementById("loadingProgress");
 
   const WALK_LAYER_ROOT = "assets/duck/walk-layered";
+  const HAIR_ROOT = "assets/duck/hair";
   const HEADWEAR_ASSETS = {
     normal: {
       walk: "assets/duck/headwear/normal/walk.png",
@@ -204,6 +205,11 @@
     if (csvBoolean(row.president)) roles.push("president");
     if (csvBoolean(row.captain)) roles.push("captain");
     if (csvBoolean(row.coach)) roles.push("coach");
+    const rawHair = String(row.hair || row.hairStyle || row.hairstyle || "").trim();
+    const hair = canonicalHairKey(rawHair);
+    if (rawHair && !hair) {
+      DATA_WARNINGS.push(`players.csv row ${index + 2}: unknown hair ${rawHair}; using none.`);
+    }
 
     return {
       id,
@@ -213,6 +219,7 @@
       featherTone: roles.includes("president") ? "white" : featherTone,
       build,
       roles,
+      hair: hair || "none",
       swimAccessory: String(row.swimAccessory || "").trim()
     };
   }
@@ -315,8 +322,9 @@
     const roleText = (player.roles || []).length ? ` • ${(player.roles || []).join(" + ")}` : "";
     const feather = FEATHER_TONES[player.featherTone]?.label || player.featherTone || "White";
     const build = BUILD_VARIANTS[player.build]?.label || player.build || "Standard";
+    const hairText = player.hair && player.hair !== "none" ? ` • hair: ${hairLabel(player.hair)}` : "";
     const nicknameText = player.nickname ? ` • public nickname: ${player.nickname}` : "";
-    return `${player.name} • ${player.presentation} • ${feather} • ${build}${roleText}${nicknameText}`;
+    return `${player.name} • ${player.presentation} • ${feather} • ${build}${hairText}${roleText}${nicknameText}`;
   }
 
   function formatClubDate(isoDate) {
@@ -521,7 +529,7 @@
     }
     if (dataPondEvents) {
       dataPondEvents.innerHTML = tableHtml(
-        ["Event", "Date", "Player", "Team", "Type", "Presentation", "Feather", "Build", "Roles"],
+        ["Event", "Date", "Player", "Team", "Type", "Presentation", "Feather", "Build", "Hair", "Roles"],
         pondEvents.map(event => {
           const player = playerById(event.playerId);
           return [
@@ -533,6 +541,7 @@
             player?.presentation || "—",
             FEATHER_TONES[player?.featherTone]?.label || player?.featherTone || "—",
             BUILD_VARIANTS[player?.build]?.label || player?.build || "—",
+            player?.hair && player.hair !== "none" ? hairLabel(player.hair) : "—",
             (player?.roles || []).join(", ") || "—"
           ];
         })
@@ -675,6 +684,84 @@
   };
   const BUILD_VARIANT_KEYS = ["standard", "short", "beanpole", "stocky", "big"];
   let selectedBuildVariant = "standard";
+  const HAIR_STYLE_LABELS = {
+    buzz: "Buzz Cut",
+    short: "Short",
+    part: "Part",
+    mullet: "Mullet",
+    ponytail: "Ponytail",
+    unkept: "Unkept"
+  };
+  const HAIR_COLOR_LABELS = {
+    black: "Black",
+    blonde: "Blonde",
+    brown: "Brown",
+    red: "Red",
+    gray: "Gray"
+  };
+  const HAIR_STYLES_WITH_COLOUR = ["short", "part", "mullet", "ponytail", "unkept"];
+  const HAIR_KEYS = [
+    "none",
+    "buzz",
+    ...HAIR_STYLES_WITH_COLOUR.flatMap(style => Object.keys(HAIR_COLOR_LABELS).map(colour => `${style}-${colour}`))
+  ];
+
+  function canonicalHairKey(value) {
+    const raw = String(value || "").trim();
+    if (!raw) return "none";
+    const withBoundaries = raw
+      .replace(/([a-z])([A-Z])/g, "$1-$2")
+      .replace(/&/g, " and ")
+      .toLowerCase();
+    const normalized = withBoundaries
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+    if (!normalized || ["none", "no-hair", "bald"].includes(normalized)) return "none";
+    const compact = normalized.replace(/-/g, "");
+    if (normalized === "buzz" || compact === "buzz") return "buzz";
+
+    for (const style of HAIR_STYLES_WITH_COLOUR) {
+      for (const colour of Object.keys(HAIR_COLOR_LABELS)) {
+        const key = `${style}-${colour}`;
+        if (normalized === key || compact === `${style}${colour}`) return key;
+      }
+    }
+    return "";
+  }
+
+  function hairLabel(hairKey) {
+    const key = canonicalHairKey(hairKey);
+    if (!key || key === "none") return "No hair";
+    if (key === "buzz") return HAIR_STYLE_LABELS.buzz;
+    const [style, colour] = key.split("-");
+    return `${HAIR_STYLE_LABELS[style] || style} ${HAIR_COLOR_LABELS[colour] || colour}`;
+  }
+
+  function hairStem(hairKey) {
+    const key = canonicalHairKey(hairKey);
+    if (!key || key === "none") return "";
+    if (key === "buzz") return "Buzz";
+    const [style, colour] = key.split("-");
+    const stylePart = style.charAt(0).toUpperCase() + style.slice(1);
+    const colourPart = colour.charAt(0).toUpperCase() + colour.slice(1);
+    return `${stylePart}${colourPart}`;
+  }
+
+  function walkHairSrc(hairKey) {
+    const stem = hairStem(hairKey);
+    return stem ? `${HAIR_ROOT}/walk/${stem}.png` : "";
+  }
+
+  function swimHairSrc(hairKey) {
+    const stem = hairStem(hairKey);
+    return stem ? `${HAIR_ROOT}/swim/${stem}Swim.png` : "";
+  }
+
+  function randomHairKey() {
+    if (Math.random() < 0.3) return "none";
+    const visibleKeys = HAIR_KEYS.filter(key => key !== "none");
+    return visibleKeys[Math.floor(Math.random() * visibleKeys.length)] || "none";
+  }
 
   function swimFaceSrc(faceName, featherTone) {
     const safeTone = FEATHER_TONES[featherTone] ? featherTone : "white";
@@ -757,6 +844,11 @@
       urls.add(swimWingSrc("back", featherTone));
       urls.add(swimFaceSrc("sad", featherTone));
       urls.add(swimBlinkSrc("sad", featherTone));
+    }
+
+    for (const hairKey of HAIR_KEYS) {
+      urls.add(walkHairSrc(hairKey));
+      urls.add(swimHairSrc(hairKey));
     }
 
     return [...urls].filter(Boolean);
@@ -2018,6 +2110,8 @@
     appendEntryImage(stack, "entry-leg entry-leg-rear", walkLegSrc("rear", tone));
     appendEntryImage(stack, "entry-shirt", walkShirtSrc(duck.dataset.duckType, presentation));
     appendEntryImage(stack, "entry-body", walkBodySrc(tone, presentation));
+    const walkHair = walkHairSrc(duck.dataset.hair);
+    if (walkHair) appendEntryImage(stack, "entry-hair", walkHair);
     appendEntryImage(stack, "entry-wing entry-wing-rear", walkWingSrc("rear", tone, presentation));
     appendEntryImage(stack, "entry-leg entry-leg-front", walkLegSrc("front", tone));
     appendEntryImage(stack, "entry-wing entry-wing-front", walkWingSrc("front", tone, presentation));
@@ -2131,6 +2225,13 @@
     body.src = swimBodySrc(duck.dataset.duckType, duck.dataset.featherTone, presentation);
     body.alt = "";
 
+    const hairSrc = swimHairSrc(duck.dataset.hair);
+    const hair = document.createElement("img");
+    hair.className = "swim-layer swim-hair";
+    if (hairSrc) hair.src = hairSrc;
+    hair.alt = "";
+    const showHair = Boolean(hairSrc);
+
     const face = document.createElement("img");
     face.className = "swim-layer swim-face";
     face.src = swimFaceSrc(faceName, duck.dataset.featherTone);
@@ -2164,7 +2265,9 @@
     headwear.src = headwearSrc(duck, "swim", duck.dataset.facing);
     headwear.alt = "";
 
-    stack.append(wingBack, body, wake, face);
+    stack.append(wingBack, body, wake);
+    if (showHair) stack.appendChild(hair);
+    stack.appendChild(face);
     if (duckHasRole(duck, "captain")) stack.appendChild(captainLayer);
     if (duckHasRole(duck, "coach")) stack.appendChild(whistle);
     stack.append(wingFront, headwear);
@@ -2424,6 +2527,7 @@
     isLeader = false,
     testRole = "",
     presentation = "male",
+    hair = "none",
     playerId = "",
     playerName = "",
     eventId = "",
@@ -2440,6 +2544,7 @@
     duck.dataset.buildVariant = BUILD_VARIANTS[buildVariant] ? buildVariant : "standard";
     duck.dataset.duckType = DUCK_TYPES.includes(duckType) ? duckType : "standard";
     duck.dataset.featherTone = FEATHER_TONES[featherTone] ? featherTone : "white";
+    duck.dataset.hair = canonicalHairKey(hair) || "none";
     const assignedRoles = normalizedRoles(roles, clubRole);
     duck.dataset.roles = assignedRoles.join(",");
     duck.dataset.clubRole = assignedRoles.includes("president") ? "president" : "player";
@@ -2456,11 +2561,12 @@
     duck.dataset.clickScooting = "false";
     chooseIdleFace(duck);
     duck.dataset.swimPace = (0.88 + (id % 5) * 0.06).toFixed(2);
+    const hairAria = duck.dataset.hair && duck.dataset.hair !== "none" ? `, ${hairLabel(duck.dataset.hair)}` : "";
     duck.setAttribute(
       "aria-label",
       playerName
-        ? `${playerName}, ${duck.dataset.presentation} ${duck.dataset.duckType} duck`
-        : `Duck ${id}, ${duck.dataset.presentation} ${duck.dataset.duckType} duck`
+        ? `${playerName}, ${duck.dataset.presentation} ${duck.dataset.duckType} duck${hairAria}`
+        : `Duck ${id}, ${duck.dataset.presentation} ${duck.dataset.duckType} duck${hairAria}`
     );
 
     applyDuckSize(duck);
@@ -2772,6 +2878,7 @@
       featherTone: player.featherTone,
       buildVariant: player.build,
       presentation: player.presentation,
+      hair: player.hair || "none",
       roles: player.roles || [],
       clubRole: (player.roles || []).includes("president") ? "president" : "player",
       isLeader: currentLeaderPlayerIds.has(player.id),
@@ -2860,7 +2967,7 @@
     };
     const duck = makePlayerDuck(player, event, { instant: false });
     if (!duck) return;
-    status.textContent = `Adding ${player.name}: permanent ${player.presentation}/${FEATHER_TONES[player.featherTone]?.label || player.featherTone}/${BUILD_VARIANTS[player.build]?.label || player.build}; ${selectedDuckType} event shirt.`;
+    status.textContent = `Adding ${player.name}: permanent ${player.presentation}/${FEATHER_TONES[player.featherTone]?.label || player.featherTone}/${BUILD_VARIANTS[player.build]?.label || player.build}${player.hair && player.hair !== "none" ? `/${hairLabel(player.hair)}` : ""}; ${selectedDuckType} event shirt.`;
     showEntrantScoreboard(player, event, 1, 1);
     animateEntry(duck, null, { onSplash: showLeaderboardScoreboard });
   }
@@ -3130,6 +3237,8 @@
       const isLeader = i === leaderIndex && !isPresident;
       const presentation = femaleIndexes.has(i) ? "female" : "male";
       const roles = [];
+      let hair = randomHairKey();
+      if (isPresident) hair = "short-gray";
       if (isPresident) roles.push("president");
       if (captainIndexes.has(i)) roles.push("captain");
       if (coachIndexes.has(i)) roles.push("coach");
@@ -3149,14 +3258,15 @@
         roles,
         clubRole: isPresident ? "president" : "player",
         isLeader,
-        presentation
+        presentation,
+        hair
       });
     }
 
     const yellowCount = [...ducks.values()]
       .filter(duck => duck.dataset.featherTone === "yellow").length;
     status.textContent =
-      `Loaded ${target} ducks with president crown, leader cap, ${captainIndexes.size} captains, ${coachIndexes.size} coaches, ${femaleIndexes.size} female-presentation ducks and ${yellowCount} yellow-feather ducks.`;
+      `Loaded ${target} ducks with president crown, leader cap, ${captainIndexes.size} captains, ${coachIndexes.size} coaches, ${femaleIndexes.size} female-presentation ducks, ${yellowCount} yellow-feather ducks and mixed hair overlays.`;
   }
 
   function updateDuckTypeButton() {
