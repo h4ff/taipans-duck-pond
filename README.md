@@ -1,4 +1,4 @@
-# Duck Pond – v0.106
+# Duck Pond – v0.107
 
 ## v0.106 – Optional Player Headwear
 

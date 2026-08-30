@@ -3,57 +3,48 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Taipan Pond — Stress Test v0.106</title>
+  <title>Taipans Duck Pond — v0.107</title>
   <link rel="stylesheet" href="src/styles.css">
 </head>
 <body>
-  <main class="app-shell">
-    <header class="toolbar">
-      <div class="toolbar-copy">
+  <main class="app-shell production-shell">
+    <header class="production-toolbar">
+      <div class="production-brand">
         <p class="eyebrow">Taipans Cricket Club</p>
-        <h1>Duck Pond — Stress Test v0.106</h1>
-        <p class="subtle">Production data test: CSV player roster + duck events, automatic completed-week playback, cumulative leaderboard, live entrant scoreboard, hair overlays and optional player headwear.</p>
+        <h1>Duck Pond</h1>
       </div>
 
-      <div class="mobile-toolbar-actions" aria-label="Mobile pond controls">
-        <button id="mobileControlsToggle" type="button" class="secondary" aria-expanded="false" aria-controls="developerControls">Test Controls</button>
+      <div class="production-week" aria-label="Choose club week">
+        <label for="weekSelect">Club week</label>
+        <select id="weekSelect" disabled></select>
+        <span id="weekSummary" class="production-week-summary">Loading season…</span>
+      </div>
+
+      <div class="mobile-toolbar-actions production-mobile-actions" aria-label="Pond controls">
+        <button id="mobileControlsToggle" type="button" hidden aria-expanded="false" aria-controls="developerControls">Test Controls</button>
         <button id="mobilePondToggle" type="button" class="secondary" aria-pressed="false">Expand Pond</button>
         <button id="mobileZoomReset" type="button" class="secondary" hidden>Reset Zoom</button>
       </div>
-
-      <div id="developerControls" class="controls" aria-label="Developer controls">
-        <section class="control-group player-data-controls" aria-labelledby="playerTestHeading">
-          <strong id="playerTestHeading" class="control-group-title">Player / Week Test</strong>
-          <label class="control-field player-field">
-            <span>Player</span>
-            <select id="playerSelect" disabled></select>
-          </label>
-          <button id="addPlayerButton" type="button" disabled>Add Selected Player</button>
-          <p id="playerIdentitySummary" class="control-summary">Select a player to inspect their permanent appearance.</p>
-
-          <label class="control-field player-field">
-            <span>Week</span>
-            <select id="weekSelect" disabled></select>
-          </label>
-          <p id="weekSummary" class="control-summary">Select a Monday to load the completed Monday–Sunday immediately before it. The latest Monday is selected and loaded automatically.</p>
-        </section>
-
-        <section class="control-group legacy-controls" aria-labelledby="legacyTestHeading">
-          <strong id="legacyTestHeading" class="control-group-title">Manual / Asset Test</strong>
-          <button id="duckTypeButton" type="button" disabled class="secondary">Duck Type: Standard</button>
-          <button id="featherToneButton" type="button" disabled class="secondary">Feather: White</button>
-          <button id="buildVariantButton" type="button" disabled class="secondary">Build: Standard</button>
-          <button id="addMaleButton" type="button" disabled>+ Add Male</button>
-          <button id="addFemaleButton" type="button" disabled>+ Add Female</button>
-          <button id="load60Button" type="button" disabled class="secondary">Load 60 Ducks</button>
-          <button id="testPresidentButton" type="button" disabled class="secondary">Test President</button>
-          <button id="testLeaderButton" type="button" disabled class="secondary">Test Leader</button>
-          <button id="testCaptainButton" type="button" disabled class="secondary">Test Captain</button>
-          <button id="testCoachButton" type="button" disabled class="secondary">Test Coach</button>
-          <button id="resetButton" type="button" disabled class="secondary">Reset</button>
-        </section>
-      </div>
     </header>
+
+    <!-- Development hooks remain in the DOM so the test architecture can be
+         re-enabled later without carrying the test rig in the production UI. -->
+    <div id="developerControls" class="controls developer-controls-hidden" hidden aria-hidden="true">
+      <select id="playerSelect" disabled></select>
+      <button id="addPlayerButton" type="button" disabled>Add Selected Player</button>
+      <p id="playerIdentitySummary"></p>
+      <button id="duckTypeButton" type="button" disabled>Duck Type</button>
+      <button id="featherToneButton" type="button" disabled>Feather</button>
+      <button id="buildVariantButton" type="button" disabled>Build</button>
+      <button id="addMaleButton" type="button" disabled>Add Male</button>
+      <button id="addFemaleButton" type="button" disabled>Add Female</button>
+      <button id="load60Button" type="button" disabled>Load 60</button>
+      <button id="testPresidentButton" type="button" disabled>President</button>
+      <button id="testLeaderButton" type="button" disabled>Leader</button>
+      <button id="testCaptainButton" type="button" disabled>Captain</button>
+      <button id="testCoachButton" type="button" disabled>Coach</button>
+      <button id="resetButton" type="button" disabled>Reset</button>
+    </div>
 
     <section id="sceneFrame" class="scene-frame" aria-label="Interactive Taipan duck pond">
       <div id="scene" class="scene-viewport">
@@ -109,47 +100,25 @@
       <div id="scoreboardPanel" class="scoreboard-panel" hidden>
         <button id="closeScoreboard" class="scoreboard-close" type="button"
                 aria-label="Close scoreboard">×</button>
-        <p id="panelWeekLabel">WEEK TEST</p>
+        <p id="panelWeekLabel">CLUB WEEK</p>
         <h2><span id="panelDuckCount">0</span> ducks in the pond</h2>
         <ol id="panelLeaderboard"></ol>
-        <small>Leaderboard is calculated from all duck events in the pond up to the selected week's Sunday.</small>
+        <small>Season leaderboard through the selected club week.</small>
       </div>
 
     </section>
 
 
-    <section id="dataDebugPanel" class="data-debug-panel" aria-labelledby="dataDebugHeading">
-      <div class="data-debug-heading">
-        <div>
-          <p class="eyebrow">Development data view</p>
-          <h2 id="dataDebugHeading">Weekly playback data</h2>
-        </div>
-        <div class="data-debug-status"><p id="dataLoadStatus" class="subtle">Loading CSV data…</p><p id="dataDebugRange" class="subtle">No week loaded yet.</p></div>
-      </div>
-      <div class="data-debug-grid">
-        <article>
-          <h3>Leaderboard</h3>
-          <div id="dataLeaderboard"></div>
-        </article>
-        <article>
-          <h3>Selected-week entrants</h3>
-          <div id="dataWeekEvents"></div>
-        </article>
-        <article class="data-debug-wide">
-          <h3>All ducks currently represented in the pond</h3>
-          <div id="dataPondEvents"></div>
-        </article>
-      </div>
+    <!-- Hidden development diagnostics. Kept as data sinks for the existing
+         runtime, but no longer rendered in the production experience. -->
+    <section id="dataDebugPanel" hidden aria-hidden="true">
+      <p id="dataLoadStatus"></p>
+      <p id="dataDebugRange"></p>
+      <div id="dataLeaderboard"></div>
+      <div id="dataWeekEvents"></div>
+      <div id="dataPondEvents"></div>
     </section>
-
-    <div id="status" class="scene-note" aria-live="polite">
-      Loading and decoding production duck assets before first use…
-    </div>
-
-    <footer>
-      <strong>What to judge:</strong>
-      the current Monday is selected automatically, prior ducks are already swimming, new entrants arrive via the pier, nicknames override public display names, and clicking a player duck opens their cumulative stats while making that duck clear the area.
-    </footer>
+    <div id="status" hidden aria-live="polite"></div>
   </main>
 
   <script src="src/app.js"></script>

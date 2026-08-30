@@ -341,6 +341,18 @@
       .format(new Date(year, month - 1, day));
   }
 
+  function formatClubWeekRange(startIso, endIso) {
+    if (!startIso || !endIso) return "—";
+    const start = localDateFromIso(startIso);
+    const end = localDateFromIso(endIso);
+    const sameMonth = start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear();
+    const startText = new Intl.DateTimeFormat("en-AU", sameMonth
+      ? { day: "numeric" }
+      : { day: "numeric", month: "short" }).format(start);
+    const endText = new Intl.DateTimeFormat("en-AU", { day: "numeric", month: "short", year: "numeric" }).format(end);
+    return `${startText}–${endText}`;
+  }
+
   function isoFromLocalDate(date) {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -2984,7 +2996,7 @@
     for (const context of options) {
       const option = document.createElement("option");
       option.value = context.monday;
-      option.textContent = `${formatClubDate(context.monday)} — ${formatClubDate(context.start)} to ${formatClubDate(context.end)}`;
+      option.textContent = formatClubWeekRange(context.start, context.end);
       weekSelect.appendChild(option);
     }
     weekSelect.value = [...weekSelect.options].some(option => option.value === currentMonday) ? currentMonday : options[0]?.monday || "";
@@ -2997,7 +3009,7 @@
     const earlier = DUCK_EVENTS.filter(event => event.date < context.start).length;
     const entering = DUCK_EVENTS.filter(event => event.date >= context.start && event.date <= context.end).length;
     const future = DUCK_EVENTS.filter(event => event.date > context.end).length;
-    weekSummary.textContent = `Monday ${formatClubDate(context.monday)} → ${formatClubDate(context.start)}–${formatClubDate(context.end)} • ${earlier} already in pond • ${entering} enter via pier • ${future} not yet in pond`;
+    weekSummary.textContent = `${entering} new duck${entering === 1 ? "" : "s"} • ${earlier + entering} in pond`;
   }
 
   function addSelectedPlayerDuck() {
