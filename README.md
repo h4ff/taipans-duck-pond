@@ -1,6 +1,6 @@
-# Duck Pond – v0.105
+# Duck Pond – v0.106
 
-## v0.105 – Optional Player Headwear
+## v0.106 – Optional Player Headwear
 
 - Added a new optional `headwear` field to `data/players.csv`. Supported values are `none` and `cap`. Blank also behaves as `none`.
 - Normal TCC caps are no longer forced onto every duck. Player-selected club caps now come only from the roster data.
