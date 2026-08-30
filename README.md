@@ -1,4 +1,13 @@
-# Duck Pond – v0.104
+# Duck Pond – v0.105
+
+## v0.105 – Optional Player Headwear
+
+- Added a new optional `headwear` field to `data/players.csv`. Supported values are `none` and `cap`. Blank also behaves as `none`.
+- Normal TCC caps are no longer forced onto every duck. Player-selected club caps now come only from the roster data.
+- Headwear priority is now: president crown → leader cap → player `cap` → no hat.
+- Added an explicit `none` pathway for hair in the sample roster and in the parsing rules. Valid empty/none hair values continue to render safely with no hair layer.
+- Walking and swimming ducks now hide the normal hat layer entirely when a player has no hat, while still allowing leader and president overrides.
+- Debug output and player descriptions now include both hair and headwear so player identity settings are easier to audit.
 
 ## v0.104 – Hair Overlay Personalisation
 

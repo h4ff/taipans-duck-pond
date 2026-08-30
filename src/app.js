@@ -210,6 +210,11 @@
     if (rawHair && !hair) {
       DATA_WARNINGS.push(`players.csv row ${index + 2}: unknown hair ${rawHair}; using none.`);
     }
+    const rawHeadwear = String(row.headwear || row.hat || "").trim();
+    const playerHeadwear = canonicalPlayerHeadwear(rawHeadwear);
+    if (rawHeadwear && !playerHeadwear) {
+      DATA_WARNINGS.push(`players.csv row ${index + 2}: unknown headwear ${rawHeadwear}; using none.`);
+    }
 
     return {
       id,
@@ -220,6 +225,7 @@
       build,
       roles,
       hair: hair || "none",
+      playerHeadwear: playerHeadwear || "none",
       swimAccessory: String(row.swimAccessory || "").trim()
     };
   }
@@ -322,9 +328,10 @@
     const roleText = (player.roles || []).length ? ` • ${(player.roles || []).join(" + ")}` : "";
     const feather = FEATHER_TONES[player.featherTone]?.label || player.featherTone || "White";
     const build = BUILD_VARIANTS[player.build]?.label || player.build || "Standard";
-    const hairText = player.hair && player.hair !== "none" ? ` • hair: ${hairLabel(player.hair)}` : "";
+    const hairText = player.hair && player.hair !== "none" ? ` • hair: ${hairLabel(player.hair)}` : " • hair: none";
+    const headwearText = ` • headwear: ${PLAYER_HEADWEAR_LABELS[player.playerHeadwear] || "No hat"}`;
     const nicknameText = player.nickname ? ` • public nickname: ${player.nickname}` : "";
-    return `${player.name} • ${player.presentation} • ${feather} • ${build}${hairText}${roleText}${nicknameText}`;
+    return `${player.name} • ${player.presentation} • ${feather} • ${build}${hairText}${headwearText}${roleText}${nicknameText}`;
   }
 
   function formatClubDate(isoDate) {
@@ -529,7 +536,7 @@
     }
     if (dataPondEvents) {
       dataPondEvents.innerHTML = tableHtml(
-        ["Event", "Date", "Player", "Team", "Type", "Presentation", "Feather", "Build", "Hair", "Roles"],
+        ["Event", "Date", "Player", "Team", "Type", "Presentation", "Feather", "Build", "Hair", "Headwear", "Roles"],
         pondEvents.map(event => {
           const player = playerById(event.playerId);
           return [
@@ -541,7 +548,8 @@
             player?.presentation || "—",
             FEATHER_TONES[player?.featherTone]?.label || player?.featherTone || "—",
             BUILD_VARIANTS[player?.build]?.label || player?.build || "—",
-            player?.hair && player.hair !== "none" ? hairLabel(player.hair) : "—",
+            player?.hair && player.hair !== "none" ? hairLabel(player.hair) : "None",
+            PLAYER_HEADWEAR_LABELS[player?.playerHeadwear] || "No hat",
             (player?.roles || []).join(", ") || "—"
           ];
         })
@@ -649,16 +657,18 @@
 
   function resolvedHeadwear(duck) {
     // Role priority is deliberate: the president's crown always wins, even
-    // if that player also happens to be the current duck leader.
+    // if that player also happens to be the current duck leader. The leader
+    // cap overrides any normal player-selected cap.
     if (duckHasRole(duck, "president")) return "crown";
     if (duck.dataset.isLeader === "true") return "leader";
-    return "normal";
+    return duck.dataset.playerHeadwear === "cap" ? "normal" : "none";
   }
 
   function headwearSrc(duck, phase, facing = "left") {
     const headwear = resolvedHeadwear(duck);
-    const assets = HEADWEAR_ASSETS[headwear] || HEADWEAR_ASSETS.normal;
     duck.dataset.headwear = headwear;
+    if (headwear === "none") return "";
+    const assets = HEADWEAR_ASSETS[headwear] || HEADWEAR_ASSETS.normal;
 
     if (phase === "walk") return assets.walk;
     return facing === "right" ? assets.swim.right : assets.swim.left;
@@ -762,6 +772,20 @@
     const visibleKeys = HAIR_KEYS.filter(key => key !== "none");
     return visibleKeys[Math.floor(Math.random() * visibleKeys.length)] || "none";
   }
+
+  const PLAYER_HEADWEAR_KEYS = ["none", "cap"];
+  const PLAYER_HEADWEAR_LABELS = {
+    none: "No hat",
+    cap: "TCC cap"
+  };
+
+  function canonicalPlayerHeadwear(value) {
+    const normalized = String(value || "").trim().toLowerCase();
+    if (!normalized || normalized === "none" || normalized === "no" || normalized === "off") return "none";
+    if (["cap", "hat", "normal", "clubcap", "club-cap", "tcc-cap"].includes(normalized)) return "cap";
+    return "";
+  }
+
 
   function swimFaceSrc(faceName, featherTone) {
     const safeTone = FEATHER_TONES[featherTone] ? featherTone : "white";
@@ -1524,7 +1548,16 @@
     stack.style.setProperty("--hat-counter-scale", nextFacing === "right" ? "-1" : "1");
 
     const headwear = duck.querySelector(".swim-headwear");
-    if (headwear) headwear.src = headwearSrc(duck, "swim", nextFacing);
+    if (headwear) {
+      const src = headwearSrc(duck, "swim", nextFacing);
+      if (src) {
+        headwear.src = src;
+        headwear.hidden = false;
+      } else {
+        headwear.removeAttribute("src");
+        headwear.hidden = true;
+      }
+    }
 
     const whistle = duck.querySelector(".swim-coach-whistle");
     if (whistle) whistle.src = coachWhistleSrc("swim", nextFacing);
@@ -2141,11 +2174,14 @@
       stack.appendChild(whistle);
     }
 
-    const headwear = document.createElement("img");
-    headwear.className = "entry-layer entry-hat entry-headwear";
-    headwear.src = headwearSrc(duck, "walk");
-    headwear.alt = "";
-    stack.appendChild(headwear);
+    const headwearPath = headwearSrc(duck, "walk");
+    if (headwearPath) {
+      const headwear = document.createElement("img");
+      headwear.className = "entry-layer entry-hat entry-headwear";
+      headwear.src = headwearPath;
+      headwear.alt = "";
+      stack.appendChild(headwear);
+    }
 
     setWalkFrame(duck, frameIndex);
   }
@@ -2528,6 +2564,7 @@
     testRole = "",
     presentation = "male",
     hair = "none",
+    playerHeadwear = "none",
     playerId = "",
     playerName = "",
     eventId = "",
@@ -2545,6 +2582,7 @@
     duck.dataset.duckType = DUCK_TYPES.includes(duckType) ? duckType : "standard";
     duck.dataset.featherTone = FEATHER_TONES[featherTone] ? featherTone : "white";
     duck.dataset.hair = canonicalHairKey(hair) || "none";
+    duck.dataset.playerHeadwear = canonicalPlayerHeadwear(playerHeadwear) || "none";
     const assignedRoles = normalizedRoles(roles, clubRole);
     duck.dataset.roles = assignedRoles.join(",");
     duck.dataset.clubRole = assignedRoles.includes("president") ? "president" : "player";
@@ -2561,12 +2599,13 @@
     duck.dataset.clickScooting = "false";
     chooseIdleFace(duck);
     duck.dataset.swimPace = (0.88 + (id % 5) * 0.06).toFixed(2);
-    const hairAria = duck.dataset.hair && duck.dataset.hair !== "none" ? `, ${hairLabel(duck.dataset.hair)}` : "";
+    const hairAria = duck.dataset.hair && duck.dataset.hair !== "none" ? `, ${hairLabel(duck.dataset.hair)}` : ", no hair";
+    const headwearAria = duck.dataset.headwear === "none" ? ", no hat" : duck.dataset.headwear === "normal" ? ", club cap" : duck.dataset.headwear === "leader" ? ", leader cap" : ", crown";
     duck.setAttribute(
       "aria-label",
       playerName
-        ? `${playerName}, ${duck.dataset.presentation} ${duck.dataset.duckType} duck${hairAria}`
-        : `Duck ${id}, ${duck.dataset.presentation} ${duck.dataset.duckType} duck${hairAria}`
+        ? `${playerName}, ${duck.dataset.presentation} ${duck.dataset.duckType} duck${hairAria}${headwearAria}`
+        : `Duck ${id}, ${duck.dataset.presentation} ${duck.dataset.duckType} duck${hairAria}${headwearAria}`
     );
 
     applyDuckSize(duck);
@@ -2879,6 +2918,7 @@
       buildVariant: player.build,
       presentation: player.presentation,
       hair: player.hair || "none",
+      playerHeadwear: player.playerHeadwear || "none",
       roles: player.roles || [],
       clubRole: (player.roles || []).includes("president") ? "president" : "player",
       isLeader: currentLeaderPlayerIds.has(player.id),
@@ -2967,7 +3007,7 @@
     };
     const duck = makePlayerDuck(player, event, { instant: false });
     if (!duck) return;
-    status.textContent = `Adding ${player.name}: permanent ${player.presentation}/${FEATHER_TONES[player.featherTone]?.label || player.featherTone}/${BUILD_VARIANTS[player.build]?.label || player.build}${player.hair && player.hair !== "none" ? `/${hairLabel(player.hair)}` : ""}; ${selectedDuckType} event shirt.`;
+    status.textContent = `Adding ${player.name}: permanent ${player.presentation}/${FEATHER_TONES[player.featherTone]?.label || player.featherTone}/${BUILD_VARIANTS[player.build]?.label || player.build}/${player.hair && player.hair !== "none" ? hairLabel(player.hair) : "No hair"}/${PLAYER_HEADWEAR_LABELS[player.playerHeadwear] || "No hat"}; ${selectedDuckType} event shirt.`;
     showEntrantScoreboard(player, event, 1, 1);
     animateEntry(duck, null, { onSplash: showLeaderboardScoreboard });
   }
@@ -3238,6 +3278,7 @@
       const presentation = femaleIndexes.has(i) ? "female" : "male";
       const roles = [];
       let hair = randomHairKey();
+      let playerHeadwear = Math.random() < 0.35 ? "cap" : "none";
       if (isPresident) hair = "short-gray";
       if (isPresident) roles.push("president");
       if (captainIndexes.has(i)) roles.push("captain");
@@ -3259,14 +3300,15 @@
         clubRole: isPresident ? "president" : "player",
         isLeader,
         presentation,
-        hair
+        hair,
+        playerHeadwear
       });
     }
 
     const yellowCount = [...ducks.values()]
       .filter(duck => duck.dataset.featherTone === "yellow").length;
     status.textContent =
-      `Loaded ${target} ducks with president crown, leader cap, ${captainIndexes.size} captains, ${coachIndexes.size} coaches, ${femaleIndexes.size} female-presentation ducks, ${yellowCount} yellow-feather ducks and mixed hair overlays.`;
+      `Loaded ${target} ducks with president crown, leader cap, optional club caps, ${captainIndexes.size} captains, ${coachIndexes.size} coaches, ${femaleIndexes.size} female-presentation ducks, ${yellowCount} yellow-feather ducks and mixed hair overlays.`;
   }
 
   function updateDuckTypeButton() {
