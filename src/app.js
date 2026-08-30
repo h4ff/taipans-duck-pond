@@ -2296,17 +2296,22 @@
     wingFront.src = swimWingSrc("front", duck.dataset.featherTone);
     wingFront.alt = "";
 
-    const headwear = document.createElement("img");
-    headwear.className = "swim-layer swim-hat swim-headwear";
-    headwear.src = headwearSrc(duck, "swim", duck.dataset.facing);
-    headwear.alt = "";
+    const headwearPath = headwearSrc(duck, "swim", duck.dataset.facing);
+    let headwear = null;
+    if (headwearPath) {
+      headwear = document.createElement("img");
+      headwear.className = "swim-layer swim-hat swim-headwear";
+      headwear.src = headwearPath;
+      headwear.alt = "";
+    }
 
     stack.append(wingBack, body, wake);
     if (showHair) stack.appendChild(hair);
     stack.appendChild(face);
     if (duckHasRole(duck, "captain")) stack.appendChild(captainLayer);
     if (duckHasRole(duck, "coach")) stack.appendChild(whistle);
-    stack.append(wingFront, headwear);
+    stack.appendChild(wingFront);
+    if (headwear) stack.appendChild(headwear);
     visual.appendChild(stack);
 
     duck.dataset.face = faceName;
