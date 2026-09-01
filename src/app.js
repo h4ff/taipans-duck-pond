@@ -68,6 +68,7 @@
 
   const WALK_LAYER_ROOT = "assets/duck/walk-layered";
   const HAIR_ROOT = "assets/duck/hair";
+  const LEADER_HAIR_ROOT = `${HAIR_ROOT}/leader`;
   const HEADWEAR_ASSETS = {
     normal: {
       walk: "assets/duck/headwear/normal/walk.png",
@@ -400,26 +401,62 @@
     for (const event of events) {
       const player = playerById(event.playerId);
       if (!player) continue;
-      const current = totals.get(player.id) || { player, count: 0, latestDate: "" };
+      const current = totals.get(player.id) || {
+        player,
+        count: 0,
+        diamondCount: 0,
+        goldenCount: 0,
+        standardCount: 0,
+        latestDate: ""
+      };
       current.count += 1;
+      if (event.duckType === "diamond") current.diamondCount += 1;
+      else if (event.duckType === "golden") current.goldenCount += 1;
+      else current.standardCount += 1;
       if (event.date > current.latestDate) current.latestDate = event.date;
       totals.set(player.id, current);
     }
+
+    // Pond hierarchy: total ducks remains the primary measure. When players
+    // have the same total, Diamond outranks Golden, which outranks Standard.
+    // The comparison is lexicographic so ties remain genuine ties.
+    const compareScore = (a, b) =>
+      b.count - a.count ||
+      b.diamondCount - a.diamondCount ||
+      b.goldenCount - a.goldenCount ||
+      b.standardCount - a.standardCount;
+
+    const sameScore = (a, b) => Boolean(a && b) &&
+      a.count === b.count &&
+      a.diamondCount === b.diamondCount &&
+      a.goldenCount === b.goldenCount &&
+      a.standardCount === b.standardCount;
+
     const leaders = [...totals.values()].sort((a, b) =>
-      b.count - a.count || displayPlayerName(a.player).localeCompare(displayPlayerName(b.player))
+      compareScore(a, b) || displayPlayerName(a.player).localeCompare(displayPlayerName(b.player))
     );
-    let previousCount = null;
+
+    let previous = null;
     let previousRank = 0;
     leaders.forEach((leader, index) => {
-      if (leader.count === previousCount) {
+      if (sameScore(leader, previous)) {
         leader.rank = previousRank;
       } else {
         leader.rank = index + 1;
         previousRank = leader.rank;
-        previousCount = leader.count;
       }
+      previous = leader;
     });
     return leaders;
+  }
+
+  function leaderboardHasActiveLeader(leaderboard) {
+    const top = leaderboard?.[0];
+    if (!top) return false;
+    // A pond made up solely of one Standard duck per player has no leader cap.
+    // A player becomes a visible leader as soon as the top score has 2+ ducks,
+    // or a Golden/Diamond duck breaks an otherwise one-duck tie.
+    return top.count > 1 || top.diamondCount > 0 || top.goldenCount > 0;
   }
 
   function shortScoreName(name) {
@@ -779,6 +816,26 @@
     return stem ? `${HAIR_ROOT}/swim/${stem}Swim.png` : "";
   }
 
+  function leaderHairSrc(hairKey, phase) {
+    const key = canonicalHairKey(hairKey);
+    if (!key || key === "none" || key === "buzz") return "";
+    const [style] = key.split("-");
+    if (!["part", "mullet", "ponytail"].includes(style)) return "";
+    const stem = hairStem(key);
+    if (!stem) return "";
+    return phase === "walk"
+      ? `${LEADER_HAIR_ROOT}/walk/${stem}Hat.png`
+      : `${LEADER_HAIR_ROOT}/swim/${stem}HatSwim.png`;
+  }
+
+  function visualHairSrc(duck, phase) {
+    const headwear = resolvedHeadwear(duck);
+    // Only the three deliberately redrawn styles remain visible beneath the
+    // mandatory yellow leader cap. All other leader hair is suppressed.
+    if (headwear === "leader") return leaderHairSrc(duck.dataset.hair, phase);
+    return phase === "walk" ? walkHairSrc(duck.dataset.hair) : swimHairSrc(duck.dataset.hair);
+  }
+
   function randomHairKey() {
     if (Math.random() < 0.3) return "none";
     const visibleKeys = HAIR_KEYS.filter(key => key !== "none");
@@ -885,6 +942,8 @@
     for (const hairKey of HAIR_KEYS) {
       urls.add(walkHairSrc(hairKey));
       urls.add(swimHairSrc(hairKey));
+      urls.add(leaderHairSrc(hairKey, "walk"));
+      urls.add(leaderHairSrc(hairKey, "swim"));
     }
 
     return [...urls].filter(Boolean);
@@ -2155,7 +2214,7 @@
     appendEntryImage(stack, "entry-leg entry-leg-rear", walkLegSrc("rear", tone));
     appendEntryImage(stack, "entry-shirt", walkShirtSrc(duck.dataset.duckType, presentation));
     appendEntryImage(stack, "entry-body", walkBodySrc(tone, presentation));
-    const walkHair = walkHairSrc(duck.dataset.hair);
+    const walkHair = visualHairSrc(duck, "walk");
     if (walkHair) appendEntryImage(stack, "entry-hair", walkHair);
     appendEntryImage(stack, "entry-wing entry-wing-rear", walkWingSrc("rear", tone, presentation));
     appendEntryImage(stack, "entry-leg entry-leg-front", walkLegSrc("front", tone));
@@ -2273,7 +2332,7 @@
     body.src = swimBodySrc(duck.dataset.duckType, duck.dataset.featherTone, presentation);
     body.alt = "";
 
-    const hairSrc = swimHairSrc(duck.dataset.hair);
+    const hairSrc = visualHairSrc(duck, "swim");
     const hair = document.createElement("img");
     hair.className = "swim-layer swim-hair";
     if (hairSrc) hair.src = hairSrc;
@@ -2426,8 +2485,8 @@
     }
 
     const leaders = currentLeaderboard();
-    const rankIndex = leaders.findIndex(entry => entry.player.id === player.id);
-    const rankText = rankIndex >= 0 ? `#${rankIndex + 1} on pond leaderboard` : "Unranked";
+    const rankEntry = leaders.find(entry => entry.player.id === player.id);
+    const rankText = rankEntry ? `#${rankEntry.rank} on pond leaderboard` : "Unranked";
     const latest = events[events.length - 1] || null;
     const display = displayPlayerName(player);
 
@@ -3048,9 +3107,11 @@
     const weekEvents = events.filter(event => event.date >= context.start && event.date <= context.end);
     const pondEvents = events.filter(event => event.date <= context.end);
     const leaderboard = leaderboardForEvents(pondEvents);
-    const leadCount = leaderboard[0]?.count || 0;
+    const activeLeader = leaderboardHasActiveLeader(leaderboard);
     currentLeaderPlayerIds = new Set(
-      leaderboard.filter(entry => leadCount > 0 && entry.count === leadCount).map(entry => entry.player.id)
+      activeLeader
+        ? leaderboard.filter(entry => entry.rank === 1).map(entry => entry.player.id)
+        : []
     );
 
     for (const event of earlierEvents) {

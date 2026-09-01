@@ -1,4 +1,26 @@
-# Duck Pond – v0.107
+## v0.109 – Leader Hair/Cap Integration
+
+- Includes all v0.108 leaderboard hierarchy changes: total duck count first, then Diamond > Golden > Standard when counts tie.
+- No visible leader cap when the top score is only one Standard duck. A Golden or Diamond duck can establish a leader even when everyone has one duck.
+- Added 30 dedicated leader-state hair assets for Part, Mullet and Ponytail (5 colours × walk/swim).
+- When a duck is the active leader, Part/Mullet/Ponytail use their redrawn cap-compatible hair asset underneath the existing yellow leader cap.
+- Other leader hairstyles are hidden while the leader cap is active.
+- President crown still overrides leader headwear and keeps the normal hair presentation.
+
+# Duck Pond – v0.109
+
+## v0.108 – Duck Hierarchy + Leader Activation
+
+- Leaderboard ranking now uses cumulative duck count first, then Diamond > Golden > Standard as the tie-break hierarchy.
+- Players with identical score profiles remain tied at the same competition rank.
+- A pond containing only one Standard duck per player has no active leader cap.
+- A Golden or Diamond duck can establish an active leader even when all players have only one duck.
+
+## v0.107 – Production UI Cleanup
+
+- Replaced the visible development/test harness with a compact production header and club-week selector.
+- Removed the development data tables and debug/test controls from the normal production view.
+- Kept the underlying test hooks available in code for future development.
 
 ## v0.106 – Optional Player Headwear
 
