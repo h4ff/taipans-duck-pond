@@ -1,6 +1,6 @@
 date,playerId,team,duckType
 4/07/2026,P003,5th XI,standard
-5/07/2026,P001,1st XI,standard
+5/07/2026,P065,5th XI,standard
 11/07/2026,P076,Women,golden
 12/07/2026,P094,Women,standard
 18/07/2026,P029,2nd XI,standard
@@ -8,6 +8,7 @@ date,playerId,team,duckType
 25/07/2026,P001,1st XI,golden
 1/08/2026,P078,Women,standard
 2/08/2026,P069,2nd XI,diamond
+2/08/2026,P043,1st XI,golden
 3/08/2026,P077,Women,standard
 8/08/2026,P001,1st XI,standard
 9/08/2026,P003,5th XI,standard
@@ -20,6 +21,8 @@ date,playerId,team,duckType
 22/08/2026,P011,2nd XI,golden
 23/08/2026,P054,3rd XI,standard
 25/08/2026,P095,Women,standard
+29/08/2026,P065,5th XI,standard
+29/08/2026,P068,1st XI,standard
 29/08/2026,P008,4th XI,golden
 2/09/2026,P001,1st XI,standard
 5/09/2026,P003,5th XI,diamond
