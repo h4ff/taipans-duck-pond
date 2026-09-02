@@ -1,4 +1,4 @@
-## v0.110 – Faster Startup / Percentage Loader
+## v0.111 – Faster Startup / Percentage Loader
 
 - Startup no longer blocks on every production image variant. It preloads only the assets required for the currently selected pond/week.
 - The remaining variants are warmed quietly in the background after the pond becomes usable.
@@ -15,7 +15,7 @@
 - Other leader hairstyles are hidden while the leader cap is active.
 - President crown still overrides leader headwear and keeps the normal hair presentation.
 
-# Duck Pond – v0.110
+# Duck Pond – v0.111
 
 ## v0.108 – Duck Hierarchy + Leader Activation
 

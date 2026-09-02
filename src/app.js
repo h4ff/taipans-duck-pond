@@ -217,6 +217,15 @@
       DATA_WARNINGS.push(`players.csv row ${index + 2}: unknown headwear ${rawHeadwear}; using none.`);
     }
 
+    const rawSwimAccessory = String(row.swimAccessory || "").trim();
+    const swimAccessory = canonicalSwimAccessory(rawSwimAccessory);
+    if (rawSwimAccessory && !swimAccessory) {
+      DATA_WARNINGS.push(`players.csv row ${index + 2}: unknown swimAccessory ${rawSwimAccessory}; using none.`);
+    }
+    if (presentation === "female" && swimAccessory === "flamingo") {
+      DATA_WARNINGS.push(`players.csv row ${index + 2}: flamingo currently fits the male model only; accessory ignored for this player.`);
+    }
+
     return {
       id,
       name,
@@ -227,8 +236,15 @@
       roles,
       hair: hair || "none",
       playerHeadwear: playerHeadwear || "none",
-      swimAccessory: String(row.swimAccessory || "").trim()
+      swimAccessory: swimAccessory || "none"
     };
+  }
+
+  function canonicalSwimAccessory(value) {
+    const raw = String(value || "").trim().toLowerCase();
+    if (!raw || ["none", "no", "off"].includes(raw)) return "none";
+    if (["flamingo", "floatie", "flamingo-floatie"].includes(raw)) return "flamingo";
+    return "";
   }
 
   function normaliseCsvDate(value) {
@@ -665,6 +681,20 @@
     return `${WALK_LAYER_ROOT}/faces/${safeFace}.png`;
   }
 
+  const FLAMINGO_ASSETS = {
+    walk: "assets/duck/accessories/flamingo/MaleFlamingoWalk.png",
+    swim: "assets/duck/accessories/flamingo/MaleFlamingoSwim.png",
+    wakes: {
+      standard: "assets/duck/accessories/flamingo/RippleStandardFlamingo.png",
+      golden: "assets/duck/accessories/flamingo/RippleGoldenFlamingo.png",
+      diamond: "assets/duck/accessories/flamingo/RippleDiamondFlamingo.png"
+    }
+  };
+
+  function duckHasFlamingo(duck) {
+    return duck?.dataset?.presentation === "male" && duck?.dataset?.swimAccessory === "flamingo";
+  }
+
   const SWIM_ASSETS = {
     bodyRoot: "assets/duck/swim/body",
     wingRoot: "assets/duck/swim/wing",
@@ -696,7 +726,9 @@
   }
 
   function swimWakeSrc(duck) {
-    return SWIM_ASSETS.wakes[duck?.dataset?.duckType] || SWIM_ASSETS.wakes.standard;
+    const type = DUCK_TYPES.includes(duck?.dataset?.duckType) ? duck.dataset.duckType : "standard";
+    if (duckHasFlamingo(duck)) return FLAMINGO_ASSETS.wakes[type] || FLAMINGO_ASSETS.wakes.standard;
+    return SWIM_ASSETS.wakes[type] || SWIM_ASSETS.wakes.standard;
   }
 
   function swimWingSrc(which, featherTone) {
@@ -927,7 +959,12 @@
     urls.add(swimBodySrc(type, tone, presentation));
     urls.add(swimWingSrc("front", tone));
     urls.add(swimWingSrc("back", tone));
-    urls.add(SWIM_ASSETS.wakes[type]);
+    if (presentation === "male" && player.swimAccessory === "flamingo") {
+      urls.add(FLAMINGO_ASSETS.swim);
+      urls.add(FLAMINGO_ASSETS.wakes[type]);
+    } else {
+      urls.add(SWIM_ASSETS.wakes[type]);
+    }
     urls.add(swimFaceSrc("sad", tone));
     urls.add(swimBlinkSrc("sad", tone));
 
@@ -962,6 +999,7 @@
     urls.add(walkLegSrc("rear", tone));
     urls.add(walkFaceSrc("sad", tone));
     urls.add(walkFaceSrc("nervous", tone));
+    if (presentation === "male" && player.swimAccessory === "flamingo") urls.add(FLAMINGO_ASSETS.walk);
 
     if (headwear === "leader") {
       const specialLeaderHair = leaderHairSrc(player.hair, "walk");
@@ -1010,6 +1048,10 @@
       urls.add(headwear.swim.left);
       urls.add(headwear.swim.right);
     }
+
+    urls.add(FLAMINGO_ASSETS.walk);
+    urls.add(FLAMINGO_ASSETS.swim);
+    for (const wake of Object.values(FLAMINGO_ASSETS.wakes)) urls.add(wake);
 
     urls.add(ROLE_ASSETS.coach.walk);
     urls.add(ROLE_ASSETS.coach.swim.left);
@@ -2379,6 +2421,7 @@
     appendEntryImage(stack, "entry-leg entry-leg-rear", walkLegSrc("rear", tone));
     appendEntryImage(stack, "entry-shirt", walkShirtSrc(duck.dataset.duckType, presentation));
     appendEntryImage(stack, "entry-body", walkBodySrc(tone, presentation));
+    if (duckHasFlamingo(duck)) appendEntryImage(stack, "entry-flamingo", FLAMINGO_ASSETS.walk);
     const walkHair = visualHairSrc(duck, "walk");
     if (walkHair) appendEntryImage(stack, "entry-hair", walkHair);
     appendEntryImage(stack, "entry-wing entry-wing-rear", walkWingSrc("rear", tone, presentation));
@@ -2509,6 +2552,13 @@
     face.src = swimFaceSrc(faceName, duck.dataset.featherTone);
     face.alt = "";
 
+    const flamingo = document.createElement("img");
+    if (duckHasFlamingo(duck)) {
+      flamingo.className = "swim-layer swim-flamingo";
+      flamingo.src = FLAMINGO_ASSETS.swim;
+      flamingo.alt = "";
+    }
+
     const captainLayer = document.createElement("span");
     if (duckHasRole(duck, "captain")) {
       captainLayer.className = "swim-layer swim-role-layer swim-captain-layer";
@@ -2544,6 +2594,7 @@
     stack.append(wingBack, body, wake);
     if (showHair) stack.appendChild(hair);
     stack.appendChild(face);
+    if (duckHasFlamingo(duck)) stack.appendChild(flamingo);
     if (duckHasRole(duck, "captain")) stack.appendChild(captainLayer);
     if (duckHasRole(duck, "coach")) stack.appendChild(whistle);
     stack.appendChild(wingFront);
@@ -2806,6 +2857,7 @@
     presentation = "male",
     hair = "none",
     playerHeadwear = "none",
+    swimAccessory = "none",
     playerId = "",
     playerName = "",
     eventId = "",
@@ -2824,6 +2876,7 @@
     duck.dataset.featherTone = FEATHER_TONES[featherTone] ? featherTone : "white";
     duck.dataset.hair = canonicalHairKey(hair) || "none";
     duck.dataset.playerHeadwear = canonicalPlayerHeadwear(playerHeadwear) || "none";
+    duck.dataset.swimAccessory = canonicalSwimAccessory(swimAccessory) || "none";
     const assignedRoles = normalizedRoles(roles, clubRole);
     duck.dataset.roles = assignedRoles.join(",");
     duck.dataset.clubRole = assignedRoles.includes("president") ? "president" : "player";
@@ -2833,7 +2886,9 @@
     duck.dataset.playerName = playerName || "";
     duck.dataset.eventId = eventId || "";
     duck.dataset.eventDate = eventDate || "";
-    duck.dataset.facing = "left";
+    // Existing pond ducks should not all materialise facing the source-art direction.
+    // Entrants still walk in facing left; instant pond reconstruction is randomised.
+    duck.dataset.facing = instant && Math.random() < 0.5 ? "right" : "left";
     duck.dataset.collisionEscaping = "false";
     duck.dataset.blinking = "false";
     duck.dataset.clickScootPending = "false";
@@ -3160,6 +3215,7 @@
       presentation: player.presentation,
       hair: player.hair || "none",
       playerHeadwear: player.playerHeadwear || "none",
+      swimAccessory: player.swimAccessory || "none",
       roles: player.roles || [],
       clubRole: (player.roles || []).includes("president") ? "president" : "player",
       isLeader: currentLeaderPlayerIds.has(player.id),

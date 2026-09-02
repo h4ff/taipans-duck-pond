@@ -375,6 +375,7 @@ body {
 .entry-shirt { z-index: 2; }
 .entry-body { z-index: 3; }
 .entry-hair { z-index: 4; }
+.entry-flamingo { z-index: 5; }
 .entry-leg-front { z-index: 5; transform-origin: 43% 78%; }
 .entry-wing-front { z-index: 6; transform-origin: 48% 59%; }
 .entry-face { z-index: 7; }
@@ -556,6 +557,7 @@ body {
 .swim-wake { z-index: 3; }
 .swim-hair { z-index: 4; }
 .swim-face { z-index: 5; }
+.swim-flamingo { z-index: 6; }
 .swim-role-layer { z-index: 6; }
 .swim-wing-front { z-index: 7; }
 .swim-captain-layer { z-index: 6; }
