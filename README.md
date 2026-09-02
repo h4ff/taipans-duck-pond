@@ -1,4 +1,19 @@
-## v0.111 – Faster Startup / Percentage Loader
+# Duck Pond – v0.113
+
+## v0.113 – README / Version Cleanup
+
+- Corrected the changelog header and version ordering introduced in v0.111.
+- Restored separate entries for the v0.110 startup optimisation and v0.111 flamingo/facing changes.
+- No simulation, artwork or data behaviour changed in this corrective build.
+
+## v0.111 – Flamingo Floatie + Pond Facing
+
+- Added the male-only Flamingo swim accessory using the supplied walking and swimming overlays.
+- Added the dedicated Flamingo wake/ripple treatment, including Standard, Golden and Diamond variants.
+- Existing ducks loaded directly into the pond now receive a random initial left/right facing instead of all starting left.
+- The existing `swimAccessory` player field accepts `flamingo`; female players safely fall back to the normal swim presentation.
+
+## v0.110 – Faster Startup / Percentage Loader
 
 - Startup no longer blocks on every production image variant. It preloads only the assets required for the currently selected pond/week.
 - The remaining variants are warmed quietly in the background after the pond becomes usable.
@@ -14,8 +29,6 @@
 - When a duck is the active leader, Part/Mullet/Ponytail use their redrawn cap-compatible hair asset underneath the existing yellow leader cap.
 - Other leader hairstyles are hidden while the leader cap is active.
 - President crown still overrides leader headwear and keeps the normal hair presentation.
-
-# Duck Pond – v0.111
 
 ## v0.108 – Duck Hierarchy + Leader Activation
 
