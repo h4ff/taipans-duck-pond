@@ -883,8 +883,23 @@
   // the first time a walk/swim/splash/accessory variant is requested.
   const PRELOADED_IMAGES = new Map();
 
-  function productionImageManifest() {
-    const urls = new Set([
+  function addHeadwearAssets(urls, headwear) {
+    if (!headwear || headwear === "none") return;
+    const assets = HEADWEAR_ASSETS[headwear];
+    if (!assets) return;
+    urls.add(assets.walk);
+    urls.add(assets.swim.left);
+    urls.add(assets.swim.right);
+  }
+
+  function playerHeadwearKind(player, isLeader = false) {
+    if ((player?.roles || []).includes("president")) return "crown";
+    if (isLeader) return "leader";
+    return player?.playerHeadwear === "cap" ? "normal" : "none";
+  }
+
+  function addCommonSceneAssets(urls) {
+    [
       "assets/scene/background.png",
       "assets/scene/foreground-near-bank.png",
       "assets/scene/foreground-reeds.png",
@@ -893,13 +908,102 @@
       SWIM_ASSETS.faces.surprised,
       SWIM_ASSETS.faces.angry,
       SWIM_ASSETS.blinks.neutral,
-      ...Object.values(SWIM_ASSETS.wakes),
       walkFaceSrc("neutral"),
       walkFaceSrc("angry"),
       walkFaceSrc("surprised"),
       walkFaceSrc("neutral-blink"),
       walkFaceSrc("sad-blink")
-    ]);
+    ].forEach(url => urls.add(url));
+  }
+
+  function addSwimAssetsForEvent(urls, event, player, leaderIds) {
+    if (!event || !player) return;
+    const tone = FEATHER_TONES[player.featherTone] ? player.featherTone : "white";
+    const presentation = player.presentation === "female" ? "female" : "male";
+    const type = DUCK_TYPES.includes(event.duckType) ? event.duckType : "standard";
+    const isLeader = leaderIds.has(player.id);
+    const headwear = playerHeadwearKind(player, isLeader);
+
+    urls.add(swimBodySrc(type, tone, presentation));
+    urls.add(swimWingSrc("front", tone));
+    urls.add(swimWingSrc("back", tone));
+    urls.add(SWIM_ASSETS.wakes[type]);
+    urls.add(swimFaceSrc("sad", tone));
+    urls.add(swimBlinkSrc("sad", tone));
+
+    if (headwear === "leader") {
+      const specialLeaderHair = leaderHairSrc(player.hair, "swim");
+      if (specialLeaderHair) urls.add(specialLeaderHair);
+    } else {
+      const hair = swimHairSrc(player.hair);
+      if (hair) urls.add(hair);
+    }
+    addHeadwearAssets(urls, headwear);
+
+    if ((player.roles || []).includes("coach")) {
+      urls.add(ROLE_ASSETS.coach.swim.left);
+      urls.add(ROLE_ASSETS.coach.swim.right);
+    }
+  }
+
+  function addWalkAssetsForEvent(urls, event, player, leaderIds) {
+    if (!event || !player) return;
+    const tone = FEATHER_TONES[player.featherTone] ? player.featherTone : "white";
+    const presentation = player.presentation === "female" ? "female" : "male";
+    const type = DUCK_TYPES.includes(event.duckType) ? event.duckType : "standard";
+    const isLeader = leaderIds.has(player.id);
+    const headwear = playerHeadwearKind(player, isLeader);
+
+    urls.add(walkBodySrc(tone, presentation));
+    urls.add(walkShirtSrc(type, presentation));
+    urls.add(walkWingSrc("front", tone, presentation));
+    urls.add(walkWingSrc("rear", tone, presentation));
+    urls.add(walkLegSrc("front", tone));
+    urls.add(walkLegSrc("rear", tone));
+    urls.add(walkFaceSrc("sad", tone));
+    urls.add(walkFaceSrc("nervous", tone));
+
+    if (headwear === "leader") {
+      const specialLeaderHair = leaderHairSrc(player.hair, "walk");
+      if (specialLeaderHair) urls.add(specialLeaderHair);
+    } else {
+      const hair = walkHairSrc(player.hair);
+      if (hair) urls.add(hair);
+    }
+    addHeadwearAssets(urls, headwear);
+
+    if ((player.roles || []).includes("coach")) urls.add(ROLE_ASSETS.coach.walk);
+    for (let frame = 1; frame <= 4; frame++) urls.add(splashFrameSrc(type, frame));
+  }
+
+  function productionImageManifest(context = null) {
+    // Startup now blocks only on assets required to render the currently
+    // selected pond/week. The remainder are warmed quietly after startup.
+    if (context) {
+      const urls = new Set();
+      addCommonSceneAssets(urls);
+      const pondEvents = DUCK_EVENTS.filter(event => event.date <= context.end);
+      const weekEvents = pondEvents.filter(event => event.date >= context.start);
+      const leaderboard = leaderboardForEvents(pondEvents);
+      const leaderIds = new Set(
+        leaderboardHasActiveLeader(leaderboard)
+          ? leaderboard.filter(entry => entry.rank === 1).map(entry => entry.player.id)
+          : []
+      );
+
+      for (const event of pondEvents) {
+        addSwimAssetsForEvent(urls, event, playerById(event.playerId), leaderIds);
+      }
+      for (const event of weekEvents) {
+        addWalkAssetsForEvent(urls, event, playerById(event.playerId), leaderIds);
+      }
+      return [...urls].filter(Boolean);
+    }
+
+    // Full production manifest retained for low-priority background warming
+    // and for developer/test controls without slowing the first usable paint.
+    const urls = new Set();
+    addCommonSceneAssets(urls);
 
     for (const headwear of Object.values(HEADWEAR_ASSETS)) {
       urls.add(headwear.walk);
@@ -912,10 +1016,8 @@
     urls.add(ROLE_ASSETS.coach.swim.right);
 
     for (const duckType of DUCK_TYPES) {
-      for (let frame = 1; frame <= 4; frame++) {
-        urls.add(splashFrameSrc(duckType, frame));
-      }
-
+      urls.add(SWIM_ASSETS.wakes[duckType]);
+      for (let frame = 1; frame <= 4; frame++) urls.add(splashFrameSrc(duckType, frame));
       for (const featherTone of FEATHER_TONE_KEYS) {
         for (const presentation of ["male", "female"]) {
           urls.add(walkBodySrc(featherTone, presentation));
@@ -945,7 +1047,6 @@
       urls.add(leaderHairSrc(hairKey, "walk"));
       urls.add(leaderHairSrc(hairKey, "swim"));
     }
-
     return [...urls].filter(Boolean);
   }
 
@@ -1046,16 +1147,17 @@
     }
   }
 
-  async function initialiseProductionAssets() {
-    setDuckControlsEnabled(false);
-    const manifest = productionImageManifest();
-    status.textContent = `Loading duck assets… 0/${manifest.length}`;
-    if (loadingOverlay) {
-      loadingOverlay.hidden = false;
-      loadingOverlay.classList.remove("loading-complete", "loading-failed");
+  function loadingPercent(done, total) {
+    if (!total) return 100;
+    return Math.max(0, Math.min(100, Math.round((done / total) * 100)));
+  }
+
+  async function preloadManifest(manifest, { showProgress = false, concurrency = PRELOAD_CONCURRENCY } = {}) {
+    const pending = manifest.filter(url => url && !PRELOADED_IMAGES.has(url));
+    if (!pending.length) {
+      if (showProgress && loadingProgress) loadingProgress.textContent = "100%";
+      return [];
     }
-    if (loadingTitle) loadingTitle.textContent = "Loading pond…";
-    if (loadingProgress) loadingProgress.textContent = `0 / ${manifest.length}`;
 
     let cursor = 0;
     let completed = 0;
@@ -1064,9 +1166,8 @@
     async function worker() {
       while (true) {
         const index = cursor++;
-        if (index >= manifest.length) return;
-        const url = manifest[index];
-
+        if (index >= pending.length) return;
+        const url = pending[index];
         try {
           await preloadAndDecodeImage(url);
         } catch (error) {
@@ -1074,40 +1175,104 @@
           console.error("Duck asset preload failed", url, error);
         } finally {
           completed += 1;
-          status.textContent = `Loading duck assets… ${completed}/${manifest.length}`;
-          if (loadingProgress) loadingProgress.textContent = `${completed} / ${manifest.length}`;
+          if (showProgress) {
+            const pct = loadingPercent(completed, pending.length);
+            if (status) status.textContent = `Loading pond… ${pct}%`;
+            if (loadingProgress) loadingProgress.textContent = `${pct}%`;
+          }
         }
       }
     }
 
-    const workerCount = Math.min(PRELOAD_CONCURRENCY, manifest.length);
+    const workerCount = Math.min(concurrency, pending.length);
     await Promise.all(Array.from({ length: workerCount }, () => worker()));
+    return failures;
+  }
+
+  function warmRemainingAssetsInBackground() {
+    const remaining = productionImageManifest().filter(url => !PRELOADED_IMAGES.has(url));
+    if (!remaining.length) return;
+    const startWarm = () => {
+      preloadManifest(remaining, { showProgress: false, concurrency: 2 })
+        .then(failures => {
+          if (failures.length) console.warn(`Background asset warm completed with ${failures.length} failures.`);
+          else console.info(`Background asset warm completed: ${remaining.length} deferred images.`);
+        })
+        .catch(error => console.warn("Background asset warm failed", error));
+    };
+    if ("requestIdleCallback" in window) {
+      window.requestIdleCallback(startWarm, { timeout: 2500 });
+    } else {
+      window.setTimeout(startWarm, 1200);
+    }
+  }
+
+  async function ensureAssetsForWeek(context, { showOverlay = false } = {}) {
+    const manifest = productionImageManifest(context);
+    const pending = manifest.filter(url => !PRELOADED_IMAGES.has(url));
+    if (!pending.length) return true;
+
+    if (showOverlay && loadingOverlay) {
+      loadingOverlay.hidden = false;
+      loadingOverlay.classList.remove("loading-complete", "loading-failed");
+      if (loadingTitle) loadingTitle.textContent = "Loading week…";
+      if (loadingProgress) loadingProgress.textContent = "0%";
+    }
+
+    const failures = await preloadManifest(manifest, { showProgress: showOverlay });
+    if (failures.length) {
+      if (showOverlay && loadingOverlay) loadingOverlay.classList.add("loading-failed");
+      if (showOverlay && loadingTitle) loadingTitle.textContent = "Week loading failed";
+      if (showOverlay && loadingProgress) loadingProgress.textContent = "Reload to retry";
+      return false;
+    }
+
+    if (showOverlay && loadingOverlay) {
+      if (loadingProgress) loadingProgress.textContent = "100%";
+      if (loadingTitle) loadingTitle.textContent = "Pond ready";
+      loadingOverlay.classList.add("loading-complete");
+      window.setTimeout(() => { loadingOverlay.hidden = true; }, 180);
+    }
+    return true;
+  }
+
+  async function initialiseProductionAssets() {
+    setDuckControlsEnabled(false);
+    const initialContext = weekSelect?.value ? weekContextForMonday(weekSelect.value) : null;
+    const manifest = productionImageManifest(initialContext);
+    if (status) status.textContent = "Loading pond… 0%";
+    if (loadingOverlay) {
+      loadingOverlay.hidden = false;
+      loadingOverlay.classList.remove("loading-complete", "loading-failed");
+    }
+    if (loadingTitle) loadingTitle.textContent = "Loading pond…";
+    if (loadingProgress) loadingProgress.textContent = "0%";
+
+    const failures = await preloadManifest(manifest, { showProgress: true });
 
     if (failures.length) {
       setDuckControlsEnabled(false);
-      status.textContent =
-        `Asset preload finished with ${failures.length} failed image${failures.length === 1 ? "" : "s"}. Reload to retry; controls remain disabled.`;
+      if (status) status.textContent = `Pond loading failed on ${failures.length} required image${failures.length === 1 ? "" : "s"}. Reload to retry.`;
       if (loadingOverlay) loadingOverlay.classList.add("loading-failed");
       if (loadingTitle) loadingTitle.textContent = "Pond loading failed";
-      if (loadingProgress) loadingProgress.textContent = `${manifest.length - failures.length} / ${manifest.length} assets ready`;
+      if (loadingProgress) loadingProgress.textContent = "Reload to retry";
       return;
     }
 
     setDuckControlsEnabled(true);
-    status.textContent =
-      `Ready — ${manifest.length} production images loaded through the mobile-safe preload queue.`;
-    if (loadingProgress) loadingProgress.textContent = `${manifest.length} / ${manifest.length}`;
+    if (status) status.textContent = `Ready — ${manifest.length} images required for this pond loaded; remaining variants will warm in the background.`;
+    if (loadingProgress) loadingProgress.textContent = "100%";
     if (loadingTitle) loadingTitle.textContent = "Pond ready";
     if (loadingOverlay) {
       loadingOverlay.classList.add("loading-complete");
       window.setTimeout(() => {
         loadingOverlay.hidden = true;
-        // v0.87 production-style default: the most recent Monday is already
-        // selected, so load its completed prior Monday–Sunday week automatically.
-        loadSelectedWeek();
-      }, 320);
+        loadSelectedWeek({ assetsReady: true });
+        warmRemainingAssetsInBackground();
+      }, 220);
     } else {
-      loadSelectedWeek();
+      loadSelectedWeek({ assetsReady: true });
+      warmRemainingAssetsInBackground();
     }
   }
 
@@ -3088,7 +3253,7 @@
     animateEntry(duck, null, { onSplash: showLeaderboardScoreboard });
   }
 
-  async function loadSelectedWeek() {
+  async function loadSelectedWeek({ assetsReady = false } = {}) {
     const monday = weekSelect?.value || "";
     if (!monday) {
       status.textContent = "Choose a week first.";
@@ -3097,6 +3262,10 @@
 
     const context = weekContextForMonday(monday);
     selectedWeekContext = context;
+    if (!assetsReady) {
+      const ready = await ensureAssetsForWeek(context, { showOverlay: true });
+      if (!ready) return;
+    }
     resetPond();
     // resetPond increments the cancellation token, so capture the fresh value afterwards.
     const loadToken = dateRangeLoadToken;

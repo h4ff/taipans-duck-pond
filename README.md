@@ -1,3 +1,11 @@
+## v0.110 – Faster Startup / Percentage Loader
+
+- Startup no longer blocks on every production image variant. It preloads only the assets required for the currently selected pond/week.
+- The remaining variants are warmed quietly in the background after the pond becomes usable.
+- The loading overlay now shows a simple percentage instead of a raw asset count.
+- Changing to a week that needs an uncached asset briefly preloads only the missing assets before playback.
+- The existing bounded mobile-safe image queue, retries and decode timeouts are retained.
+
 ## v0.109 – Leader Hair/Cap Integration
 
 - Includes all v0.108 leaderboard hierarchy changes: total duck count first, then Diamond > Golden > Standard when counts tie.
@@ -7,7 +15,7 @@
 - Other leader hairstyles are hidden while the leader cap is active.
 - President crown still overrides leader headwear and keeps the normal hair presentation.
 
-# Duck Pond – v0.109
+# Duck Pond – v0.110
 
 ## v0.108 – Duck Hierarchy + Leader Activation
 
