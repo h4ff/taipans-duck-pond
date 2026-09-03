@@ -1,6 +1,6 @@
 date,playerId,team,duckType
 4/07/2026,P068,1st XI,standard
-4/07/2026,P003,5th XI,standard
+4/07/2026,P010,5th XI,standard
 5/07/2026,P065,5th XI,standard
 11/07/2026,P076,Women,golden
 12/07/2026,P094,Women,standard
@@ -37,3 +37,4 @@ date,playerId,team,duckType
 19/09/2026,P088,Women,standard
 19/09/2026,P061,4th XI,standard
 19/09/2026,P068,1st XI,standard
+19/09/2026,P010,5th XI,golden
