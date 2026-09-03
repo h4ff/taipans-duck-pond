@@ -1,6 +1,6 @@
-# Duck Pond – v0.113
+# Duck Pond – v0.114
 
-## v0.113 – README / Version Cleanup
+## v0.114 – README / Version Cleanup
 
 - Corrected the changelog header and version ordering introduced in v0.111.
 - Restored separate entries for the v0.110 startup optimisation and v0.111 flamingo/facing changes.

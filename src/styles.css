@@ -542,6 +542,13 @@ body {
   pointer-events: none;
 }
 
+/* v0.114: the revised flamingo artwork is already internally aligned to the duck.
+   Only the whole composite gets a lower pond anchor so the duck sits at the same
+   apparent water level as standard swimmers. */
+.swim-stack.swim-stack-flamingo {
+  transform: translateY(-22%) rotate(var(--swim-tilt)) scaleX(var(--facing-scale));
+}
+
 .swim-layer {
   position: absolute;
   inset: 0;

@@ -2511,7 +2511,7 @@
     visual.replaceChildren();
 
     const stack = document.createElement("span");
-    stack.className = "swim-stack";
+    stack.className = duckHasFlamingo(duck) ? "swim-stack swim-stack-flamingo" : "swim-stack";
     const facingRight = duck.dataset.facing === "right";
     stack.style.setProperty(
       "--facing-scale",
