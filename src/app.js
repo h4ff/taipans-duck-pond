@@ -2537,6 +2537,8 @@
       facingRight ? "-1" : "1"
     );
 
+    const presentation = duck.dataset.presentation === "female" ? "female" : "male";
+
     const wake = document.createElement("img");
     wake.className = "swim-layer swim-wake";
     wake.src = swimWakeSrc(duck);
@@ -2549,7 +2551,6 @@
 
     const body = document.createElement("img");
     body.className = "swim-layer swim-body";
-    const presentation = duck.dataset.presentation === "female" ? "female" : "male";
     // Swimming presentation is mutually exclusive: exactly one base body element
     // is created, selected from the male OR female asset matrix.
     body.src = swimBodySrc(duck.dataset.duckType, duck.dataset.featherTone, presentation);
