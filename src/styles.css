@@ -674,6 +674,19 @@ body {
   50% { transform: rotate(22deg) translateY(-2px); }
 }
 
+/* v0.118: the female rear-wing artwork starts in a much more tucked/downward
+   orientation than the original male rear wing. Give female rear-wing motions
+   a larger lift so the wing actually clears the body silhouette. */
+.duck[data-presentation="female"].reacting .swim-wing-back {
+  transform-origin: 49% 66%;
+  animation-name: female-back-wing-flap;
+}
+
+@keyframes female-back-wing-flap {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(72deg) translateY(-2px); }
+}
+
 .duck.idle-wing-front-flick .swim-wing-front {
   transform-origin: 40% 58%;
   animation: idle-front-wing-flick .54s ease-in-out 1;
@@ -695,6 +708,17 @@ body {
   0%, 100% { transform: rotate(0deg); }
   38% { transform: rotate(9deg) translateY(-1px); }
   68% { transform: rotate(3deg); }
+}
+
+.duck[data-presentation="female"].idle-wing-back-flick .swim-wing-back {
+  transform-origin: 49% 66%;
+  animation-name: female-idle-back-wing-flick;
+}
+
+@keyframes female-idle-back-wing-flick {
+  0%, 100% { transform: rotate(0deg); }
+  38% { transform: rotate(64deg) translateY(-1px); }
+  68% { transform: rotate(24deg); }
 }
 
 .splash-sprite,

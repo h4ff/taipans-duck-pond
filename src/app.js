@@ -3277,9 +3277,9 @@
     const latestMarkerMonday = latestEvent ? addLocalDays(latestEventWeekMonday, 7) : currentMonday;
     const firstMonday = latestMarkerMonday > currentMonday ? latestMarkerMonday : currentMonday;
 
-    // Show every relevant Monday marker across the loaded dataset. The real
-    // current Monday remains selected automatically, even if test data includes
-    // future-dated rows.
+    // Show every relevant Monday marker across the loaded dataset. If the
+    // loaded data extends into a later club week than the current marker, use
+    // that latest marker by default so the newest entrants are not hidden.
     let monday = firstMonday;
     const options = [];
     for (let guard = 0; guard < 60; guard++) {
@@ -3295,7 +3295,10 @@
       option.textContent = formatClubWeekRange(context.start, context.end);
       weekSelect.appendChild(option);
     }
-    weekSelect.value = [...weekSelect.options].some(option => option.value === currentMonday) ? currentMonday : options[0]?.monday || "";
+    const preferredMonday = latestMarkerMonday > currentMonday ? latestMarkerMonday : currentMonday;
+    weekSelect.value = [...weekSelect.options].some(option => option.value === preferredMonday)
+      ? preferredMonday
+      : options[0]?.monday || "";
     updateWeekSummary();
   }
 

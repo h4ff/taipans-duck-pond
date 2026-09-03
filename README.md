@@ -1,7 +1,7 @@
-# Duck Pond – v0.117
+# Duck Pond – v0.118
 
 
-## v0.117 – Female Swim Wing Test
+## v0.118 – Female Swim Wing Test
 
 - Added dedicated female swimming front/rear wing assets for all four feather tones.
 - Female swimmers now use the supplied smaller/repositioned wing set; male swimmers remain unchanged.
