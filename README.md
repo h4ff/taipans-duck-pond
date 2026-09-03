@@ -1,4 +1,12 @@
-# Duck Pond – v0.115
+# Duck Pond – v0.116
+
+
+## v0.116 – Female Swim Wing Test
+
+- Added dedicated female swimming front/rear wing assets for all four feather tones.
+- Female swimmers now use the supplied smaller/repositioned wing set; male swimmers remain unchanged.
+- Preload logic now requests the correct swim-wing set by presentation.
+- Added a future polish note to normalise sprite/model alignment across the full asset library.
 
 ## v0.115 – Flamingo Pond Depth Anchor Fix
 
@@ -732,3 +740,7 @@ No v40/v41/v43/v44/v51/v52/v53 folders remain in the production asset tree.
 - Pier layering/exclusions
 - Walking/jump/splash sequence
 - Mobile behaviour and scene scaling
+
+
+### Future asset normalisation
+- Run a deliberate pass over all production duck layers to standardise canvas alignment, waterline/body anchors and model positioning where practical.

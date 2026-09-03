@@ -731,8 +731,11 @@
     return SWIM_ASSETS.wakes[type] || SWIM_ASSETS.wakes.standard;
   }
 
-  function swimWingSrc(which, featherTone) {
+  function swimWingSrc(which, featherTone, presentation = "male") {
     const safeTone = FEATHER_TONES[featherTone] ? featherTone : "white";
+    if (presentation === "female") {
+      return `assets/duck/swim/wing-female/wing-${which}-${safeTone}.png`;
+    }
     return `${SWIM_ASSETS.wingRoot}/wing-${which}-${safeTone}.png`;
   }
 
@@ -957,8 +960,8 @@
     const headwear = playerHeadwearKind(player, isLeader);
 
     urls.add(swimBodySrc(type, tone, presentation));
-    urls.add(swimWingSrc("front", tone));
-    urls.add(swimWingSrc("back", tone));
+    urls.add(swimWingSrc("front", tone, presentation));
+    urls.add(swimWingSrc("back", tone, presentation));
     if (presentation === "male" && player.swimAccessory === "flamingo") {
       urls.add(FLAMINGO_ASSETS.swim);
       urls.add(FLAMINGO_ASSETS.wakes[type]);
@@ -1079,6 +1082,8 @@
     for (const featherTone of FEATHER_TONE_KEYS) {
       urls.add(swimWingSrc("front", featherTone));
       urls.add(swimWingSrc("back", featherTone));
+      urls.add(swimWingSrc("front", featherTone, "female"));
+      urls.add(swimWingSrc("back", featherTone, "female"));
       urls.add(swimFaceSrc("sad", featherTone));
       urls.add(swimBlinkSrc("sad", featherTone));
     }
@@ -2539,7 +2544,7 @@
 
     const wingBack = document.createElement("img");
     wingBack.className = "swim-layer swim-wing-back";
-    wingBack.src = swimWingSrc("back", duck.dataset.featherTone);
+    wingBack.src = swimWingSrc("back", duck.dataset.featherTone, presentation);
     wingBack.alt = "";
 
     const body = document.createElement("img");
@@ -2589,7 +2594,7 @@
 
     const wingFront = document.createElement("img");
     wingFront.className = "swim-layer swim-wing-front";
-    wingFront.src = swimWingSrc("front", duck.dataset.featherTone);
+    wingFront.src = swimWingSrc("front", duck.dataset.featherTone, presentation);
     wingFront.alt = "";
 
     const headwearPath = headwearSrc(duck, "swim", duck.dataset.facing);
