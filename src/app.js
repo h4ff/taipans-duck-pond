@@ -1498,13 +1498,23 @@
     return 100 + Math.round(y * 10);
   }
 
+  const FLAMINGO_DEPTH_Y_OFFSET = 1.32;
+
   function setDepth(duck, y) {
     duck.style.setProperty("--duck-scale", scaleForY(y).toFixed(3));
 
-    // Swimming ducks sort against one another by Y, but remain below the
-    // permanent pier layer (z-index 2200). Entry ducks are explicitly raised
-    // above the pier while waddling and jumping.
-    duck.style.zIndex = String(depthZForY(y));
+    // Depth sorting is based on the visible water-contact point, not simply
+    // the duck sprite's logical Y. The flamingo wake finishes 49 source pixels
+    // lower than the standard wake (466 vs 417 on the 512px canvas), which is
+    // about 1.32 pond-Y units at the production sprite size. This means a
+    // flamingo swimmer now passes in front of/behind other ducks according to
+    // the bottom of its visible wake while preserving the same swim path/scale.
+    const depthY = y + (duckHasFlamingo(duck) ? FLAMINGO_DEPTH_Y_OFFSET : 0);
+
+    // Swimming ducks sort against one another by their visual waterline, but
+    // remain below the permanent pier layer (z-index 2200). Entry ducks are
+    // explicitly raised above the pier while waddling and jumping.
+    duck.style.zIndex = String(depthZForY(depthY));
   }
 
   function setEffectDepth(effect, y) {

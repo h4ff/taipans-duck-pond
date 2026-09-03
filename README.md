@@ -1,10 +1,26 @@
-# Duck Pond – v0.114
+# Duck Pond – v0.115
 
-## v0.114 – README / Version Cleanup
+## v0.115 – Flamingo Pond Depth Anchor Fix
 
-- Corrected the changelog header and version ordering introduced in v0.111.
-- Restored separate entries for the v0.110 startup optimisation and v0.111 flamingo/facing changes.
-- No simulation, artwork or data behaviour changed in this corrective build.
+- Fixed Flamingo overlap/depth sorting in the pond using the visible waterline rather than shifting the artwork.
+- Flamingo swimmers now use the bottom of the Flamingo wake as their z-order anchor. The supplied Flamingo artwork remains internally aligned exactly as drawn.
+- The v0.114 whole-composite vertical offset has been removed.
+- Normal duck movement, scaling and depth sorting are unchanged.
+
+## v0.114 – Revised Flamingo Pond Assets
+
+- Replaced the Flamingo swimming overlay and Standard/Golden/Diamond Flamingo ripple assets with the revised supplied artwork.
+- Added a temporary Flamingo-only visual vertical offset in an attempt to align pond overlap; this workaround is superseded by the proper depth-anchor fix in v0.115.
+
+## v0.113 – Flamingo Walk Layering Fix
+
+- Adjusted walking Flamingo layering so the front leg renders behind the Flamingo floatie.
+- No other duck behaviour changed.
+
+## v0.112 – README / Version Cleanup
+
+- Corrected changelog/version ordering from the v0.111 rollout.
+- No simulation or artwork behaviour changed in this corrective build.
 
 ## v0.111 – Flamingo Floatie + Pond Facing
 

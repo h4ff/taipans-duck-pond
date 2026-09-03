@@ -542,12 +542,9 @@ body {
   pointer-events: none;
 }
 
-/* v0.114: the revised flamingo artwork is already internally aligned to the duck.
-   Only the whole composite gets a lower pond anchor so the duck sits at the same
-   apparent water level as standard swimmers. */
-.swim-stack.swim-stack-flamingo {
-  transform: translateY(-22%) rotate(var(--swim-tilt)) scaleX(var(--facing-scale));
-}
+/* v0.115: the supplied flamingo artwork remains internally aligned exactly as
+   drawn. Pond overlap is handled by the flamingo-specific waterline/depth anchor
+   in app.js rather than moving the visual stack. */
 
 .swim-layer {
   position: absolute;
