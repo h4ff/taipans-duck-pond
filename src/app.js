@@ -6,6 +6,8 @@
 
   const sceneFrame = document.getElementById("sceneFrame");
   const scene = document.getElementById("scene");
+  const snakeEvent = document.getElementById("snakeEvent");
+  const snakeSprite = document.getElementById("snakeSprite");
   const worldStage = document.getElementById("worldStage");
   const world = document.getElementById("world");
   const duckLayer = document.getElementById("duckLayer");
@@ -691,6 +693,18 @@
     }
   };
 
+  const SNAKE_ASSETS = {
+    closed: "assets/events/snake/snake-peek-closed.png",
+    open: "assets/events/snake/snake-peek-open.png",
+    strike: "assets/events/snake/snake-strike.png"
+  };
+
+  // The strike zone sits immediately in front of the right-hand reeds. Ducks
+  // are evaluated in the same percentage coordinate system used by pond motion.
+  const SNAKE_THREAT_POINT = { x: 73.5, y: 69.0 };
+  const SNAKE_ENGAGE_RADIUS_X = 10.5;
+  const SNAKE_ENGAGE_RADIUS_Y = 7.0;
+
   function duckHasFlamingo(duck) {
     return duck?.dataset?.presentation === "male" && duck?.dataset?.swimAccessory === "flamingo";
   }
@@ -1056,6 +1070,10 @@
     urls.add(FLAMINGO_ASSETS.swim);
     for (const wake of Object.values(FLAMINGO_ASSETS.wakes)) urls.add(wake);
 
+    // Snake is a low-priority pond event, so its artwork warms after the first
+    // usable pond paint rather than increasing the blocking startup manifest.
+    Object.values(SNAKE_ASSETS).forEach(url => urls.add(url));
+
     urls.add(ROLE_ASSETS.coach.walk);
     urls.add(ROLE_ASSETS.coach.swim.left);
     urls.add(ROLE_ASSETS.coach.swim.right);
@@ -1329,6 +1347,13 @@
   const collisionPairs = new Map();
   let nextGlobalCollisionReactionAt = 0;
   let nextGlobalIdleWingAt = 0;
+
+  let snakeEventEnabled = false;
+  let snakeBusy = false;
+  let snakeWatchTimer = null;
+  let snakeNextPeekAt = Infinity;
+  let snakeNextEligibleAt = Infinity;
+  let snakeRunToken = 0;
 
   function randomCollisionGap() {
     return 8000 + Math.random() * 7000;
@@ -2236,6 +2261,203 @@
 
       scheduleMoodShift(duck, 9000 + Math.random() * 13000);
     }, delay);
+  }
+
+
+  function snakeTargetScore(duck) {
+    // Only strike a duck that has settled. Interrupting an in-flight roam would
+    // leave the older animation promise unresolved; the watcher checks again
+    // every 700ms, so a duck that stops in the threat zone is caught immediately.
+    if (!duck?.isConnected || duck.dataset.motionState !== "floating") return Infinity;
+    const point = currentPosition(duck);
+    if (![point.x, point.y].every(Number.isFinite)) return Infinity;
+    const nx = (point.x - SNAKE_THREAT_POINT.x) / SNAKE_ENGAGE_RADIUS_X;
+    const ny = (point.y - SNAKE_THREAT_POINT.y) / SNAKE_ENGAGE_RADIUS_Y;
+    const score = nx * nx + ny * ny;
+    return score <= 1 ? score : Infinity;
+  }
+
+  function nearestSnakeTarget() {
+    let target = null;
+    let bestScore = Infinity;
+    for (const duck of ducks.values()) {
+      const score = snakeTargetScore(duck);
+      if (score < bestScore) {
+        target = duck;
+        bestScore = score;
+      }
+    }
+    return target;
+  }
+
+  function setSnakePose(pose) {
+    if (!snakeEvent || !snakeSprite) return;
+    snakeEvent.className = `snake-event ${pose}`;
+    if (pose === "is-peeking" || pose === "is-dropping") snakeSprite.src = SNAKE_ASSETS.closed;
+    else if (pose === "is-open") snakeSprite.src = SNAKE_ASSETS.open;
+    else if (pose === "is-striking") snakeSprite.src = SNAKE_ASSETS.strike;
+  }
+
+  function hideSnakeImmediately() {
+    if (!snakeEvent || !snakeSprite) return;
+    snakeEvent.className = "snake-event is-hidden";
+    snakeSprite.removeAttribute("src");
+  }
+
+  function snakeEscapePoint(duck) {
+    const from = currentPosition(duck);
+    let dx = from.x - SNAKE_THREAT_POINT.x;
+    let dy = from.y - SNAKE_THREAT_POINT.y;
+    let length = Math.hypot(dx, dy);
+    if (length < .1) {
+      dx = -1;
+      dy = -.15;
+      length = Math.hypot(dx, dy);
+    }
+    dx /= length;
+    dy /= length;
+
+    // A snake escape is deliberately much more abrupt and committed than the
+    // normal collision scoot. Try a few slight angle variants so the duck still
+    // lands in valid water near the bank.
+    for (const distanceAway of [15, 12, 9]) {
+      for (const angleOffset of [0, .22, -.22, .40, -.40]) {
+        const c = Math.cos(angleOffset);
+        const s = Math.sin(angleOffset);
+        const rx = dx * c - dy * s;
+        const ry = dx * s + dy * c;
+        const candidate = {
+          x: from.x + rx * distanceAway,
+          y: from.y + ry * distanceAway * .62
+        };
+        if (canDuckStopAt(candidate.x, candidate.y) && segmentClear(from, candidate)) return candidate;
+      }
+    }
+    return nearbyPoint(from);
+  }
+
+  async function startSnakePanic(duck) {
+    if (!duck?.isConnected) return;
+    if (duck.dataset.motionState !== "floating") return;
+
+    clearTimeout(duck._roamTimer);
+    duck.dataset.motionState = "swimming";
+    duck.dataset.collisionEscaping = "false";
+    duck.dataset.clickScooting = "false";
+    duck.classList.remove("floating", "collision-bump", "reaction-angry");
+    duck.classList.add("reacting", "snake-panic", "reaction-surprised");
+    duck.dataset.reacting = "true";
+    setDuckFace(duck, "surprised");
+
+    const from = currentPosition(duck);
+    const to = snakeEscapePoint(duck);
+    const distanceAway = distance(from, to);
+    activeSwimmers++;
+    try {
+      await animateMove(duck, from, to, Math.max(620, Math.min(980, 440 + distanceAway * 34)));
+    } finally {
+      activeSwimmers = Math.max(0, activeSwimmers - 1);
+    }
+    if (!duck.isConnected) return;
+
+    duck.classList.remove("reacting", "snake-panic", "reaction-surprised");
+    duck.dataset.reacting = "false";
+    duck.dataset.motionState = "floating";
+    duck.classList.add("floating");
+    restoreIdleFace(duck);
+    scheduleRoam(duck, 2400 + Math.random() * 3600);
+  }
+
+  async function runSnakeSequence(initialTarget = null, token = snakeRunToken) {
+    if (!snakeEventEnabled || snakeBusy || token !== snakeRunToken) return;
+    snakeBusy = true;
+
+    try {
+      setSnakePose("is-peeking");
+      await sleep(380);
+      if (!snakeEventEnabled || token !== snakeRunToken) return;
+
+      // A random peek can become a real attack if a duck swims into range while
+      // the snake is looking. Otherwise it simply checks the pond and drops.
+      let target = initialTarget?.isConnected ? initialTarget : nearestSnakeTarget();
+      if (!target) {
+        await sleep(520 + Math.random() * 650);
+        target = nearestSnakeTarget();
+      }
+
+      if (!target) {
+        setSnakePose("is-dropping");
+        await sleep(330);
+        hideSnakeImmediately();
+        snakeNextPeekAt = performance.now() + 9000 + Math.random() * 12000;
+        return;
+      }
+
+      setSnakePose("is-open");
+      await sleep(210);
+      if (!snakeEventEnabled || token !== snakeRunToken) return;
+
+      // The duck reacts at launch rather than after impact: shocked face, rapid
+      // wing flaps and a fast escape away from the reed bank.
+      const panicPromise = startSnakePanic(target);
+      setSnakePose("is-striking");
+      await sleep(360);
+      if (!snakeEventEnabled || token !== snakeRunToken) return;
+
+      setSnakePose("is-open");
+      await sleep(170);
+      setSnakePose("is-peeking");
+      await sleep(130);
+      setSnakePose("is-dropping");
+      await sleep(320);
+      hideSnakeImmediately();
+
+      // Keep the strike rare enough to remain an Easter egg rather than a
+      // constant interruption, while still allowing occasional harmless peeks.
+      snakeNextEligibleAt = performance.now() + 30000 + Math.random() * 30000;
+      snakeNextPeekAt = performance.now() + 8500 + Math.random() * 13000;
+      void panicPromise;
+    } finally {
+      snakeBusy = false;
+    }
+  }
+
+  function snakeWatchTick() {
+    clearTimeout(snakeWatchTimer);
+    if (!snakeEventEnabled) return;
+
+    const now = performance.now();
+    if (!snakeBusy && now >= snakeNextEligibleAt) {
+      const target = nearestSnakeTarget();
+      if (target) {
+        void runSnakeSequence(target, snakeRunToken);
+      } else if (now >= snakeNextPeekAt) {
+        void runSnakeSequence(null, snakeRunToken);
+      }
+    }
+    snakeWatchTimer = setTimeout(snakeWatchTick, 700);
+  }
+
+  function enableSnakeEvent() {
+    snakeEventEnabled = true;
+    snakeRunToken++;
+    snakeBusy = false;
+    hideSnakeImmediately();
+    const now = performance.now();
+    snakeNextEligibleAt = now + 5500 + Math.random() * 4500;
+    snakeNextPeekAt = now + 6500 + Math.random() * 6500;
+    snakeWatchTick();
+  }
+
+  function disableSnakeEvent() {
+    snakeEventEnabled = false;
+    snakeRunToken++;
+    snakeBusy = false;
+    if (snakeWatchTimer) clearTimeout(snakeWatchTimer);
+    snakeWatchTimer = null;
+    snakeNextEligibleAt = Infinity;
+    snakeNextPeekAt = Infinity;
+    hideSnakeImmediately();
   }
 
   function collisionPairKey(a, b) {
@@ -3403,6 +3625,7 @@
     if (loadToken !== dateRangeLoadToken) return;
     showLeaderboardScoreboard();
     status.textContent = `${formatClubDate(context.start)}–${formatClubDate(context.end)} loaded. ${pondEvents.length} cumulative ducks are now represented in the pond.`;
+    enableSnakeEvent();
   }
 
   function addAnimatedDuck(presentation = "male") {
@@ -3495,6 +3718,7 @@
 
   function resetPond() {
     dateRangeLoadToken++;
+    disableSnakeEvent();
     for (const duck of [...ducks.values()]) disposeDuck(duck);
 
     duckLayer.replaceChildren();

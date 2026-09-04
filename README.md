@@ -1,5 +1,15 @@
-# Duck Pond – v0.118
+# Duck Pond – v0.119
 
+
+## v0.119 – Snake Pond Event
+
+- Added a right-bank snake Easter egg using the supplied closed-mouth, open-mouth and strike poses.
+- The snake lives behind the foreground reeds and periodically peeks up to check the pond.
+- A harmless peek drops back out of sight when no duck is within the reed-bank engagement zone.
+- If a duck swims within range, the snake opens its mouth, strikes quickly and recoils behind the reeds.
+- The targeted duck immediately switches to the surprised face, flaps both wings rapidly and makes a fast escape away from the snake before returning to normal pond behaviour.
+- Strike events have a 30–60 second cooldown; harmless peeks can still occur between attacks.
+- Snake artwork is warmed in the background and does not increase the blocking startup asset manifest.
 
 ## v0.118 – Female Swim Wing Test
 
