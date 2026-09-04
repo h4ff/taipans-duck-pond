@@ -1,7 +1,7 @@
-# Duck Pond – v0.119
+# Duck Pond – v0.120
 
 
-## v0.119 – Snake Pond Event
+## v0.120 – Snake Pond Event
 
 - Added a right-bank snake Easter egg using the supplied closed-mouth, open-mouth and strike poses.
 - The snake lives behind the foreground reeds and periodically peeks up to check the pond.

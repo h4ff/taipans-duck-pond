@@ -701,9 +701,9 @@
 
   // The strike zone sits immediately in front of the right-hand reeds. Ducks
   // are evaluated in the same percentage coordinate system used by pond motion.
-  const SNAKE_THREAT_POINT = { x: 73.5, y: 69.0 };
-  const SNAKE_ENGAGE_RADIUS_X = 10.5;
-  const SNAKE_ENGAGE_RADIUS_Y = 7.0;
+  const SNAKE_THREAT_POINT = { x: 82.0, y: 69.5 };
+  const SNAKE_ENGAGE_RADIUS_X = 8.5;
+  const SNAKE_ENGAGE_RADIUS_Y = 6.5;
 
   function duckHasFlamingo(duck) {
     return duck?.dataset?.presentation === "male" && duck?.dataset?.swimAccessory === "flamingo";
@@ -2368,21 +2368,27 @@
     scheduleRoam(duck, 2400 + Math.random() * 3600);
   }
 
-  async function runSnakeSequence(initialTarget = null, token = snakeRunToken) {
+  async function runSnakeSequence(initialTarget = null, token = snakeRunToken, allowAttack = true) {
     if (!snakeEventEnabled || snakeBusy || token !== snakeRunToken) return;
     snakeBusy = true;
 
     try {
       setSnakePose("is-peeking");
-      await sleep(380);
+      // Keep the closed-mouth check visible long enough to read as an actual
+      // "peek" before the snake decides whether to attack.
+      await sleep(700 + Math.random() * 350);
       if (!snakeEventEnabled || token !== snakeRunToken) return;
 
-      // A random peek can become a real attack if a duck swims into range while
-      // the snake is looking. Otherwise it simply checks the pond and drops.
-      let target = initialTarget?.isConnected ? initialTarget : nearestSnakeTarget();
-      if (!target) {
-        await sleep(520 + Math.random() * 650);
-        target = nearestSnakeTarget();
+      // A harmless scheduled peek can occur even while the strike is cooling
+      // down. When attacks are eligible, a duck entering range during the peek
+      // can still trigger the full sequence.
+      let target = null;
+      if (allowAttack) {
+        target = initialTarget?.isConnected ? initialTarget : nearestSnakeTarget();
+        if (!target) {
+          await sleep(260 + Math.random() * 320);
+          target = nearestSnakeTarget();
+        }
       }
 
       if (!target) {
@@ -2427,12 +2433,15 @@
     if (!snakeEventEnabled) return;
 
     const now = performance.now();
-    if (!snakeBusy && now >= snakeNextEligibleAt) {
-      const target = nearestSnakeTarget();
+    if (!snakeBusy) {
+      const attackEligible = now >= snakeNextEligibleAt;
+      const target = attackEligible ? nearestSnakeTarget() : null;
+
       if (target) {
-        void runSnakeSequence(target, snakeRunToken);
+        void runSnakeSequence(target, snakeRunToken, true);
       } else if (now >= snakeNextPeekAt) {
-        void runSnakeSequence(null, snakeRunToken);
+        // Peeking is independent of the 30–60 second strike cooldown.
+        void runSnakeSequence(null, snakeRunToken, attackEligible);
       }
     }
     snakeWatchTimer = setTimeout(snakeWatchTick, 700);

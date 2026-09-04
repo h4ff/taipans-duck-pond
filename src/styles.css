@@ -1553,8 +1553,8 @@ footer {
    the bank naturally hides the lower body while a strike can cross the water. */
 .snake-event {
   position: absolute;
-  left: 86.1%;
-  top: 84.0%;
+  left: 98.0%;
+  top: 84.5%;
   width: 0;
   height: 0;
   pointer-events: none;
@@ -1575,37 +1575,37 @@ footer {
 }
 
 .snake-event.is-hidden .snake-sprite {
-  width: 300px;
+  width: 125px;
   opacity: 0;
-  transform: translateY(86px) scale(.96);
+  transform: translateY(54px) scale(.96);
 }
 
 .snake-event.is-peeking .snake-sprite,
 .snake-event.is-open .snake-sprite {
-  width: 300px;
+  width: 125px;
   opacity: 1;
   transform: translateY(0) scale(1);
   transition: transform .34s cubic-bezier(.2,.72,.32,1), opacity .16s ease-out;
 }
 
 .snake-event.is-dropping .snake-sprite {
-  width: 300px;
+  width: 125px;
   opacity: 0;
-  transform: translateY(86px) scale(.96);
+  transform: translateY(54px) scale(.96);
   transition: transform .30s ease-in, opacity .18s ease-in .10s;
 }
 
 .snake-event.is-striking .snake-sprite {
-  width: 500px;
+  width: 220px;
   opacity: 1;
   animation: snake-strike-lunge .34s cubic-bezier(.18,.82,.24,1) both;
 }
 
 @keyframes snake-strike-lunge {
-  0%   { transform: translate(44px, 26px) scale(.82); }
-  42%  { transform: translate(-16px, -7px) scale(1.02); }
-  68%  { transform: translate(-22px, -8px) scale(1.03); }
-  100% { transform: translate(24px, 15px) scale(.90); }
+  0%   { transform: translate(22px, 15px) scale(.84); }
+  42%  { transform: translate(-12px, -5px) scale(1.02); }
+  68%  { transform: translate(-16px, -6px) scale(1.03); }
+  100% { transform: translate(14px, 10px) scale(.91); }
 }
 
 .duck.snake-panic .swim-stack {
