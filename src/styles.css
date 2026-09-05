@@ -1553,8 +1553,8 @@ footer {
    the bank naturally hides the lower body while a strike can cross the water. */
 .snake-event {
   position: absolute;
-  left: 98.0%;
-  top: 84.5%;
+  left: 92.0%;
+  top: 82.8%;
   width: 0;
   height: 0;
   pointer-events: none;
@@ -1580,19 +1580,26 @@ footer {
   transform: translateY(54px) scale(.96);
 }
 
+.snake-event.is-rising .snake-sprite {
+  width: 125px;
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transition: transform 2s ease-out, opacity .18s ease-out;
+}
+
 .snake-event.is-peeking .snake-sprite,
 .snake-event.is-open .snake-sprite {
   width: 125px;
   opacity: 1;
   transform: translateY(0) scale(1);
-  transition: transform .34s cubic-bezier(.2,.72,.32,1), opacity .16s ease-out;
 }
 
+.snake-event.is-descending .snake-sprite,
 .snake-event.is-dropping .snake-sprite {
   width: 125px;
-  opacity: 0;
+  opacity: 1;
   transform: translateY(54px) scale(.96);
-  transition: transform .30s ease-in, opacity .18s ease-in .10s;
+  transition: transform 2s ease-in, opacity .18s ease-in 1.75s;
 }
 
 .snake-event.is-striking .snake-sprite {

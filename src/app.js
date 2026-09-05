@@ -2293,9 +2293,13 @@
   function setSnakePose(pose) {
     if (!snakeEvent || !snakeSprite) return;
     snakeEvent.className = `snake-event ${pose}`;
-    if (pose === "is-peeking" || pose === "is-dropping") snakeSprite.src = SNAKE_ASSETS.closed;
-    else if (pose === "is-open") snakeSprite.src = SNAKE_ASSETS.open;
-    else if (pose === "is-striking") snakeSprite.src = SNAKE_ASSETS.strike;
+    if (["is-rising", "is-peeking", "is-descending", "is-dropping"].includes(pose)) {
+      snakeSprite.src = SNAKE_ASSETS.closed;
+    } else if (pose === "is-open") {
+      snakeSprite.src = SNAKE_ASSETS.open;
+    } else if (pose === "is-striking") {
+      snakeSprite.src = SNAKE_ASSETS.strike;
+    }
   }
 
   function hideSnakeImmediately() {
@@ -2373,27 +2377,28 @@
     snakeBusy = true;
 
     try {
-      setSnakePose("is-peeking");
-      // Keep the closed-mouth check visible long enough to read as an actual
-      // "peek" before the snake decides whether to attack.
-      await sleep(700 + Math.random() * 350);
+      // Deliberate readable check: two seconds rising from behind the reeds,
+      // two seconds fully visible, then decide whether to attack.
+      setSnakePose("is-rising");
+      await sleep(2000);
       if (!snakeEventEnabled || token !== snakeRunToken) return;
 
-      // A harmless scheduled peek can occur even while the strike is cooling
-      // down. When attacks are eligible, a duck entering range during the peek
-      // can still trigger the full sequence.
+      setSnakePose("is-peeking");
+      await sleep(2000);
+      if (!snakeEventEnabled || token !== snakeRunToken) return;
+
+      // Only evaluate the strike at the END of the linger. A duck can therefore
+      // swim into range while the snake is watching and trigger the attack.
       let target = null;
       if (allowAttack) {
-        target = initialTarget?.isConnected ? initialTarget : nearestSnakeTarget();
-        if (!target) {
-          await sleep(260 + Math.random() * 320);
-          target = nearestSnakeTarget();
-        }
+        target = initialTarget?.isConnected && snakeTargetScore(initialTarget) < Infinity
+          ? initialTarget
+          : nearestSnakeTarget();
       }
 
       if (!target) {
-        setSnakePose("is-dropping");
-        await sleep(330);
+        setSnakePose("is-descending");
+        await sleep(2000);
         hideSnakeImmediately();
         snakeNextPeekAt = performance.now() + 9000 + Math.random() * 12000;
         return;
@@ -2403,23 +2408,22 @@
       await sleep(210);
       if (!snakeEventEnabled || token !== snakeRunToken) return;
 
-      // The duck reacts at launch rather than after impact: shocked face, rapid
-      // wing flaps and a fast escape away from the reed bank.
+      // The target panics as the strike launches.
       const panicPromise = startSnakePanic(target);
       setSnakePose("is-striking");
       await sleep(360);
       if (!snakeEventEnabled || token !== snakeRunToken) return;
 
+      // Recoil through the existing open/closed poses, then retreat slowly
+      // behind the same reed-bank anchor.
       setSnakePose("is-open");
       await sleep(170);
       setSnakePose("is-peeking");
       await sleep(130);
-      setSnakePose("is-dropping");
-      await sleep(320);
+      setSnakePose("is-descending");
+      await sleep(2000);
       hideSnakeImmediately();
 
-      // Keep the strike rare enough to remain an Easter egg rather than a
-      // constant interruption, while still allowing occasional harmless peeks.
       snakeNextEligibleAt = performance.now() + 30000 + Math.random() * 30000;
       snakeNextPeekAt = performance.now() + 8500 + Math.random() * 13000;
       void panicPromise;
