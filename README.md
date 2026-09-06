@@ -1,5 +1,12 @@
-# Duck Pond – v0.131
+# Duck Pond – v0.132
 
+
+## v0.132 – Fight Bat Anchor / Victory Pose Repair
+
+- Re-anchored the fight bat to the supplied mock-up hold position so the handle now sits in the front wing instead of the bat drifting below the ducks.
+- Rebuilt the fight bat draw/ready/swing transforms around that corrected anchor, keeping the existing duel timing but fixing the apparent left/right orientation problem.
+- Preserved the forward gripping-wing presentation and existing clash spark placement.
+- Adjusted the winner victory pose so the front wing and bat lift together from the shoulder more cleanly, with the rear wing rising behind rather than the end pose reading like a broken wave.
 
 ## v0.131 – Articulated Fight Arm / Bat Layering
 
