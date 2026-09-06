@@ -567,6 +567,8 @@ body {
 .swim-role-layer { z-index: 6; }
 .swim-wing-front { z-index: 7; }
 .swim-fight-arm {
+  --fight-grip-x: 5%;
+  --fight-grip-y: 62%;
   position: absolute;
   inset: 0;
   z-index: 9;
@@ -579,9 +581,18 @@ body {
   will-change: transform, opacity;
 }
 .fight-arm-bat {
+  /* v0.133: cropped bat, sized to match the accepted v0.131 visible size.
+     The layout point is the wing grip; transform-origin is the bottom of the
+     black handle (29.2% down the cropped bat). This removes all screen-pixel
+     positioning from the ready/clash pose. */
+  inset: auto;
+  left: var(--fight-grip-x);
+  top: var(--fight-grip-y);
+  width: auto;
+  height: 58%;
   z-index: 1;
   opacity: 0;
-  transform-origin: 50% 20%;
+  transform-origin: 50% 29.2%;
   will-change: transform, opacity;
 }
 .fight-arm-wing {
@@ -1762,7 +1773,7 @@ body.pond-focus-mode .fight-test-rig { display: none !important; }
 .duck.fight-ready .fight-arm-bat,
 .duck.fight-victory .fight-arm-bat {
   opacity: 1;
-  transform: translate(-105px, 115px) rotate(-42deg) scale(.82);
+  transform: translate(-50%, -29.2%) rotate(136deg);
 }
 
 .duck.fight-ready .fight-arm-wing,
@@ -1792,9 +1803,9 @@ body.pond-focus-mode .fight-test-rig { display: none !important; }
 }
 
 @keyframes fight-bat-draw {
-  0%   { opacity: 0; transform: translate(-105px, 208px) rotate(8deg) scale(.76); }
-  55%  { opacity: 1; transform: translate(-105px, 162px) rotate(-18deg) scale(.79); }
-  100% { opacity: 1; transform: translate(-105px, 115px) rotate(-42deg) scale(.82); }
+  0%   { opacity: 0; transform: translate(-50%, 68%) rotate(90deg) scale(.90); }
+  55%  { opacity: 1; transform: translate(-50%, 18%) rotate(112deg) scale(.96); }
+  100% { opacity: 1; transform: translate(-50%, -29.2%) rotate(136deg); }
 }
 
 

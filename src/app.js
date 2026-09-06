@@ -706,17 +706,22 @@
   };
   let fightBusy = false;
 
+  // v0.133: the bat image is cropped to its visible bounds. Every ready/clash
+  // transform is now expressed relative to the bat's own grip point, never in
+  // rendered-screen pixels. The grip stays locked to the fight arm's canonical
+  // wing-tip anchor while the existing swim-stack mirror supplies the opposite
+  // fighter automatically.
   const FIGHT_BAT_POSE = {
-    hidden: "translate(-105px, 208px) rotate(8deg) scale(.76)",
-    drawMid: "translate(-105px, 162px) rotate(-18deg) scale(.79)",
-    ready: "translate(-105px, 115px) rotate(-42deg) scale(.82)",
-    attackHigh: "translate(-105px, 112px) rotate(-66deg) scale(.82)",
-    attackRecover: "translate(-105px, 117px) rotate(-30deg) scale(.82)",
-    defendHigh: "translate(-105px, 112px) rotate(-20deg) scale(.82)",
-    defendRecover: "translate(-105px, 117px) rotate(-50deg) scale(.82)",
-    loserDrop: "translate(-105px, 214px) rotate(6deg) scale(.74)",
-    victory: "translate(-98px, 110px) rotate(-16deg) scale(.84)",
-    victoryDrop: "translate(-98px, 214px) rotate(4deg) scale(.74)"
+    hidden: "translate(-50%, 68%) rotate(90deg) scale(.90)",
+    drawMid: "translate(-50%, 18%) rotate(112deg) scale(.96)",
+    ready: "translate(-50%, -29.2%) rotate(136deg)",
+    attackHigh: "translate(-50%, -29.2%) rotate(112deg)",
+    attackRecover: "translate(-50%, -29.2%) rotate(134deg)",
+    defendHigh: "translate(-50%, -29.2%) rotate(154deg)",
+    defendRecover: "translate(-50%, -29.2%) rotate(136deg)",
+    loserDrop: "translate(-50%, 78%) rotate(112deg) scale(.92)",
+    victory: "translate(-50%, -29.2%) rotate(136deg)",
+    victoryDrop: "translate(-50%, 78%) rotate(118deg) scale(.92)"
   };
 
   // v0.122: the snake attacks along the bank, so use an elongated leftward
@@ -2964,10 +2969,9 @@
     const defenderDelay = 45 + Math.random() * 55;
     const swing = Math.max(250, Math.round(durationMs * .58));
 
-    // v0.132: keep the articulated shoulder motion, but re-anchor the bat to
-    // the supplied mock-up pose. The previous local bat transforms were too far
-    // down the 512 canvas, which is why the bats appeared to float under the
-    // ducks instead of reading as gripped in the front wing.
+    // v0.133: preserve the v0.131 clash rhythm, but keep every bat rotation
+    // around the bottom of the black handle. No CSS-pixel translations are used
+    // here: the bat grip is already anchored to the front-wing grip point.
     const attackFrames = [
       { transform: FIGHT_BAT_POSE.ready },
       { transform: FIGHT_BAT_POSE.attackHigh, offset: .60 },
@@ -3045,11 +3049,11 @@
       ], { duration: 520, easing: "ease-out", fill: "forwards" }),
       fightAnimation(wing, [
         { transform: "rotate(0deg)" },
-        { transform: "rotate(-72deg) translate(-2px, -6px)" }
+        { transform: "rotate(72deg)" }
       ], { duration: 520, easing: "ease-out", fill: "forwards" }),
       fightAnimation(rear, [
         { opacity: .4, transform: "rotate(20deg)" },
-        { opacity: 1, transform: "rotate(88deg) translateY(-6px)" }
+        { opacity: 1, transform: "rotate(82deg) translateY(-4%)" }
       ], { duration: 520, easing: "ease-out", fill: "forwards" })
     ];
     await Promise.all(tasks);
