@@ -1,5 +1,14 @@
-# Duck Pond – v0.132
+# Duck Pond – v0.133
 
+
+## v0.133 – Bat Grip Geometry / Cropped Fight Asset
+
+- Cropped the cricket bat asset from its 512×512 transparent canvas to the visible 57×360 bat before changing any fight positioning.
+- Removed all ready/clash bat positioning based on rendered CSS pixels. The cropped bat is now sized proportionally to the duck and anchored by the bottom of its black handle to a fixed percentage grip point on the forward fight wing.
+- Restored the v0.131 bat orientation family (roughly 136° ready, 112° attack and 154° defend) instead of the incorrect v0.132 inversion.
+- The right-hand fighter is no longer treated as a separate bat-placement problem: the existing whole-duck mirror produces the opposite pose automatically.
+- Kept the accepted bat size, forward wing, clash rhythm, expressions and spark effect.
+- Rebuilt the winner lift so the entire gripping front-arm group rotates upward from the shoulder while the bat remains locked in the wing grip.
 
 ## v0.132 – Fight Bat Anchor / Victory Pose Repair
 
