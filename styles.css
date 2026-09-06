@@ -1,0 +1,1682 @@
+:root {
+  --navy: #233942;
+  --red: #c04a31;
+  --yellow: #f2b02e;
+  --cream: #f5edd9;
+  --ink: #18272c;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: #e9e4d6;
+  color: var(--ink);
+  font-family: Inter, ui-rounded, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.app-shell {
+  width: min(1420px, 100%);
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.toolbar {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 14px;
+}
+
+.toolbar h1 {
+  margin: 0;
+  font-size: clamp(1.6rem, 3vw, 2.8rem);
+}
+
+.eyebrow {
+  margin: 0 0 3px;
+  color: var(--red);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.subtle {
+  margin: 4px 0 0;
+  color: #4b5c61;
+}
+
+.controls {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.controls button,
+.mobile-toolbar-actions button {
+  font: inherit;
+  font-weight: 800;
+  border: 3px solid var(--ink);
+  border-radius: 10px;
+  padding: .7rem .9rem;
+  cursor: pointer;
+  background: var(--red);
+  color: white;
+  box-shadow: 0 4px 0 var(--ink);
+  touch-action: manipulation;
+}
+
+.controls button:active,
+.mobile-toolbar-actions button:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--ink);
+}
+
+.controls button.secondary,
+.mobile-toolbar-actions button.secondary {
+  background: var(--cream);
+  color: var(--ink);
+}
+
+#directedAddButton[aria-pressed="true"] {
+  background: var(--yellow);
+  color: var(--ink);
+}
+
+.mobile-toolbar-actions {
+  display: none;
+}
+
+/* v0.86 player/date test rig. Keep the identity path visually separate from
+   the older manual asset controls so it is obvious which system is under test. */
+.controls {
+  align-items: stretch;
+}
+
+.control-group {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(150px, 1fr));
+  gap: 8px;
+  min-width: min(560px, 100%);
+  padding: 10px;
+  border: 2px solid rgba(24,39,44,.28);
+  border-radius: 12px;
+  background: rgba(245,237,217,.72);
+}
+
+.control-group-title {
+  grid-column: 1 / -1;
+  font-size: .75rem;
+  font-weight: 950;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--navy);
+}
+
+.player-data-controls {
+  border-color: var(--navy);
+  background: rgba(255,255,255,.78);
+}
+
+.control-field {
+  display: grid;
+  gap: 4px;
+  color: #405257;
+  font-size: .72rem;
+  font-weight: 850;
+}
+
+.control-field select,
+.control-field input {
+  width: 100%;
+  min-height: 42px;
+  padding: .5rem .55rem;
+  border: 3px solid var(--ink);
+  border-radius: 9px;
+  background: white;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 800;
+}
+
+.player-field { grid-column: 1 / -1; }
+
+.date-range-grid {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.control-summary {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 7px 8px;
+  border-radius: 8px;
+  background: rgba(35,57,66,.08);
+  color: #405257;
+  font-size: .72rem;
+  font-weight: 750;
+  line-height: 1.3;
+}
+
+.legacy-controls {
+  grid-template-columns: repeat(3, minmax(135px, 1fr));
+}
+
+.scene-frame {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border: 5px solid var(--ink);
+  border-radius: 20px;
+  background: var(--ink);
+  box-shadow: 0 12px 0 rgba(24,39,44,.16);
+  isolation: isolate;
+}
+
+
+.loading-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1000000;
+  display: grid;
+  place-items: center;
+  background: rgba(24, 39, 44, .78);
+  opacity: 1;
+  transition: opacity .28s ease;
+}
+
+.loading-overlay[hidden] {
+  display: none;
+}
+
+.loading-overlay.loading-complete {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.loading-overlay.loading-failed {
+  background: rgba(24, 39, 44, .9);
+}
+
+.loading-card {
+  min-width: 170px;
+  padding: 18px 20px;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  border: 3px solid rgba(255,255,255,.88);
+  border-radius: 16px;
+  background: rgba(35, 57, 66, .94);
+  color: white;
+  text-align: center;
+}
+
+.loading-spinner {
+  width: 42px;
+  height: 42px;
+  border: 5px solid rgba(255,255,255,.28);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: pond-spin .8s linear infinite;
+}
+
+.loading-progress {
+  font-variant-numeric: tabular-nums;
+}
+
+#loadingProgress {
+  font-size: .84rem;
+  opacity: .82;
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes pond-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-spinner { animation-duration: 1.6s; }
+  .loading-overlay { transition: none; }
+}
+
+.scene-viewport {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  background: var(--ink);
+  user-select: none;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.world-stage {
+  position: relative;
+  flex: 0 0 auto;
+  overflow: hidden;
+}
+
+.scene-world {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1672px;
+  height: 941px;
+  transform-origin: 0 0;
+  overflow: hidden;
+}
+
+.scene-background,
+.foreground-layer,
+.duck-layer,
+.snake-layer,
+.splash-layer {
+  position: absolute;
+  inset: 0;
+  width: 1672px;
+  height: 941px;
+}
+
+.scene-background,
+.foreground-layer {
+  display: block;
+  object-fit: fill;
+  pointer-events: none;
+}
+
+.scene-background { z-index: 0; }
+.duck-layer { z-index: auto; pointer-events: none; }
+.duck-layer .duck { pointer-events: auto; }
+.snake-layer { z-index: 2125; pointer-events: none; overflow: hidden; }
+.near-bank { z-index: 2100; }
+.reeds { z-index: 2140; }
+.pier-depth { z-index: 2200; }
+.splash-layer { z-index: auto; pointer-events: none; }
+
+.duck {
+  --duck-size: 124px;
+  --duck-scale: .7;
+  --build-scale-x: 1;
+  --build-scale-y: 1;
+  --bob-duration: 4.8s;
+  position: absolute;
+  width: var(--duck-size);
+  height: var(--duck-size);
+  overflow: visible;
+  -webkit-appearance: none;
+  appearance: none;
+  transform: translate(-50%, -50%) scale(var(--duck-scale));
+  transform-origin: 50% 72%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  cursor: pointer;
+  user-select: none;
+  filter: drop-shadow(0 8px 3px rgba(24,39,44,.20));
+  will-change: left, top, transform;
+  touch-action: manipulation;
+}
+
+.duck-visual {
+  display: block;
+  overflow: visible;
+  width: 100%;
+  transform: scaleX(var(--build-scale-x)) scaleY(var(--build-scale-y));
+  transform-origin: 50% 72%;
+}
+
+.duck.entrying {
+  width: 0;
+  height: 0;
+  z-index: 2600 !important;
+  transform: none !important;
+  animation: none !important;
+}
+
+.duck.entrying .duck-visual {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: var(--duck-size);
+  transform: translateX(-50%) scaleX(var(--build-scale-x)) scaleY(var(--build-scale-y));
+  transform-origin: 50% 100%;
+}
+
+.entry-stack {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  overflow: visible;
+  pointer-events: none;
+  transform:
+    rotate(var(--entry-rotation, 0deg))
+    scale(var(--entry-scale, 1));
+  transform-origin: 50% 100%;
+  will-change: transform;
+}
+
+.entry-layer,
+.entry-role-overlay {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.entry-leg-rear { z-index: 0; transform-origin: 54% 79%; }
+.entry-wing-rear { z-index: 1; transform-origin: 66% 52%; }
+.entry-shirt { z-index: 2; }
+.entry-body { z-index: 3; }
+.entry-hair { z-index: 4; }
+.entry-flamingo { z-index: 5; }
+.entry-leg-front { z-index: 4; transform-origin: 43% 78%; }
+.entry-wing-front { z-index: 6; transform-origin: 48% 59%; }
+.entry-face { z-index: 7; }
+.entry-face-blink { z-index: 7; }
+.entry-face-blink[hidden] { display: none !important; }
+.entry-role-overlay { z-index: 8; }
+.entry-hat { z-index: 9; }
+
+/* v0.92: broader, more committed stride. The supplied straight leg/foot art
+   stays intact; translation + rotation + a small lift creates the step before
+   asking for separate foot artwork. Male stride is deliberately a little
+   broader/heavier than female to suit the wider body proportions. */
+.entry-stack[data-walk-step="1"] .entry-leg-front {
+  transform: translate(-8px, -4px) rotate(23deg);
+}
+.entry-stack[data-walk-step="1"] .entry-leg-rear {
+  transform: translate(9px, 3px) rotate(-21deg);
+}
+.entry-stack[data-walk-step="1"] .entry-wing-front {
+  transform: rotate(-3.5deg) translateY(1px);
+}
+.entry-stack[data-walk-step="1"] .entry-wing-rear {
+  transform: rotate(-8deg) translate(-1px, 2px);
+}
+
+.entry-stack[data-walk-step="2"] .entry-leg-front,
+.entry-stack[data-walk-step="2"] .entry-leg-rear {
+  transform: translate(0, 0) rotate(0deg);
+}
+.entry-stack[data-walk-step="2"] .entry-wing-front {
+  transform: rotate(0deg);
+}
+.entry-stack[data-walk-step="2"] .entry-wing-rear {
+  transform: rotate(-10deg) translateY(2px);
+}
+
+.entry-stack[data-walk-step="3"] .entry-leg-front {
+  transform: translate(8px, 3px) rotate(-23deg);
+}
+.entry-stack[data-walk-step="3"] .entry-leg-rear {
+  transform: translate(-9px, -4px) rotate(21deg);
+}
+.entry-stack[data-walk-step="3"] .entry-wing-front {
+  transform: rotate(3.5deg) translateY(-1px);
+}
+.entry-stack[data-walk-step="3"] .entry-wing-rear {
+  transform: rotate(-12deg) translate(-1px, 1px);
+}
+
+/* Female proportions suit a slightly tighter stride, but still much broader
+   than v0.91's shuffle. The female rear wing is explicitly kept BEHIND the
+   shirt/body and uses the supplied natural down/rest pose. */
+.entry-stack.entry-female .entry-wing-rear { z-index: 1; }
+.entry-stack.entry-female[data-walk-step="1"] .entry-leg-front {
+  transform: translate(-6px, -3px) rotate(19deg);
+}
+.entry-stack.entry-female[data-walk-step="1"] .entry-leg-rear {
+  transform: translate(7px, 2px) rotate(-18deg);
+}
+.entry-stack.entry-female[data-walk-step="2"] .entry-leg-front,
+.entry-stack.entry-female[data-walk-step="2"] .entry-leg-rear {
+  transform: translate(0, 0) rotate(0deg);
+}
+.entry-stack.entry-female[data-walk-step="3"] .entry-leg-front {
+  transform: translate(6px, 2px) rotate(-19deg);
+}
+.entry-stack.entry-female[data-walk-step="3"] .entry-leg-rear {
+  transform: translate(-7px, -3px) rotate(18deg);
+}
+.entry-stack.entry-female[data-walk-step="1"] .entry-wing-rear { transform: translate(-1px, 1px) rotate(-2deg); }
+.entry-stack.entry-female[data-walk-step="2"] .entry-wing-rear { transform: translate(-1px, 1px) rotate(-2deg); }
+.entry-stack.entry-female[data-walk-step="3"] .entry-wing-rear { transform: translate(-1px, 1px) rotate(-2deg); }
+
+/* Male rear-wing source is supplied raised. Bias it down/in and keep the
+   motion subtle while body occlusion does the rest. */
+.entry-stack.entry-male .entry-wing-rear { z-index: 1; transform-origin: 66% 56%; }
+.entry-stack.entry-male[data-walk-step="1"] .entry-wing-rear { transform: translate(-3px, 5px) rotate(-18deg); }
+.entry-stack.entry-male[data-walk-step="2"] .entry-wing-rear { transform: translate(-3px, 5px) rotate(-20deg); }
+.entry-stack.entry-male[data-walk-step="3"] .entry-wing-rear { transform: translate(-3px, 5px) rotate(-22deg); }
+
+.entry-captain-layer {
+  z-index: 7;
+}
+
+.entry-coach-whistle {
+  z-index: 7;
+}
+
+.captain-mark {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  font-family: Arial Black, Arial, Helvetica, sans-serif;
+  font-weight: 900;
+  line-height: 1;
+  color: #f6f1df;
+  -webkit-text-stroke: .8px #17262d;
+  text-shadow: 0 0 1px #17262d;
+}
+
+.captain-mark-walk {
+  left: 64.5%;
+  top: 57.5%;
+  width: 12%;
+  height: 13%;
+  font-size: 13px;
+  transform: translate(-50%, -50%);
+}
+
+
+/* v0.98 nervous entry: a small whole-duck tremble followed by a slow,
+   eyes-closed breath before the existing pre-jump squash. These animations
+   act on the assembled walking stack, so no extra artwork is required. */
+.duck.nervous-entry-shake .entry-stack {
+  animation: nervous-entry-shake .11s ease-in-out infinite;
+}
+
+@keyframes nervous-entry-shake {
+  0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1.31); }
+  25% { transform: translate(-2px, 0) rotate(-0.8deg) scale(1.31); }
+  50% { transform: translate(2px, -1px) rotate(0.8deg) scale(1.31); }
+  75% { transform: translate(-1px, 1px) rotate(-0.5deg) scale(1.31); }
+}
+
+.duck.nervous-entry-breathe .entry-stack {
+  animation: nervous-entry-breathe .75s ease-in-out 2;
+}
+
+@keyframes nervous-entry-breathe {
+  0%, 100% { transform: translateY(0) rotate(0deg) scaleX(1.31) scaleY(1.31); }
+  50% { transform: translateY(-2px) rotate(0deg) scaleX(1.315) scaleY(1.34); }
+}
+
+.duck.prejump .entry-stack {
+  animation: pre-jump-squash .30s ease-in-out forwards;
+}
+
+@keyframes pre-jump-squash {
+  0% {
+    transform: rotate(0deg) scale(1.31);
+  }
+  62% {
+    transform: rotate(0deg) scaleX(1.44) scaleY(1.09);
+  }
+  100% {
+    transform: rotate(0deg) scaleX(1.38) scaleY(1.22);
+  }
+}
+
+.swim-stack {
+  --facing-scale: 1;
+  --hat-counter-scale: 1;
+  --swim-tilt: 0deg;
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  overflow: visible;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  transform: translateY(-27%) rotate(var(--swim-tilt)) scaleX(var(--facing-scale));
+  transform-origin: 50% 50%;
+  pointer-events: none;
+}
+
+/* v0.115: the supplied flamingo artwork remains internally aligned exactly as
+   drawn. Pond overlap is handled by the flamingo-specific waterline/depth anchor
+   in app.js rather than moving the visual stack. */
+
+.swim-layer {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.swim-wing-back { z-index: 1; opacity: 0; }
+.swim-body { z-index: 2; }
+.swim-wake { z-index: 3; }
+.swim-hair { z-index: 4; }
+.swim-face { z-index: 5; }
+.swim-flamingo { z-index: 6; }
+.swim-role-layer { z-index: 6; }
+.swim-wing-front { z-index: 7; }
+.swim-captain-layer { z-index: 6; }
+.swim-hat {
+  z-index: 8;
+  transform: scaleX(var(--hat-counter-scale));
+  transform-origin: 50% 50%;
+}
+
+.swim-coach-whistle {
+  transform: scaleX(var(--hat-counter-scale));
+  transform-origin: 50% 50%;
+}
+
+.captain-mark-swim {
+  left: 28%;
+  top: 64%;
+  width: 12%;
+  height: 13%;
+  font-size: 13px;
+  transform: translate(-50%, -50%) scaleX(var(--hat-counter-scale));
+  transform-origin: 50% 50%;
+}
+
+.duck[data-motion-state="floating"] .swim-wake {
+  opacity: .72;
+}
+
+.duck[data-motion-state="swimming"] .swim-wake {
+  opacity: 1;
+}
+
+.duck.floating {
+  animation: bob var(--bob-duration) ease-in-out infinite;
+}
+
+@keyframes bob {
+  0%, 100% {
+    transform: translate(-50%, -50%) translateY(0) scale(var(--duck-scale)) rotate(-.7deg);
+  }
+  50% {
+    transform: translate(-50%, -50%) translateY(-3px) scale(var(--duck-scale)) rotate(.8deg);
+  }
+}
+
+.duck.reacting .swim-stack {
+  animation: duck-startle-shake .12s steps(2, end) 6;
+}
+
+.duck.reacting .swim-wing-front {
+  transform-origin: 40% 58%;
+  animation: front-wing-flap .18s ease-in-out 4;
+}
+
+.duck.reacting .swim-wing-back {
+  opacity: 1;
+  transform-origin: 45% 58%;
+  animation: back-wing-flap .18s ease-in-out 4;
+}
+
+
+.duck.reaction-angry .swim-stack {
+  animation: duck-angry-jolt .14s ease-in-out 5;
+}
+
+.duck.reaction-angry .swim-wing-front,
+.duck.reaction-angry .swim-wing-back {
+  animation-duration: .14s;
+  animation-iteration-count: 5;
+}
+
+@keyframes duck-angry-jolt {
+  0%,100% { transform: translateY(-27%) rotate(var(--swim-tilt)) scaleX(var(--facing-scale)) rotate(0deg); }
+  25% { transform: translateY(-28%) rotate(var(--swim-tilt)) scaleX(var(--facing-scale)) translateX(-2px) rotate(-3deg); }
+  75% { transform: translateY(-27%) rotate(var(--swim-tilt)) scaleX(var(--facing-scale)) translateX(2px) rotate(3deg); }
+}
+
+.duck.collision-bump .swim-stack {
+  animation: duck-collision-shudder .10s steps(2, end) 6;
+}
+
+@keyframes duck-collision-shudder {
+  0%, 100% {
+    transform: translateY(-27%) rotate(var(--swim-tilt)) scaleX(var(--facing-scale)) translateX(0);
+  }
+  35% {
+    transform: translateY(-27%) rotate(var(--swim-tilt)) scaleX(var(--facing-scale)) translateX(-3px) rotate(-2deg);
+  }
+  70% {
+    transform: translateY(-27%) rotate(var(--swim-tilt)) scaleX(var(--facing-scale)) translateX(3px) rotate(2deg);
+  }
+}
+
+@keyframes duck-startle-shake {
+  0%, 100% {
+    transform: translateY(-27%) rotate(var(--swim-tilt)) scaleX(var(--facing-scale)) translateX(0) rotate(0);
+  }
+  50% {
+    transform: translateY(-28%) rotate(var(--swim-tilt)) scaleX(var(--facing-scale)) translateX(2px) rotate(-2deg);
+  }
+}
+
+@keyframes front-wing-flap {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-28deg) translateY(-2px); }
+}
+
+@keyframes back-wing-flap {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(22deg) translateY(-2px); }
+}
+
+/* v0.118: the female rear-wing artwork starts in a much more tucked/downward
+   orientation than the original male rear wing. Give female rear-wing motions
+   a larger lift so the wing actually clears the body silhouette. */
+.duck[data-presentation="female"].reacting .swim-wing-back {
+  transform-origin: 49% 66%;
+  animation-name: female-back-wing-flap;
+}
+
+@keyframes female-back-wing-flap {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(72deg) translateY(-2px); }
+}
+
+.duck.idle-wing-front-flick .swim-wing-front {
+  transform-origin: 40% 58%;
+  animation: idle-front-wing-flick .54s ease-in-out 1;
+}
+
+.duck.idle-wing-back-flick .swim-wing-back {
+  opacity: .72;
+  transform-origin: 45% 58%;
+  animation: idle-back-wing-flick .60s ease-in-out 1;
+}
+
+@keyframes idle-front-wing-flick {
+  0%, 100% { transform: rotate(0deg); }
+  38% { transform: rotate(-11deg) translateY(-1px); }
+  68% { transform: rotate(-4deg); }
+}
+
+@keyframes idle-back-wing-flick {
+  0%, 100% { transform: rotate(0deg); }
+  38% { transform: rotate(9deg) translateY(-1px); }
+  68% { transform: rotate(3deg); }
+}
+
+.duck[data-presentation="female"].idle-wing-back-flick .swim-wing-back {
+  transform-origin: 49% 66%;
+  animation-name: female-idle-back-wing-flick;
+}
+
+@keyframes female-idle-back-wing-flick {
+  0%, 100% { transform: rotate(0deg); }
+  38% { transform: rotate(64deg) translateY(-1px); }
+  68% { transform: rotate(24deg); }
+}
+
+.splash-sprite,
+.resurface-sprite {
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  transform: translate(-50%, -70%);
+  pointer-events: none;
+}
+
+.splash-sprite img,
+.resurface-sprite img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.resurface-sprite {
+  opacity: 1;
+  animation: resurface-ripple .70s ease-out forwards;
+}
+
+@keyframes resurface-ripple {
+  0% { opacity: 0; transform: translate(-50%, -70%) scale(.65); }
+  24% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -70%) scale(1.15); }
+}
+
+.destination-marker {
+  position: absolute;
+  z-index: 4500;
+  width: 30px;
+  height: 30px;
+  transform: translate(-50%, -50%);
+  border: 4px solid #f5edd9;
+  border-radius: 50%;
+  background: rgba(242, 176, 46, .34);
+  box-shadow: 0 0 0 3px #18272c, 0 0 0 7px rgba(242,176,46,.42);
+  pointer-events: none;
+}
+
+.destination-marker::before,
+.destination-marker::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  background: #18272c;
+  transform: translate(-50%, -50%);
+}
+
+.destination-marker::before { width: 38px; height: 3px; }
+.destination-marker::after { width: 3px; height: 38px; }
+
+.destination-marker.invalid {
+  background: rgba(192, 74, 49, .42);
+  box-shadow: 0 0 0 3px #18272c, 0 0 0 7px rgba(192,74,49,.46);
+}
+
+.live-scoreboard {
+  position: absolute;
+  left: 10.72%;
+  top: 28.37%;
+  width: 10.29%;
+  height: 9.46%;
+  z-index: 500;
+  display: grid;
+  grid-template-rows: 12px 28px 9px repeat(3, 1fr);
+  align-content: start;
+  gap: 1px;
+  border: 0;
+  padding: 4px 7px 5px;
+  background: transparent;
+  color: #f6e9c6;
+  cursor: pointer;
+  text-align: left;
+  overflow: hidden;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, .6);
+}
+
+.live-scoreboard .score-label {
+  color: var(--yellow);
+  font-weight: 900;
+  letter-spacing: .12em;
+  font-size: 8.5px;
+  text-align: center;
+}
+
+.live-scoreboard strong {
+  display: block;
+  color: #f6e9c6;
+  text-align: center;
+  line-height: 1.05;
+  overflow: hidden;
+  min-width: 0;
+  min-height: 0;
+}
+
+.live-scoreboard[data-mode="leaderboard"] strong {
+  font-size: 27px;
+  white-space: nowrap;
+}
+
+.live-scoreboard[data-mode="entrant"] strong {
+  font-size: 20px;
+  line-height: 1.02;
+  white-space: nowrap;
+  text-overflow: clip;
+}
+
+.score-secondary {
+  color: rgba(246, 233, 198, .86);
+  letter-spacing: .10em;
+  font-size: 7px;
+  text-align: center;
+}
+
+.score-mini {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: center;
+  gap: 4px;
+  line-height: 1.1;
+  min-width: 0;
+}
+
+.score-mini b {
+  color: var(--yellow);
+  font-size: 7.5px;
+  letter-spacing: .04em;
+}
+
+.score-mini span:last-child {
+  color: #f6e9c6;
+  font-size: 9px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.scoreboard-panel {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 6000;
+  width: min(430px, calc(100% - 30px));
+  transform: translate(-50%, -50%);
+  border: 5px solid var(--ink);
+  border-radius: 16px;
+  padding: 22px;
+  background: rgba(35,57,66,.97);
+  color: white;
+  box-shadow: 0 14px 0 rgba(24,39,44,.30);
+}
+
+.scoreboard-panel[hidden] { display: none; }
+
+.scoreboard-panel p,
+.scoreboard-panel h2 { margin: 0 0 12px; }
+
+.scoreboard-panel ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.scoreboard-panel li {
+  display: grid;
+  grid-template-columns: 30px 1fr auto;
+  align-items: center;
+  gap: 9px;
+  border-top: 1px solid rgba(255,255,255,.22);
+  padding-top: 8px;
+}
+
+.medal {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  color: var(--ink);
+  font-weight: 900;
+}
+
+.medal.gold { background: #e1b629; }
+.medal.silver { background: #d6d9dc; }
+.medal.bronze { background: #b87333; }
+
+.scoreboard-close {
+  position: absolute;
+  right: 8px;
+  top: 5px;
+  border: 0;
+  background: transparent;
+  color: white;
+  font-size: 28px;
+  cursor: pointer;
+}
+
+.scene-note {
+  min-height: 38px;
+  margin: 12px 4px 0;
+  padding: 8px 11px;
+  border-left: 5px solid var(--yellow);
+  border-radius: 8px;
+  background: rgba(245,237,217,.88);
+  color: #3f5156;
+  font-size: .82rem;
+  font-weight: 750;
+  line-height: 1.3;
+}
+
+footer {
+  padding: 16px 4px 0;
+  color: #4b5c61;
+}
+
+@media (max-width: 900px) and (pointer: coarse) {
+  .app-shell { padding: 10px; }
+
+  .toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .toolbar h1 {
+    font-size: clamp(1.65rem, 7.5vw, 2.15rem);
+  }
+
+  .mobile-toolbar-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .mobile-toolbar-actions #mobileZoomReset:not([hidden]) {
+    grid-column: 1 / -1;
+  }
+
+  .mobile-toolbar-actions button,
+  .controls button {
+    width: 100%;
+    min-height: 48px;
+    padding: .55rem .45rem;
+  }
+
+  .controls {
+    width: 100%;
+    display: none;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .controls.mobile-open {
+    display: grid;
+  }
+
+  .controls.mobile-open .control-group {
+    width: 100%;
+    min-width: 0;
+    grid-column: 1 / -1;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .controls.mobile-open .legacy-controls {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .controls.mobile-open .control-field select,
+  .controls.mobile-open .control-field input {
+    min-height: 48px;
+  }
+
+  .scene-viewport {
+    overflow: auto;
+    /* Preserve one-finger pond panning, but reserve two-finger pinch for the
+       app-controlled scene zoom rather than Safari visual-viewport zoom. */
+    touch-action: pan-x pan-y;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+  }
+
+  .scene-viewport::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scene-note {
+    min-height: 34px;
+    margin-top: 9px;
+    padding: 7px 9px;
+    font-size: .72rem;
+  }
+
+  footer {
+    font-size: .95rem;
+  }
+
+  body.pond-focus-mode .app-shell {
+    padding: 2px;
+  }
+
+  body.pond-focus-mode .toolbar {
+    gap: 4px;
+    margin-bottom: 4px;
+  }
+
+  body.pond-focus-mode .toolbar-copy,
+  body.pond-focus-mode .controls,
+  body.pond-focus-mode .scene-note,
+  body.pond-focus-mode footer {
+    display: none !important;
+  }
+
+  body.pond-focus-mode .scene-frame {
+    border-width: 3px;
+    border-radius: 12px;
+  }
+
+}
+@media (max-width: 900px) and (pointer: coarse) and (orientation: landscape) {
+  #mobilePondToggle {
+    display: none;
+  }
+
+  .app-shell {
+    padding: 6px;
+  }
+
+  .toolbar {
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+
+  .toolbar-copy {
+    display: none;
+  }
+
+  .mobile-toolbar-actions {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .mobile-toolbar-actions #mobileZoomReset:not([hidden]) {
+    grid-column: auto;
+  }
+
+  .mobile-toolbar-actions button,
+  .controls button {
+    min-height: 42px;
+    padding: .42rem .38rem;
+    font-size: .86rem;
+  }
+
+  .scene-note,
+  footer {
+    display: none;
+  }
+}
+
+
+
+/* v0.81: mobile landscape is a production-style pond viewport. The page itself
+   does not scroll; all close-up movement stays inside the pond's scroll box. */
+@media (max-width: 900px) and (pointer: coarse) and (orientation: landscape) {
+  html,
+  body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  .app-shell {
+    padding: 4px;
+    max-width: none;
+  }
+
+  .toolbar {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 70;
+    margin: 0;
+    padding: 0;
+  }
+
+  .toolbar-copy,
+  #mobileControlsToggle,
+  #mobilePondToggle,
+  #developerControls {
+    display: none !important;
+  }
+
+  .mobile-toolbar-actions {
+    display: block;
+  }
+
+  #mobileZoomReset:not([hidden]) {
+    display: block;
+    width: auto;
+    min-width: 108px;
+    min-height: 40px;
+    padding: .4rem .6rem;
+  }
+
+  .scene-frame {
+    margin: 0;
+  }
+
+  .scene-viewport {
+    margin: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+  }
+
+  .world-stage {
+    margin-inline: auto;
+  }
+}
+
+/* v0.87 production-style weekly playback/debug data view. */
+.data-debug-panel {
+  margin-top: 18px;
+  padding: 18px;
+  border: 4px solid var(--ink);
+  border-radius: 16px;
+  background: white;
+  box-shadow: 0 8px 0 rgba(24,39,44,.10);
+}
+
+.data-debug-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+
+.data-debug-status {
+  display: grid;
+  gap: 3px;
+  justify-items: end;
+}
+
+.data-debug-status p { margin: 0; }
+
+.data-debug-heading h2,
+.data-debug-panel h3 {
+  margin: 0;
+}
+
+.data-debug-heading .subtle {
+  max-width: 620px;
+  margin: 0;
+  text-align: right;
+}
+
+.data-debug-grid {
+  display: grid;
+  grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr);
+  gap: 14px;
+}
+
+.data-debug-grid article {
+  min-width: 0;
+  padding: 12px;
+  border: 2px solid rgba(35,57,66,.18);
+  border-radius: 12px;
+  background: rgba(35,57,66,.035);
+}
+
+.data-debug-grid article h3 {
+  margin-bottom: 8px;
+  font-size: 1rem;
+}
+
+.data-debug-wide {
+  grid-column: 1 / -1;
+}
+
+.data-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .78rem;
+  white-space: nowrap;
+}
+
+.data-table th,
+.data-table td {
+  padding: 6px 7px;
+  border-bottom: 1px solid rgba(35,57,66,.15);
+  text-align: left;
+}
+
+.data-table th {
+  color: #405257;
+  font-size: .7rem;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.live-scoreboard strong {
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.score-mini span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  .data-debug-heading {
+    display: block;
+  }
+
+  .data-debug-heading .subtle {
+    margin-top: 6px;
+    text-align: left;
+  }
+
+  .data-debug-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .data-debug-wide {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 900px) and (pointer: coarse) and (orientation: landscape) {
+  .data-debug-panel {
+    display: none !important;
+  }
+}
+
+
+/* v0.90 duck-attached player stat callout. */
+.player-stats-card {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 6100;
+  width: min(260px, calc(100% - 18px));
+  padding: 9px 30px 9px 11px;
+  border: 2px solid rgba(24,39,44,.88);
+  border-radius: 11px;
+  background: rgba(255,255,255,.68);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  color: var(--ink);
+  box-shadow: 0 4px 10px rgba(24,39,44,.20);
+  pointer-events: auto;
+  box-sizing: border-box;
+}
+
+.player-stats-card[hidden] { display: none; }
+
+.player-stats-card h2,
+.player-stats-card p { margin: 0; }
+
+.player-stats-kicker { display: none; }
+
+.player-stats-card h2 {
+  font-size: 1.02rem;
+  line-height: 1.05;
+}
+
+.player-stats-meta {
+  margin-top: 2px !important;
+  font-size: .64rem;
+  line-height: 1.15;
+  opacity: .72;
+}
+
+.player-stats-total {
+  display: block;
+  margin-top: 5px;
+  font-size: .77rem;
+  line-height: 1.15;
+}
+
+.player-stats-types,
+.player-stats-latest {
+  margin-top: 2px !important;
+  font-size: .64rem;
+  line-height: 1.18;
+}
+
+.player-stats-close {
+  position: absolute;
+  right: 5px;
+  top: 3px;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 20px;
+  line-height: 20px;
+  cursor: pointer;
+  padding: 0;
+}
+
+@media (max-width: 760px) {
+  .player-stats-card {
+    width: min(225px, calc(100% - 14px));
+    padding: 7px 27px 7px 9px;
+    border-radius: 9px;
+    background: rgba(255,255,255,.64);
+  }
+  .player-stats-card h2 { font-size: .88rem; }
+  .player-stats-meta,
+  .player-stats-types,
+  .player-stats-latest { font-size: .57rem; }
+  .player-stats-total { margin-top: 4px; font-size: .69rem; }
+}
+
+
+
+/* v0.107 production shell -------------------------------------------------- */
+.production-shell {
+  width: min(1420px, 100%);
+  padding: 14px 18px 22px;
+}
+
+.production-toolbar {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(340px, auto) minmax(180px, 1fr);
+  align-items: center;
+  gap: 18px;
+  margin: 0 2px 12px;
+}
+
+.production-brand h1 {
+  margin: 0;
+  font-size: clamp(1.65rem, 3vw, 2.45rem);
+  line-height: 1;
+}
+
+.production-brand .eyebrow {
+  font-size: .74rem;
+  margin-bottom: 5px;
+}
+
+.production-week {
+  justify-self: center;
+  display: grid;
+  grid-template-columns: auto minmax(210px, 280px);
+  align-items: center;
+  gap: 4px 10px;
+  padding: 8px 10px;
+  border: 2px solid rgba(24,39,44,.18);
+  border-radius: 12px;
+  background: rgba(255,255,255,.55);
+}
+
+.production-week label {
+  color: var(--red);
+  font-size: .68rem;
+  font-weight: 950;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+.production-week select {
+  min-height: 40px;
+  padding: 6px 34px 6px 10px;
+  border: 2px solid var(--ink);
+  border-radius: 9px;
+  background: white;
+  color: var(--ink);
+  font: inherit;
+  font-size: .9rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.production-week-summary {
+  grid-column: 2;
+  color: #526267;
+  font-size: .7rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.production-mobile-actions {
+  justify-self: end;
+  display: none;
+}
+
+.developer-controls-hidden,
+#dataDebugPanel[hidden],
+#status[hidden] {
+  display: none !important;
+}
+
+@media (max-width: 900px) and (pointer: coarse) {
+  .production-shell { padding: 8px; }
+
+  .production-toolbar {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px 10px;
+    margin: 2px 2px 8px;
+  }
+
+  .production-brand {
+    grid-column: 1;
+  }
+
+  .production-brand h1 {
+    font-size: 1.55rem;
+  }
+
+  .production-brand .eyebrow {
+    font-size: .62rem;
+  }
+
+  .production-week {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: 100%;
+    grid-template-columns: auto minmax(0, 1fr);
+    justify-self: stretch;
+    padding: 7px 8px;
+  }
+
+  .production-week select {
+    width: 100%;
+    min-height: 42px;
+    font-size: .86rem;
+  }
+
+  .production-week-summary {
+    font-size: .67rem;
+  }
+
+  .production-mobile-actions {
+    grid-column: 2;
+    grid-row: 1;
+    display: block;
+    width: auto;
+  }
+
+  .production-mobile-actions #mobilePondToggle {
+    display: block;
+    width: auto;
+    min-width: 118px;
+    min-height: 42px;
+    border: 2px solid var(--ink);
+    border-radius: 9px;
+    padding: .45rem .65rem;
+    background: var(--cream);
+    color: var(--ink);
+    box-shadow: 0 3px 0 var(--ink);
+    font: inherit;
+    font-size: .78rem;
+    font-weight: 850;
+  }
+
+  .production-mobile-actions #mobileZoomReset:not([hidden]) {
+    margin-top: 6px;
+    min-height: 40px;
+  }
+
+  body.pond-focus-mode .production-brand,
+  body.pond-focus-mode .production-week {
+    display: none !important;
+  }
+
+  body.pond-focus-mode .production-toolbar {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 80;
+    margin: 0;
+    display: block;
+  }
+}
+
+@media (max-width: 900px) and (pointer: coarse) and (orientation: landscape) {
+  .production-toolbar {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 80;
+    margin: 0;
+    display: block;
+  }
+
+  .production-brand,
+  .production-week,
+  #mobilePondToggle {
+    display: none !important;
+  }
+
+  .production-mobile-actions {
+    display: block;
+  }
+}
+
+@media (max-width: 620px) {
+  .production-brand h1 { font-size: 1.4rem; }
+  .production-week { grid-template-columns: 1fr; }
+  .production-week label { grid-column: 1; }
+  .production-week select { grid-column: 1; }
+  .production-week-summary { grid-column: 1; }
+}
+
+
+/* v0.119 snake pond event. The snake is anchored inside the right-hand reed
+   bank. Its container is below the foreground reeds but above pond ducks, so
+   the bank naturally hides the lower body while a strike can cross the water. */
+.snake-event {
+  position: absolute;
+  left: 92.0%;
+  top: 82.8%;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  opacity: 1;
+}
+
+.snake-sprite {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  display: block;
+  max-width: none;
+  height: auto;
+  transform-origin: 100% 100%;
+  filter: drop-shadow(0 6px 3px rgba(18, 26, 31, .18));
+  will-change: transform, opacity;
+  pointer-events: none;
+}
+
+.snake-event.is-hidden .snake-sprite {
+  width: 125px;
+  opacity: 0;
+  transform: translateY(54px) scale(.96);
+}
+
+.snake-event.is-rising .snake-sprite {
+  width: 125px;
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transition: transform 2s ease-out, opacity .18s ease-out;
+}
+
+.snake-event.is-peeking .snake-sprite,
+.snake-event.is-open .snake-sprite {
+  width: 125px;
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.snake-event.is-descending .snake-sprite,
+.snake-event.is-dropping .snake-sprite {
+  width: 125px;
+  opacity: 1;
+  transform: translateY(54px) scale(.96);
+  transition: transform 2s ease-in, opacity .18s ease-in 1.75s;
+}
+
+.snake-event.is-striking .snake-sprite {
+  width: 220px;
+  opacity: 1;
+  animation: snake-strike-lunge .34s cubic-bezier(.18,.82,.24,1) both;
+}
+
+@keyframes snake-strike-lunge {
+  /* Keep the rear/bottom of the strike sprite visually planted in the reeds.
+     The lunge is now mostly horizontal; the previous negative Y translation
+     made the whole snake appear to lift off the bank. */
+  0%   { transform: translate(22px, 20px) scale(.84); }
+  42%  { transform: translate(-16px, 16px) scale(1.02); }
+  68%  { transform: translate(-20px, 15px) scale(1.03); }
+  100% { transform: translate(14px, 18px) scale(.91); }
+}
+
+.duck.snake-panic .swim-stack {
+  animation: duck-startle-shake .085s steps(2, end) 9;
+}
+
+.duck.snake-panic .swim-wing-front {
+  transform-origin: 40% 58%;
+  animation: front-wing-flap .11s ease-in-out 7;
+}
+
+.duck.snake-panic .swim-wing-back {
+  opacity: 1;
+  transform-origin: 45% 58%;
+  animation: back-wing-flap .11s ease-in-out 7;
+}
+
+.duck[data-presentation="female"].snake-panic .swim-wing-back {
+  transform-origin: 49% 66%;
+  animation-name: female-back-wing-flap;
+}
+
+/* v0.127: same-player high-fives stay on the natural swim path, but the
+   stationary duck now lifts a beat earlier and the moving duck reaches later.
+   That offset timing, plus a shorter recoil, reads more like a real high-five
+   and less like two ducks waving in sync. */
+.duck.same-player-highfive .swim-wing-front {
+  transform-origin: 40% 58%;
+}
+
+.duck.same-player-highfive.same-player-highfive-stationary .swim-wing-front {
+  animation: same-player-highfive-wing-stationary var(--highfive-duration, 760ms) ease-in-out 1 both;
+}
+
+.duck.same-player-highfive.same-player-highfive-mover .swim-wing-front {
+  animation: same-player-highfive-wing-mover var(--highfive-duration, 760ms) ease-in-out 1 both;
+}
+
+.duck.same-player-highfive-contact .swim-wing-front {
+  filter: brightness(1.03);
+}
+
+@keyframes same-player-highfive-wing-stationary {
+  0%   { transform: rotate(0deg) translate(0, 0); }
+  14%  { transform: rotate(-22deg) translate(-1px, -1px); }
+  28%  { transform: rotate(-60deg) translate(-2px, -3px); }
+  42%  { transform: rotate(-98deg) translate(-7px, -7px); }
+  54%  { transform: rotate(-126deg) translate(-11px, -10px); }
+  60%  { transform: rotate(-130deg) translate(-12px, -10px); }
+  68%  { transform: rotate(-108deg) translate(-7px, -6px); }
+  100% { transform: rotate(0deg) translate(0, 0); }
+}
+
+@keyframes same-player-highfive-wing-mover {
+  0%   { transform: rotate(0deg) translate(0, 0); }
+  18%  { transform: rotate(0deg) translate(0, 0); }
+  34%  { transform: rotate(-18deg) translate(-1px, -1px); }
+  48%  { transform: rotate(-72deg) translate(-3px, -4px); }
+  58%  { transform: rotate(-116deg) translate(-8px, -8px); }
+  64%  { transform: rotate(-132deg) translate(-12px, -10px); }
+  70%  { transform: rotate(-128deg) translate(-12px, -10px); }
+  78%  { transform: rotate(-104deg) translate(-7px, -6px); }
+  100% { transform: rotate(0deg) translate(0, 0); }
+}

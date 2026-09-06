@@ -1,5 +1,11 @@
-# Duck Pond – v0.126
+# Duck Pond – v0.127
 
+
+## v0.127 – Staggered High-Five Timing
+
+- Reworked same-player high-five timing so the stationary duck lifts first and the moving duck joins a beat later instead of both wings rising in sync.
+- Shortened the recoil so the action reads as extend → touch → small recoil → tuck, rather than a two-part wave.
+- Brought the swim pass line slightly closer so the front wings can visibly make contact more reliably.
 
 ## v0.126 – High-Five Motion + README Repair
 

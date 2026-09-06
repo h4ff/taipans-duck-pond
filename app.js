@@ -1,0 +1,4354 @@
+(() => {
+  "use strict";
+
+  const WORLD_WIDTH = 1672;
+  const WORLD_HEIGHT = 941;
+
+  const sceneFrame = document.getElementById("sceneFrame");
+  const scene = document.getElementById("scene");
+  const snakeEvent = document.getElementById("snakeEvent");
+  const snakeSprite = document.getElementById("snakeSprite");
+  const worldStage = document.getElementById("worldStage");
+  const world = document.getElementById("world");
+  const duckLayer = document.getElementById("duckLayer");
+  const splashLayer = document.getElementById("splashLayer");
+  const destinationMarker = document.getElementById("destinationMarker");
+
+  const addMaleButton = document.getElementById("addMaleButton");
+  const addFemaleButton = document.getElementById("addFemaleButton");
+  const duckTypeButton = document.getElementById("duckTypeButton");
+  const featherToneButton = document.getElementById("featherToneButton");
+  const buildVariantButton = document.getElementById("buildVariantButton");
+  const load60Button = document.getElementById("load60Button");
+  const testPresidentButton = document.getElementById("testPresidentButton");
+  const testLeaderButton = document.getElementById("testLeaderButton");
+  const testCaptainButton = document.getElementById("testCaptainButton");
+  const testCoachButton = document.getElementById("testCoachButton");
+  const resetButton = document.getElementById("resetButton");
+  const developerControls = document.getElementById("developerControls");
+  const mobileControlsToggle = document.getElementById("mobileControlsToggle");
+  const mobilePondToggle = document.getElementById("mobilePondToggle");
+  const mobileZoomReset = document.getElementById("mobileZoomReset");
+
+  const playerSelect = document.getElementById("playerSelect");
+  const addPlayerButton = document.getElementById("addPlayerButton");
+  const playerIdentitySummary = document.getElementById("playerIdentitySummary");
+  const weekSelect = document.getElementById("weekSelect");
+  const loadWeekButton = document.getElementById("loadWeekButton");
+  const weekSummary = document.getElementById("weekSummary");
+
+  const scoreboardLabel = document.getElementById("scoreboardLabel");
+  const scoreboardPrimary = document.getElementById("scoreboardPrimary");
+  const scoreboardSecondary = document.getElementById("scoreboardSecondary");
+  const scoreboardMinis = [1, 2, 3].map(index => document.getElementById(`scoreboardMini${index}`));
+  const panelDuckCount = document.getElementById("panelDuckCount");
+  const panelWeekLabel = document.getElementById("panelWeekLabel");
+  const panelLeaderboard = document.getElementById("panelLeaderboard");
+  const dataDebugRange = document.getElementById("dataDebugRange");
+  const dataLoadStatus = document.getElementById("dataLoadStatus");
+  const dataLeaderboard = document.getElementById("dataLeaderboard");
+  const dataWeekEvents = document.getElementById("dataWeekEvents");
+  const dataPondEvents = document.getElementById("dataPondEvents");
+  const liveScoreboard = document.getElementById("liveScoreboard");
+  const scoreboardPanel = document.getElementById("scoreboardPanel");
+  const closeScoreboard = document.getElementById("closeScoreboard");
+  const playerStatsCard = document.getElementById("playerStatsCard");
+  const playerStatsName = document.getElementById("playerStatsName");
+  const playerStatsMeta = document.getElementById("playerStatsMeta");
+  const playerStatsSummary = document.getElementById("playerStatsSummary");
+  const playerStatsTypes = document.getElementById("playerStatsTypes");
+  const playerStatsLatest = document.getElementById("playerStatsLatest");
+  const closePlayerStats = document.getElementById("closePlayerStats");
+  let playerStatsDuck = null;
+  let playerStatsFollowFrame = null;
+  let playerStatsHideTimer = null;
+  const PLAYER_STATS_TIMEOUT_MS = 5000;
+  const status = document.getElementById("status");
+  const loadingOverlay = document.getElementById("loadingOverlay");
+  const loadingTitle = document.getElementById("loadingTitle");
+  const loadingProgress = document.getElementById("loadingProgress");
+
+  const WALK_LAYER_ROOT = "assets/duck/walk-layered";
+  const HAIR_ROOT = "assets/duck/hair";
+  const LEADER_HAIR_ROOT = `${HAIR_ROOT}/leader`;
+  const HEADWEAR_ASSETS = {
+    normal: {
+      walk: "assets/duck/headwear/normal/walk.png",
+      swim: {
+        left: "assets/duck/headwear/normal/swim-left.png",
+        right: "assets/duck/headwear/normal/swim-right.png"
+      }
+    },
+    leader: {
+      walk: "assets/duck/headwear/leader/walk.png",
+      swim: {
+        left: "assets/duck/headwear/leader/swim-left.png",
+        right: "assets/duck/headwear/leader/swim-right.png"
+      }
+    },
+    crown: {
+      walk: "assets/duck/headwear/crown/walk.png",
+      swim: {
+        left: "assets/duck/headwear/crown/swim-left.png",
+        right: "assets/duck/headwear/crown/swim-right.png"
+      }
+    }
+  };
+
+  const ROLE_ASSETS = {
+    coach: {
+      walk: "assets/duck/roles/coach/walk.png",
+      swim: {
+        left: "assets/duck/roles/coach/swim-left.png",
+        right: "assets/duck/roles/coach/swim-right.png"
+      }
+    }
+  };
+
+  const FEMALE_ASSETS = {
+    swimBodyRoot: "assets/duck/female/swim/body"
+  };
+
+  let PLAYER_PROFILES = [];
+  let DUCK_EVENTS = [];
+  let PLAYER_BY_ID = new Map();
+  let DATA_WARNINGS = [];
+  let dateRangeLoadToken = 0;
+  let selectedWeekContext = null;
+  let scoreboardMode = "leaderboard";
+  let currentLeaderPlayerIds = new Set();
+
+  function playerById(playerId) {
+    return PLAYER_BY_ID.get(playerId) || null;
+  }
+
+  function displayPlayerName(player) {
+    if (!player) return "Unknown player";
+    const nickname = String(player.nickname || "").trim();
+    return nickname || player.name || "Unknown player";
+  }
+
+  function parseCsv(text) {
+    const rows = [];
+    let row = [];
+    let field = "";
+    let quoted = false;
+
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      if (quoted) {
+        if (char === '"') {
+          if (text[i + 1] === '"') {
+            field += '"';
+            i += 1;
+          } else {
+            quoted = false;
+          }
+        } else {
+          field += char;
+        }
+        continue;
+      }
+
+      if (char === '"') {
+        quoted = true;
+      } else if (char === ",") {
+        row.push(field);
+        field = "";
+      } else if (char === "\n") {
+        row.push(field.replace(/\r$/, ""));
+        rows.push(row);
+        row = [];
+        field = "";
+      } else {
+        field += char;
+      }
+    }
+
+    if (field.length || row.length) {
+      row.push(field.replace(/\r$/, ""));
+      rows.push(row);
+    }
+
+    const nonEmpty = rows.filter(values => values.some(value => String(value).trim() !== ""));
+    if (!nonEmpty.length) return [];
+    const headers = nonEmpty[0].map(value => String(value).trim());
+    return nonEmpty.slice(1).map(values => {
+      const record = {};
+      headers.forEach((header, index) => {
+        record[header] = String(values[index] ?? "").trim();
+      });
+      return record;
+    });
+  }
+
+  function csvBoolean(value) {
+    return ["1", "true", "yes", "y"].includes(String(value || "").trim().toLowerCase());
+  }
+
+  async function fetchCsv(path) {
+    const separator = path.includes("?") ? "&" : "?";
+    const response = await fetch(`${path}${separator}v=${Date.now()}`, { cache: "no-store" });
+    if (!response.ok) throw new Error(`Could not load ${path} (${response.status})`);
+    return parseCsv(await response.text());
+  }
+
+  function normalisePlayerRow(row, index) {
+    const id = String(row.playerId || row.id || "").trim();
+    const name = String(row.name || "").trim();
+    if (!id || !name) {
+      DATA_WARNINGS.push(`players.csv row ${index + 2}: playerId and name are required.`);
+      return null;
+    }
+
+    const presentation = row.presentation === "female" ? "female" : "male";
+    const featherTone = FEATHER_TONES[row.featherTone] ? row.featherTone : "white";
+    const build = BUILD_VARIANTS[row.build] ? row.build : "standard";
+    const roles = [];
+    if (csvBoolean(row.president)) roles.push("president");
+    if (csvBoolean(row.captain)) roles.push("captain");
+    if (csvBoolean(row.coach)) roles.push("coach");
+    const rawHair = String(row.hair || row.hairStyle || row.hairstyle || "").trim();
+    const hair = canonicalHairKey(rawHair);
+    if (rawHair && !hair) {
+      DATA_WARNINGS.push(`players.csv row ${index + 2}: unknown hair ${rawHair}; using none.`);
+    }
+    const rawHeadwear = String(row.headwear || row.hat || "").trim();
+    const playerHeadwear = canonicalPlayerHeadwear(rawHeadwear);
+    if (rawHeadwear && !playerHeadwear) {
+      DATA_WARNINGS.push(`players.csv row ${index + 2}: unknown headwear ${rawHeadwear}; using none.`);
+    }
+
+    const rawSwimAccessory = String(row.swimAccessory || "").trim();
+    const swimAccessory = canonicalSwimAccessory(rawSwimAccessory);
+    if (rawSwimAccessory && !swimAccessory) {
+      DATA_WARNINGS.push(`players.csv row ${index + 2}: unknown swimAccessory ${rawSwimAccessory}; using none.`);
+    }
+    if (presentation === "female" && swimAccessory === "flamingo") {
+      DATA_WARNINGS.push(`players.csv row ${index + 2}: flamingo currently fits the male model only; accessory ignored for this player.`);
+    }
+
+    return {
+      id,
+      name,
+      nickname: String(row.nickname || "").trim(),
+      presentation,
+      featherTone: roles.includes("president") ? "white" : featherTone,
+      build,
+      roles,
+      hair: hair || "none",
+      playerHeadwear: playerHeadwear || "none",
+      swimAccessory: swimAccessory || "none"
+    };
+  }
+
+  function canonicalSwimAccessory(value) {
+    const raw = String(value || "").trim().toLowerCase();
+    if (!raw || ["none", "no", "off"].includes(raw)) return "none";
+    if (["flamingo", "floatie", "flamingo-floatie"].includes(raw)) return "flamingo";
+    return "";
+  }
+
+  function normaliseCsvDate(value) {
+    const raw = String(value || "").trim();
+    if (!raw) return "";
+
+    // Accept the production spreadsheet format used by the club (D/M/YYYY or
+    // DD/MM/YYYY) as well as ISO YYYY-MM-DD, then normalise everything to ISO.
+    let year;
+    let month;
+    let day;
+    let match = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (match) {
+      year = Number(match[1]);
+      month = Number(match[2]);
+      day = Number(match[3]);
+    } else {
+      match = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      if (!match) return "";
+      day = Number(match[1]);
+      month = Number(match[2]);
+      year = Number(match[3]);
+    }
+
+    const candidate = new Date(year, month - 1, day, 12, 0, 0, 0);
+    if (
+      candidate.getFullYear() !== year ||
+      candidate.getMonth() !== month - 1 ||
+      candidate.getDate() !== day
+    ) return "";
+
+    return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  }
+
+  function normaliseEventRow(row, index) {
+    const playerId = String(row.playerId || "").trim();
+    const rawDate = String(row.date || "").trim();
+    const date = normaliseCsvDate(rawDate);
+    if (!playerId || !date) {
+      DATA_WARNINGS.push(`ducks.csv row ${index + 2}: valid date (D/M/YYYY, DD/MM/YYYY or YYYY-MM-DD) and playerId are required.`);
+      return null;
+    }
+    if (!PLAYER_BY_ID.has(playerId)) {
+      DATA_WARNINGS.push(`ducks.csv row ${index + 2}: unknown playerId ${playerId}.`);
+      return null;
+    }
+
+    const requestedType = String(row.duckType || "standard").trim().toLowerCase();
+    const duckType = DUCK_TYPES.includes(requestedType) ? requestedType : "standard";
+    if (requestedType && requestedType !== duckType) {
+      DATA_WARNINGS.push(`ducks.csv row ${index + 2}: unknown duckType ${requestedType}; using standard.`);
+    }
+
+    return {
+      id: String(row.eventId || row.id || `${date}-${playerId}-${index + 1}`).trim(),
+      playerId,
+      date,
+      team: String(row.team || "—").trim() || "—",
+      duckType
+    };
+  }
+
+  async function loadProductionData() {
+    DATA_WARNINGS = [];
+    if (status) status.textContent = "Loading player roster and duck events…";
+    const playerRows = await fetchCsv("data/players.csv");
+    const players = playerRows.map(normalisePlayerRow).filter(Boolean);
+    const seenPlayers = new Set();
+    PLAYER_PROFILES = players.filter(player => {
+      if (seenPlayers.has(player.id)) {
+        DATA_WARNINGS.push(`players.csv: duplicate playerId ${player.id}; later duplicate ignored.`);
+        return false;
+      }
+      seenPlayers.add(player.id);
+      return true;
+    });
+    PLAYER_BY_ID = new Map(PLAYER_PROFILES.map(player => [player.id, player]));
+
+    const eventRows = await fetchCsv("data/ducks.csv");
+    DUCK_EVENTS = eventRows.map(normaliseEventRow).filter(Boolean)
+      .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
+
+    if (!PLAYER_PROFILES.length) throw new Error("players.csv did not contain any valid player records.");
+    const diagnostic = `${PLAYER_PROFILES.length} players • ${DUCK_EVENTS.length} duck events loaded${DATA_WARNINGS.length ? ` • ${DATA_WARNINGS.length} warning${DATA_WARNINGS.length === 1 ? "" : "s"}` : " • no rejected rows"}`;
+    if (dataLoadStatus) dataLoadStatus.textContent = diagnostic;
+    console.info(`Duck Pond data: ${diagnostic}`);
+    if (DATA_WARNINGS.length) console.warn("Duck Pond data warnings", DATA_WARNINGS);
+  }
+
+  function playerEventsThrough(playerId, endIso = selectedWeekContext?.end || "9999-12-31") {
+    return DUCK_EVENTS
+      .filter(event => event.playerId === playerId && event.date <= endIso)
+      .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
+  }
+
+  function describePlayer(player) {
+    if (!player) return "Unknown player";
+    const roleText = (player.roles || []).length ? ` • ${(player.roles || []).join(" + ")}` : "";
+    const feather = FEATHER_TONES[player.featherTone]?.label || player.featherTone || "White";
+    const build = BUILD_VARIANTS[player.build]?.label || player.build || "Standard";
+    const hairText = player.hair && player.hair !== "none" ? ` • hair: ${hairLabel(player.hair)}` : " • hair: none";
+    const headwearText = ` • headwear: ${PLAYER_HEADWEAR_LABELS[player.playerHeadwear] || "No hat"}`;
+    const nicknameText = player.nickname ? ` • public nickname: ${player.nickname}` : "";
+    return `${player.name} • ${player.presentation} • ${feather} • ${build}${hairText}${headwearText}${roleText}${nicknameText}`;
+  }
+
+  function formatClubDate(isoDate) {
+    if (!isoDate) return "—";
+    const [year, month, day] = isoDate.split("-").map(Number);
+    return new Intl.DateTimeFormat("en-AU", { day: "numeric", month: "short", year: "numeric" })
+      .format(new Date(year, month - 1, day));
+  }
+
+  function formatClubWeekRange(startIso, endIso) {
+    if (!startIso || !endIso) return "—";
+    const start = localDateFromIso(startIso);
+    const end = localDateFromIso(endIso);
+    const sameMonth = start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear();
+    const startText = new Intl.DateTimeFormat("en-AU", sameMonth
+      ? { day: "numeric" }
+      : { day: "numeric", month: "short" }).format(start);
+    const endText = new Intl.DateTimeFormat("en-AU", { day: "numeric", month: "short", year: "numeric" }).format(end);
+    return `${startText}–${endText}`;
+  }
+
+  function isoFromLocalDate(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+
+  function localDateFromIso(isoDate) {
+    const [year, month, day] = isoDate.split("-").map(Number);
+    return new Date(year, month - 1, day, 12, 0, 0, 0);
+  }
+
+  function addLocalDays(isoDate, days) {
+    const date = localDateFromIso(isoDate);
+    date.setDate(date.getDate() + days);
+    return isoFromLocalDate(date);
+  }
+
+  function mostRecentMonday(reference = new Date()) {
+    const date = new Date(reference.getFullYear(), reference.getMonth(), reference.getDate(), 12, 0, 0, 0);
+    const day = date.getDay();
+    const daysSinceMonday = (day + 6) % 7;
+    date.setDate(date.getDate() - daysSinceMonday);
+    return isoFromLocalDate(date);
+  }
+
+  function weekContextForMonday(mondayIso) {
+    // The dropdown Monday is the "as at" marker. Its playback window is the
+    // complete club week immediately before it: Monday through Sunday.
+    return {
+      monday: mondayIso,
+      start: addLocalDays(mondayIso, -7),
+      end: addLocalDays(mondayIso, -1)
+    };
+  }
+
+  function eventsThrough(endIso) {
+    return [...DUCK_EVENTS]
+      .filter(event => event.date <= endIso)
+      .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
+  }
+
+  function leaderboardForEvents(events) {
+    const totals = new Map();
+    for (const event of events) {
+      const player = playerById(event.playerId);
+      if (!player) continue;
+      const current = totals.get(player.id) || {
+        player,
+        count: 0,
+        diamondCount: 0,
+        goldenCount: 0,
+        standardCount: 0,
+        latestDate: ""
+      };
+      current.count += 1;
+      if (event.duckType === "diamond") current.diamondCount += 1;
+      else if (event.duckType === "golden") current.goldenCount += 1;
+      else current.standardCount += 1;
+      if (event.date > current.latestDate) current.latestDate = event.date;
+      totals.set(player.id, current);
+    }
+
+    // Pond hierarchy: total ducks remains the primary measure. When players
+    // have the same total, Diamond outranks Golden, which outranks Standard.
+    // The comparison is lexicographic so ties remain genuine ties.
+    const compareScore = (a, b) =>
+      b.count - a.count ||
+      b.diamondCount - a.diamondCount ||
+      b.goldenCount - a.goldenCount ||
+      b.standardCount - a.standardCount;
+
+    const sameScore = (a, b) => Boolean(a && b) &&
+      a.count === b.count &&
+      a.diamondCount === b.diamondCount &&
+      a.goldenCount === b.goldenCount &&
+      a.standardCount === b.standardCount;
+
+    const leaders = [...totals.values()].sort((a, b) =>
+      compareScore(a, b) || displayPlayerName(a.player).localeCompare(displayPlayerName(b.player))
+    );
+
+    let previous = null;
+    let previousRank = 0;
+    leaders.forEach((leader, index) => {
+      if (sameScore(leader, previous)) {
+        leader.rank = previousRank;
+      } else {
+        leader.rank = index + 1;
+        previousRank = leader.rank;
+      }
+      previous = leader;
+    });
+    return leaders;
+  }
+
+  function leaderboardHasActiveLeader(leaderboard) {
+    const top = leaderboard?.[0];
+    if (!top) return false;
+    // A pond made up solely of one Standard duck per player has no leader cap.
+    // A player becomes a visible leader as soon as the top score has 2+ ducks,
+    // or a Golden/Diamond duck breaks an otherwise one-duck tie.
+    return top.count > 1 || top.diamondCount > 0 || top.goldenCount > 0;
+  }
+
+  function shortScoreName(name) {
+    if (!name) return "—";
+    const parts = name.trim().split(/\s+/);
+    return parts.length > 1 ? parts[parts.length - 1].toUpperCase() : name.toUpperCase();
+  }
+
+  function currentLeaderboard() {
+    if (!selectedWeekContext) return [];
+    return leaderboardForEvents(eventsThrough(selectedWeekContext.end));
+  }
+
+  function renderScoreMini(element, label, text) {
+    if (!element) return;
+    element.replaceChildren();
+    const rankNode = document.createElement("b");
+    rankNode.textContent = String(label);
+    const textNode = document.createElement("span");
+    textNode.textContent = text;
+    element.append(rankNode, textNode);
+  }
+
+  function scoreboardDuckType(type) {
+    return String(type || "standard").replace(/^./, char => char.toUpperCase());
+  }
+
+  function fitScoreboardPrimary() {
+    if (!liveScoreboard || !scoreboardPrimary) return;
+    const entrant = scoreboardMode === "entrant";
+    const maxSize = entrant ? 20 : 27;
+    const minSize = entrant ? 10 : 20;
+    scoreboardPrimary.style.fontSize = `${maxSize}px`;
+    scoreboardPrimary.style.lineHeight = entrant ? "1.02" : "1.05";
+
+    // Measure in the unscaled world DOM and progressively reduce only when
+    // a long entrant name or large count would otherwise clip the board.
+    let size = maxSize;
+    while (size > minSize && (
+      scoreboardPrimary.scrollWidth > scoreboardPrimary.clientWidth + 1 ||
+      scoreboardPrimary.scrollHeight > scoreboardPrimary.clientHeight + 1
+    )) {
+      size -= 1;
+      scoreboardPrimary.style.fontSize = `${size}px`;
+    }
+  }
+
+  function showLeaderboardScoreboard() {
+    scoreboardMode = "leaderboard";
+    liveScoreboard?.setAttribute("data-mode", "leaderboard");
+    const leaders = currentLeaderboard().slice(0, 3);
+    if (scoreboardLabel) scoreboardLabel.textContent = "POND LEADERS";
+    if (scoreboardPrimary) scoreboardPrimary.textContent = `${ducks.size} DUCK${ducks.size === 1 ? "" : "S"}`;
+    if (scoreboardSecondary) scoreboardSecondary.textContent = "";
+    fitScoreboardPrimary();
+    scoreboardMinis.forEach((element, index) => {
+      const leader = leaders[index];
+      renderScoreMini(element, leader?.rank || index + 1, leader ? `${shortScoreName(displayPlayerName(leader.player))} • ${leader.count}` : "—");
+    });
+    renderScoreboardPanel();
+  }
+
+  function showEntrantScoreboard(player, event, position, total) {
+    scoreboardMode = "entrant";
+    liveScoreboard?.setAttribute("data-mode", "entrant");
+    if (scoreboardLabel) scoreboardLabel.textContent = "NOW ENTERING";
+    if (scoreboardPrimary) scoreboardPrimary.textContent = player ? displayPlayerName(player) : "Unknown duck";
+    if (scoreboardSecondary) scoreboardSecondary.textContent = `WEEK ENTRANT ${position}/${total}`;
+    fitScoreboardPrimary();
+    renderScoreMini(scoreboardMinis[0], "TEAM", event?.team || "—");
+    renderScoreMini(scoreboardMinis[1], "DATE", formatClubDate(event?.date));
+    renderScoreMini(scoreboardMinis[2], "TYPE", scoreboardDuckType(event?.duckType));
+  }
+
+  function renderScoreboardPanel() {
+    if (panelDuckCount) panelDuckCount.textContent = String(ducks.size);
+    if (panelWeekLabel && selectedWeekContext) {
+      panelWeekLabel.textContent = `${formatClubDate(selectedWeekContext.start)}–${formatClubDate(selectedWeekContext.end)}`;
+    }
+    if (!panelLeaderboard) return;
+    panelLeaderboard.replaceChildren();
+    currentLeaderboard().slice(0, 3).forEach((leader, index) => {
+      const li = document.createElement("li");
+      const medal = document.createElement("span");
+      const medalClass = { 1: "gold", 2: "silver", 3: "bronze" }[leader.rank] || "";
+      medal.className = `medal ${medalClass}`;
+      medal.textContent = String(leader.rank || index + 1);
+      const name = document.createElement("strong");
+      name.textContent = displayPlayerName(leader.player);
+      const count = document.createElement("span");
+      count.textContent = `${leader.count} duck${leader.count === 1 ? "" : "s"}`;
+      li.append(medal, name, count);
+      panelLeaderboard.appendChild(li);
+    });
+  }
+
+  function tableHtml(headers, rows) {
+    const escape = value => String(value ?? "—")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;");
+    return `<div class="data-table-wrap"><table class="data-table"><thead><tr>${headers.map(header => `<th>${escape(header)}</th>`).join("")}</tr></thead><tbody>${rows.map(row => `<tr>${row.map(cell => `<td>${escape(cell)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+  }
+
+  function renderDataDebug(context, weekEvents, pondEvents) {
+    if (!context) return;
+    const leaders = leaderboardForEvents(pondEvents);
+    if (dataDebugRange) {
+      dataDebugRange.textContent = `Selected Monday ${formatClubDate(context.monday)} → playback ${formatClubDate(context.start)}–${formatClubDate(context.end)} • ${pondEvents.length} cumulative ducks`;
+    }
+    if (dataLeaderboard) {
+      dataLeaderboard.innerHTML = tableHtml(
+        ["Rank", "Player", "Ducks", "Latest"],
+        leaders.map((leader, index) => [index + 1, displayPlayerName(leader.player), leader.count, formatClubDate(leader.latestDate)])
+      );
+    }
+    if (dataWeekEvents) {
+      dataWeekEvents.innerHTML = tableHtml(
+        ["Date", "Player", "Team", "Type"],
+        weekEvents.map(event => {
+          const player = playerById(event.playerId);
+          return [formatClubDate(event.date), player ? displayPlayerName(player) : event.playerId, event.team, event.duckType];
+        })
+      );
+    }
+    if (dataPondEvents) {
+      dataPondEvents.innerHTML = tableHtml(
+        ["Event", "Date", "Player", "Team", "Type", "Presentation", "Feather", "Build", "Hair", "Headwear", "Roles"],
+        pondEvents.map(event => {
+          const player = playerById(event.playerId);
+          return [
+            event.id,
+            formatClubDate(event.date),
+            player ? displayPlayerName(player) : event.playerId,
+            event.team,
+            event.duckType,
+            player?.presentation || "—",
+            FEATHER_TONES[player?.featherTone]?.label || player?.featherTone || "—",
+            BUILD_VARIANTS[player?.build]?.label || player?.build || "—",
+            player?.hair && player.hair !== "none" ? hairLabel(player.hair) : "None",
+            PLAYER_HEADWEAR_LABELS[player?.playerHeadwear] || "No hat",
+            (player?.roles || []).join(", ") || "—"
+          ];
+        })
+      );
+    }
+  }
+
+  function normalizedRoles(roles = [], clubRole = "player") {
+    const values = Array.isArray(roles) ? roles : [roles];
+    const safe = new Set(values.filter(role => ["president", "captain", "coach"].includes(role)));
+    if (clubRole === "president") safe.add("president");
+    return [...safe];
+  }
+
+  function duckHasRole(duck, role) {
+    if (!duck || !role) return false;
+    return (duck.dataset.roles || "")
+      .split(",")
+      .filter(Boolean)
+      .includes(role);
+  }
+
+  function coachWhistleSrc(phase, facing = "left") {
+    if (phase === "walk") return ROLE_ASSETS.coach.walk;
+    return facing === "right" ? ROLE_ASSETS.coach.swim.right : ROLE_ASSETS.coach.swim.left;
+  }
+
+  function walkBodySrc(featherTone, presentation = "male") {
+    const safeTone = FEATHER_TONES[featherTone] ? featherTone : "white";
+    const safePresentation = presentation === "female" ? "female" : "male";
+    return `${WALK_LAYER_ROOT}/${safePresentation}/body-${safeTone}.png`;
+  }
+
+  function walkShirtSrc(duckType, presentation = "male") {
+    const safeType = DUCK_TYPES.includes(duckType) ? duckType : "standard";
+    const safePresentation = presentation === "female" ? "female" : "male";
+    return `${WALK_LAYER_ROOT}/${safePresentation}/shirt-${safeType}.png`;
+  }
+
+  function walkWingSrc(which, featherTone, presentation = "male") {
+    const safeTone = FEATHER_TONES[featherTone] ? featherTone : "white";
+    const safePresentation = presentation === "female" ? "female" : "male";
+    return `${WALK_LAYER_ROOT}/${safePresentation}/wing-${which}-${safeTone}.png`;
+  }
+
+  function walkLegSrc(which, featherTone) {
+    const safeTone = FEATHER_TONES[featherTone] ? featherTone : "white";
+    if (which === "rear") return `${WALK_LAYER_ROOT}/shared/leg-rear.png`;
+    return `${WALK_LAYER_ROOT}/shared/leg-front-${safeTone}.png`;
+  }
+
+  function walkFaceSrc(faceName, featherTone = "white") {
+    const safeFace = ["neutral", "sad", "angry", "surprised", "nervous", "neutral-blink", "sad-blink"].includes(faceName)
+      ? faceName
+      : "neutral";
+    const safeTone = FEATHER_TONES[featherTone] ? featherTone : "white";
+
+    if (safeFace === "sad" || safeFace === "nervous") {
+      return `${WALK_LAYER_ROOT}/faces/${safeFace}-${safeTone}.png`;
+    }
+
+    // v0.97: use the corrected shared blink artwork exactly as supplied.
+    // Neutral and sad blink PNGs are not feather-tone variants and are not recoloured.
+    return `${WALK_LAYER_ROOT}/faces/${safeFace}.png`;
+  }
+
+  const FLAMINGO_ASSETS = {
+    walk: "assets/duck/accessories/flamingo/MaleFlamingoWalk.png",
+    swim: "assets/duck/accessories/flamingo/MaleFlamingoSwim.png",
+    wakes: {
+      standard: "assets/duck/accessories/flamingo/RippleStandardFlamingo.png",
+      golden: "assets/duck/accessories/flamingo/RippleGoldenFlamingo.png",
+      diamond: "assets/duck/accessories/flamingo/RippleDiamondFlamingo.png"
+    }
+  };
+
+  const SNAKE_ASSETS = {
+    closed: "assets/events/snake/snake-peek-closed.png",
+    open: "assets/events/snake/snake-peek-open.png",
+    strike: "assets/events/snake/snake-strike.png"
+  };
+
+  // v0.122: the snake attacks along the bank, so use an elongated leftward
+  // corridor rather than a small circular target. A slightly broader panic
+  // zone catches ducks that visually sit in the strike line, including those
+  // close to the reeds. Coordinates use the pond percentage motion system.
+  const SNAKE_THREAT_POINT = { x: 75.5, y: 69.0 };
+  const SNAKE_ENGAGE_RADIUS_X = 11.5;
+  const SNAKE_ENGAGE_RADIUS_Y = 7.5;
+  const SNAKE_PANIC_POINT = { x: 74.0, y: 69.0 };
+  const SNAKE_PANIC_RADIUS_X = 14.5;
+  const SNAKE_PANIC_RADIUS_Y = 9.0;
+
+  function duckHasFlamingo(duck) {
+    return duck?.dataset?.presentation === "male" && duck?.dataset?.swimAccessory === "flamingo";
+  }
+
+  const SWIM_ASSETS = {
+    bodyRoot: "assets/duck/swim/body",
+    wingRoot: "assets/duck/swim/wing",
+    sadFaceRoot: "assets/duck/swim/face",
+    faces: {
+      neutral: "assets/duck/swim/face/face-neutral.png",
+      sad: "assets/duck/swim/face/face-sad-white.png",
+      surprised: "assets/duck/swim/face/face-surprised.png",
+      angry: "assets/duck/swim/face/face-angry.png"
+    },
+    blinks: {
+      neutral: "assets/duck/swim/face/face-neutral-blink.png",
+      sadRoot: "assets/duck/swim/face"
+    },
+    wakes: {
+      standard: "assets/effects/wake/wake-standard.png",
+      golden: "assets/effects/wake/wake-golden.png",
+      diamond: "assets/effects/wake/wake-diamond.png"
+    }
+  };
+
+  function swimBodySrc(duckType, featherTone, presentation = "male") {
+    const safeType = DUCK_TYPES.includes(duckType) ? duckType : "standard";
+    const safeTone = FEATHER_TONES[featherTone] ? featherTone : "white";
+    if (presentation === "female") {
+      return `${FEMALE_ASSETS.swimBodyRoot}/body-${safeType}-${safeTone}.png`;
+    }
+    return `${SWIM_ASSETS.bodyRoot}/body-${safeType}-${safeTone}.png`;
+  }
+
+  function swimWakeSrc(duck) {
+    const type = DUCK_TYPES.includes(duck?.dataset?.duckType) ? duck.dataset.duckType : "standard";
+    if (duckHasFlamingo(duck)) return FLAMINGO_ASSETS.wakes[type] || FLAMINGO_ASSETS.wakes.standard;
+    return SWIM_ASSETS.wakes[type] || SWIM_ASSETS.wakes.standard;
+  }
+
+  function swimWingSrc(which, featherTone, presentation = "male") {
+    const safeTone = FEATHER_TONES[featherTone] ? featherTone : "white";
+    if (presentation === "female") {
+      return `assets/duck/swim/wing-female/wing-${which}-${safeTone}.png`;
+    }
+    return `${SWIM_ASSETS.wingRoot}/wing-${which}-${safeTone}.png`;
+  }
+
+  function resolvedHeadwear(duck) {
+    // Role priority is deliberate: the president's crown always wins, even
+    // if that player also happens to be the current duck leader. The leader
+    // cap overrides any normal player-selected cap.
+    if (duckHasRole(duck, "president")) return "crown";
+    if (duck.dataset.isLeader === "true") return "leader";
+    return duck.dataset.playerHeadwear === "cap" ? "normal" : "none";
+  }
+
+  function headwearSrc(duck, phase, facing = "left") {
+    const headwear = resolvedHeadwear(duck);
+    duck.dataset.headwear = headwear;
+    if (headwear === "none") return "";
+    const assets = HEADWEAR_ASSETS[headwear] || HEADWEAR_ASSETS.normal;
+
+    if (phase === "walk") return assets.walk;
+    return facing === "right" ? assets.swim.right : assets.swim.left;
+  }
+
+  const DUCK_TYPES = ["standard", "golden", "diamond"];
+  let selectedDuckType = "standard";
+  const FEATHER_TONES = {
+    white: { label: "White" },
+    yellow: { label: "Yellow" },
+    lightBrown: { label: "Light Brown" },
+    darkBrown: { label: "Dark Brown" }
+  };
+  const FEATHER_TONE_KEYS = ["white", "yellow", "lightBrown", "darkBrown"];
+  let selectedFeatherTone = "white";
+
+  const BUILD_VARIANTS = {
+    standard: { label: "Standard", scaleX: 1.00, scaleY: 1.00 },
+    short: { label: "Short", scaleX: .95, scaleY: .90 },
+    beanpole: { label: "Tall & Skinny", scaleX: .82, scaleY: 1.25 },
+    stocky: { label: "Stocky", scaleX: 1.12, scaleY: .97 },
+    big: { label: "Big", scaleX: 1.16, scaleY: 1.08 }
+  };
+  const BUILD_VARIANT_KEYS = ["standard", "short", "beanpole", "stocky", "big"];
+  let selectedBuildVariant = "standard";
+  const HAIR_STYLE_LABELS = {
+    buzz: "Buzz Cut",
+    short: "Short",
+    part: "Part",
+    mullet: "Mullet",
+    ponytail: "Ponytail",
+    unkept: "Unkept"
+  };
+  const HAIR_COLOR_LABELS = {
+    black: "Black",
+    blonde: "Blonde",
+    brown: "Brown",
+    red: "Red",
+    gray: "Gray"
+  };
+  const HAIR_STYLES_WITH_COLOUR = ["short", "part", "mullet", "ponytail", "unkept"];
+  const HAIR_KEYS = [
+    "none",
+    "buzz",
+    ...HAIR_STYLES_WITH_COLOUR.flatMap(style => Object.keys(HAIR_COLOR_LABELS).map(colour => `${style}-${colour}`))
+  ];
+
+  function canonicalHairKey(value) {
+    const raw = String(value || "").trim();
+    if (!raw) return "none";
+    const withBoundaries = raw
+      .replace(/([a-z])([A-Z])/g, "$1-$2")
+      .replace(/&/g, " and ")
+      .toLowerCase();
+    const normalized = withBoundaries
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+    if (!normalized || ["none", "no-hair", "bald"].includes(normalized)) return "none";
+    const compact = normalized.replace(/-/g, "");
+    if (normalized === "buzz" || compact === "buzz") return "buzz";
+
+    for (const style of HAIR_STYLES_WITH_COLOUR) {
+      for (const colour of Object.keys(HAIR_COLOR_LABELS)) {
+        const key = `${style}-${colour}`;
+        if (normalized === key || compact === `${style}${colour}`) return key;
+      }
+    }
+    return "";
+  }
+
+  function hairLabel(hairKey) {
+    const key = canonicalHairKey(hairKey);
+    if (!key || key === "none") return "No hair";
+    if (key === "buzz") return HAIR_STYLE_LABELS.buzz;
+    const [style, colour] = key.split("-");
+    return `${HAIR_STYLE_LABELS[style] || style} ${HAIR_COLOR_LABELS[colour] || colour}`;
+  }
+
+  function hairStem(hairKey) {
+    const key = canonicalHairKey(hairKey);
+    if (!key || key === "none") return "";
+    if (key === "buzz") return "Buzz";
+    const [style, colour] = key.split("-");
+    const stylePart = style.charAt(0).toUpperCase() + style.slice(1);
+    const colourPart = colour.charAt(0).toUpperCase() + colour.slice(1);
+    return `${stylePart}${colourPart}`;
+  }
+
+  function walkHairSrc(hairKey) {
+    const stem = hairStem(hairKey);
+    return stem ? `${HAIR_ROOT}/walk/${stem}.png` : "";
+  }
+
+  function swimHairSrc(hairKey) {
+    const stem = hairStem(hairKey);
+    return stem ? `${HAIR_ROOT}/swim/${stem}Swim.png` : "";
+  }
+
+  function leaderHairSrc(hairKey, phase) {
+    const key = canonicalHairKey(hairKey);
+    if (!key || key === "none" || key === "buzz") return "";
+    const [style] = key.split("-");
+    if (!["part", "mullet", "ponytail"].includes(style)) return "";
+    const stem = hairStem(key);
+    if (!stem) return "";
+    return phase === "walk"
+      ? `${LEADER_HAIR_ROOT}/walk/${stem}Hat.png`
+      : `${LEADER_HAIR_ROOT}/swim/${stem}HatSwim.png`;
+  }
+
+  function visualHairSrc(duck, phase) {
+    const headwear = resolvedHeadwear(duck);
+    // Only the three deliberately redrawn styles remain visible beneath the
+    // mandatory yellow leader cap. All other leader hair is suppressed.
+    if (headwear === "leader") return leaderHairSrc(duck.dataset.hair, phase);
+    return phase === "walk" ? walkHairSrc(duck.dataset.hair) : swimHairSrc(duck.dataset.hair);
+  }
+
+  function randomHairKey() {
+    if (Math.random() < 0.3) return "none";
+    const visibleKeys = HAIR_KEYS.filter(key => key !== "none");
+    return visibleKeys[Math.floor(Math.random() * visibleKeys.length)] || "none";
+  }
+
+  const PLAYER_HEADWEAR_KEYS = ["none", "cap"];
+  const PLAYER_HEADWEAR_LABELS = {
+    none: "No hat",
+    cap: "TCC cap"
+  };
+
+  function canonicalPlayerHeadwear(value) {
+    const normalized = String(value || "").trim().toLowerCase();
+    if (!normalized || normalized === "none" || normalized === "no" || normalized === "off") return "none";
+    if (["cap", "hat", "normal", "clubcap", "club-cap", "tcc-cap"].includes(normalized)) return "cap";
+    return "";
+  }
+
+
+  function swimFaceSrc(faceName, featherTone) {
+    const safeTone = FEATHER_TONES[featherTone] ? featherTone : "white";
+    if (faceName === "sad") {
+      return `${SWIM_ASSETS.sadFaceRoot}/face-sad-${safeTone}.png`;
+    }
+    return SWIM_ASSETS.faces[faceName] || SWIM_ASSETS.faces.neutral;
+  }
+
+  function swimBlinkSrc(faceName, featherTone) {
+    const safeTone = FEATHER_TONES[featherTone] ? featherTone : "white";
+    if (faceName === "sad") {
+      return `${SWIM_ASSETS.blinks.sadRoot}/face-sad-blink-${safeTone}.png`;
+    }
+    return SWIM_ASSETS.blinks.neutral;
+  }
+
+
+  function splashFrameSrc(duckType, frameNumber) {
+    const safeType = DUCK_TYPES.includes(duckType) ? duckType : "standard";
+    return `assets/effects/splash/${safeType}/splash-${String(frameNumber).padStart(2, "0")}.png`;
+  }
+
+  // Keep strong references to decoded production sprites for the lifetime of
+  // the page. GitHub Pages can otherwise expose a one-frame cold-load gap
+  // the first time a walk/swim/splash/accessory variant is requested.
+  const PRELOADED_IMAGES = new Map();
+
+  function addHeadwearAssets(urls, headwear) {
+    if (!headwear || headwear === "none") return;
+    const assets = HEADWEAR_ASSETS[headwear];
+    if (!assets) return;
+    urls.add(assets.walk);
+    urls.add(assets.swim.left);
+    urls.add(assets.swim.right);
+  }
+
+  function playerHeadwearKind(player, isLeader = false) {
+    if ((player?.roles || []).includes("president")) return "crown";
+    if (isLeader) return "leader";
+    return player?.playerHeadwear === "cap" ? "normal" : "none";
+  }
+
+  function addCommonSceneAssets(urls) {
+    [
+      "assets/scene/background.png",
+      "assets/scene/foreground-near-bank.png",
+      "assets/scene/foreground-reeds.png",
+      "assets/scene/pier-foreground.png",
+      SWIM_ASSETS.faces.neutral,
+      SWIM_ASSETS.faces.surprised,
+      SWIM_ASSETS.faces.angry,
+      SWIM_ASSETS.blinks.neutral,
+      walkFaceSrc("neutral"),
+      walkFaceSrc("angry"),
+      walkFaceSrc("surprised"),
+      walkFaceSrc("neutral-blink"),
+      walkFaceSrc("sad-blink")
+    ].forEach(url => urls.add(url));
+  }
+
+  function addSwimAssetsForEvent(urls, event, player, leaderIds) {
+    if (!event || !player) return;
+    const tone = FEATHER_TONES[player.featherTone] ? player.featherTone : "white";
+    const presentation = player.presentation === "female" ? "female" : "male";
+    const type = DUCK_TYPES.includes(event.duckType) ? event.duckType : "standard";
+    const isLeader = leaderIds.has(player.id);
+    const headwear = playerHeadwearKind(player, isLeader);
+
+    urls.add(swimBodySrc(type, tone, presentation));
+    urls.add(swimWingSrc("front", tone, presentation));
+    urls.add(swimWingSrc("back", tone, presentation));
+    if (presentation === "male" && player.swimAccessory === "flamingo") {
+      urls.add(FLAMINGO_ASSETS.swim);
+      urls.add(FLAMINGO_ASSETS.wakes[type]);
+    } else {
+      urls.add(SWIM_ASSETS.wakes[type]);
+    }
+    urls.add(swimFaceSrc("sad", tone));
+    urls.add(swimBlinkSrc("sad", tone));
+
+    if (headwear === "leader") {
+      const specialLeaderHair = leaderHairSrc(player.hair, "swim");
+      if (specialLeaderHair) urls.add(specialLeaderHair);
+    } else {
+      const hair = swimHairSrc(player.hair);
+      if (hair) urls.add(hair);
+    }
+    addHeadwearAssets(urls, headwear);
+
+    if ((player.roles || []).includes("coach")) {
+      urls.add(ROLE_ASSETS.coach.swim.left);
+      urls.add(ROLE_ASSETS.coach.swim.right);
+    }
+  }
+
+  function addWalkAssetsForEvent(urls, event, player, leaderIds) {
+    if (!event || !player) return;
+    const tone = FEATHER_TONES[player.featherTone] ? player.featherTone : "white";
+    const presentation = player.presentation === "female" ? "female" : "male";
+    const type = DUCK_TYPES.includes(event.duckType) ? event.duckType : "standard";
+    const isLeader = leaderIds.has(player.id);
+    const headwear = playerHeadwearKind(player, isLeader);
+
+    urls.add(walkBodySrc(tone, presentation));
+    urls.add(walkShirtSrc(type, presentation));
+    urls.add(walkWingSrc("front", tone, presentation));
+    urls.add(walkWingSrc("rear", tone, presentation));
+    urls.add(walkLegSrc("front", tone));
+    urls.add(walkLegSrc("rear", tone));
+    urls.add(walkFaceSrc("sad", tone));
+    urls.add(walkFaceSrc("nervous", tone));
+    if (presentation === "male" && player.swimAccessory === "flamingo") urls.add(FLAMINGO_ASSETS.walk);
+
+    if (headwear === "leader") {
+      const specialLeaderHair = leaderHairSrc(player.hair, "walk");
+      if (specialLeaderHair) urls.add(specialLeaderHair);
+    } else {
+      const hair = walkHairSrc(player.hair);
+      if (hair) urls.add(hair);
+    }
+    addHeadwearAssets(urls, headwear);
+
+    if ((player.roles || []).includes("coach")) urls.add(ROLE_ASSETS.coach.walk);
+    for (let frame = 1; frame <= 4; frame++) urls.add(splashFrameSrc(type, frame));
+  }
+
+  function productionImageManifest(context = null) {
+    // Startup now blocks only on assets required to render the currently
+    // selected pond/week. The remainder are warmed quietly after startup.
+    if (context) {
+      const urls = new Set();
+      addCommonSceneAssets(urls);
+      const pondEvents = DUCK_EVENTS.filter(event => event.date <= context.end);
+      const weekEvents = pondEvents.filter(event => event.date >= context.start);
+      const leaderboard = leaderboardForEvents(pondEvents);
+      const leaderIds = new Set(
+        leaderboardHasActiveLeader(leaderboard)
+          ? leaderboard.filter(entry => entry.rank === 1).map(entry => entry.player.id)
+          : []
+      );
+
+      for (const event of pondEvents) {
+        addSwimAssetsForEvent(urls, event, playerById(event.playerId), leaderIds);
+      }
+      for (const event of weekEvents) {
+        addWalkAssetsForEvent(urls, event, playerById(event.playerId), leaderIds);
+      }
+      return [...urls].filter(Boolean);
+    }
+
+    // Full production manifest retained for low-priority background warming
+    // and for developer/test controls without slowing the first usable paint.
+    const urls = new Set();
+    addCommonSceneAssets(urls);
+
+    for (const headwear of Object.values(HEADWEAR_ASSETS)) {
+      urls.add(headwear.walk);
+      urls.add(headwear.swim.left);
+      urls.add(headwear.swim.right);
+    }
+
+    urls.add(FLAMINGO_ASSETS.walk);
+    urls.add(FLAMINGO_ASSETS.swim);
+    for (const wake of Object.values(FLAMINGO_ASSETS.wakes)) urls.add(wake);
+
+    // Snake is a low-priority pond event, so its artwork warms after the first
+    // usable pond paint rather than increasing the blocking startup manifest.
+    Object.values(SNAKE_ASSETS).forEach(url => urls.add(url));
+
+    urls.add(ROLE_ASSETS.coach.walk);
+    urls.add(ROLE_ASSETS.coach.swim.left);
+    urls.add(ROLE_ASSETS.coach.swim.right);
+
+    for (const duckType of DUCK_TYPES) {
+      urls.add(SWIM_ASSETS.wakes[duckType]);
+      for (let frame = 1; frame <= 4; frame++) urls.add(splashFrameSrc(duckType, frame));
+      for (const featherTone of FEATHER_TONE_KEYS) {
+        for (const presentation of ["male", "female"]) {
+          urls.add(walkBodySrc(featherTone, presentation));
+          urls.add(walkShirtSrc(duckType, presentation));
+          urls.add(walkWingSrc("front", featherTone, presentation));
+          urls.add(walkWingSrc("rear", featherTone, presentation));
+        }
+        urls.add(walkLegSrc("front", featherTone));
+        urls.add(walkLegSrc("rear", featherTone));
+        urls.add(walkFaceSrc("sad", featherTone));
+        urls.add(walkFaceSrc("nervous", featherTone));
+        urls.add(swimBodySrc(duckType, featherTone));
+        urls.add(swimBodySrc(duckType, featherTone, "female"));
+      }
+    }
+
+    for (const featherTone of FEATHER_TONE_KEYS) {
+      urls.add(swimWingSrc("front", featherTone));
+      urls.add(swimWingSrc("back", featherTone));
+      urls.add(swimWingSrc("front", featherTone, "female"));
+      urls.add(swimWingSrc("back", featherTone, "female"));
+      urls.add(swimFaceSrc("sad", featherTone));
+      urls.add(swimBlinkSrc("sad", featherTone));
+    }
+
+    for (const hairKey of HAIR_KEYS) {
+      urls.add(walkHairSrc(hairKey));
+      urls.add(swimHairSrc(hairKey));
+      urls.add(leaderHairSrc(hairKey, "walk"));
+      urls.add(leaderHairSrc(hairKey, "swim"));
+    }
+    return [...urls].filter(Boolean);
+  }
+
+  const PRELOAD_CONCURRENCY = 6;
+  const PRELOAD_ATTEMPTS = 3;
+  const PRELOAD_LOAD_TIMEOUT_MS = 12000;
+  const PRELOAD_DECODE_TIMEOUT_MS = 7000;
+
+  function promiseWithTimeout(promise, timeoutMs, message) {
+    let timer = null;
+    return Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(message)), timeoutMs);
+      })
+    ]).finally(() => {
+      if (timer) clearTimeout(timer);
+    });
+  }
+
+  async function loadAndDecodeImageOnce(url) {
+    const image = new Image();
+    image.decoding = "async";
+    image.loading = "eager";
+
+    await promiseWithTimeout(
+      new Promise((resolve, reject) => {
+        image.addEventListener("load", resolve, { once: true });
+        image.addEventListener(
+          "error",
+          () => reject(new Error(`Image failed to load: ${url}`)),
+          { once: true }
+        );
+        image.src = url;
+      }),
+      PRELOAD_LOAD_TIMEOUT_MS,
+      `Image load timed out: ${url}`
+    );
+
+    if (!image.naturalWidth || !image.naturalHeight) {
+      throw new Error(`Image loaded without dimensions: ${url}`);
+    }
+
+    // Safari/iOS can occasionally leave decode() pending when a large number
+    // of images are requested together. The bounded queue below avoids that
+    // pressure; this timeout guarantees one sprite can never wedge the whole
+    // page at (for example) 92/99 forever.
+    if (typeof image.decode === "function") {
+      try {
+        await promiseWithTimeout(
+          image.decode(),
+          PRELOAD_DECODE_TIMEOUT_MS,
+          `Image decode timed out: ${url}`
+        );
+      } catch (decodeError) {
+        // A completed image with valid dimensions is still safe to retain.
+        // Give the browser two paint turns to finish its internal decode work.
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        if (!image.complete || !image.naturalWidth || !image.naturalHeight) {
+          throw decodeError;
+        }
+      }
+    }
+
+    return image;
+  }
+
+  async function preloadAndDecodeImage(url) {
+    if (PRELOADED_IMAGES.has(url)) return PRELOADED_IMAGES.get(url);
+
+    let lastError = null;
+    for (let attempt = 1; attempt <= PRELOAD_ATTEMPTS; attempt++) {
+      try {
+        const image = await loadAndDecodeImageOnce(url);
+        PRELOADED_IMAGES.set(url, image);
+        return image;
+      } catch (error) {
+        lastError = error;
+        if (attempt < PRELOAD_ATTEMPTS) {
+          await sleep(180 * attempt);
+        }
+      }
+    }
+
+    throw lastError || new Error(`Image failed to preload: ${url}`);
+  }
+
+  const duckControlButtons = [
+    duckTypeButton, featherToneButton, buildVariantButton, addMaleButton, addFemaleButton,
+    load60Button, testPresidentButton, testLeaderButton, testCaptainButton,
+    testCoachButton, resetButton, addPlayerButton, loadWeekButton,
+    playerSelect, weekSelect
+  ];
+
+  function setDuckControlsEnabled(enabled) {
+    for (const control of duckControlButtons) {
+      if (control) control.disabled = !enabled;
+    }
+  }
+
+  function loadingPercent(done, total) {
+    if (!total) return 100;
+    return Math.max(0, Math.min(100, Math.round((done / total) * 100)));
+  }
+
+  async function preloadManifest(manifest, { showProgress = false, concurrency = PRELOAD_CONCURRENCY } = {}) {
+    const pending = manifest.filter(url => url && !PRELOADED_IMAGES.has(url));
+    if (!pending.length) {
+      if (showProgress && loadingProgress) loadingProgress.textContent = "100%";
+      return [];
+    }
+
+    let cursor = 0;
+    let completed = 0;
+    const failures = [];
+
+    async function worker() {
+      while (true) {
+        const index = cursor++;
+        if (index >= pending.length) return;
+        const url = pending[index];
+        try {
+          await preloadAndDecodeImage(url);
+        } catch (error) {
+          failures.push({ url, error });
+          console.error("Duck asset preload failed", url, error);
+        } finally {
+          completed += 1;
+          if (showProgress) {
+            const pct = loadingPercent(completed, pending.length);
+            if (status) status.textContent = `Loading pond… ${pct}%`;
+            if (loadingProgress) loadingProgress.textContent = `${pct}%`;
+          }
+        }
+      }
+    }
+
+    const workerCount = Math.min(concurrency, pending.length);
+    await Promise.all(Array.from({ length: workerCount }, () => worker()));
+    return failures;
+  }
+
+  function warmRemainingAssetsInBackground() {
+    const remaining = productionImageManifest().filter(url => !PRELOADED_IMAGES.has(url));
+    if (!remaining.length) return;
+    const startWarm = () => {
+      preloadManifest(remaining, { showProgress: false, concurrency: 2 })
+        .then(failures => {
+          if (failures.length) console.warn(`Background asset warm completed with ${failures.length} failures.`);
+          else console.info(`Background asset warm completed: ${remaining.length} deferred images.`);
+        })
+        .catch(error => console.warn("Background asset warm failed", error));
+    };
+    if ("requestIdleCallback" in window) {
+      window.requestIdleCallback(startWarm, { timeout: 2500 });
+    } else {
+      window.setTimeout(startWarm, 1200);
+    }
+  }
+
+  async function ensureAssetsForWeek(context, { showOverlay = false } = {}) {
+    const manifest = productionImageManifest(context);
+    const pending = manifest.filter(url => !PRELOADED_IMAGES.has(url));
+    if (!pending.length) return true;
+
+    if (showOverlay && loadingOverlay) {
+      loadingOverlay.hidden = false;
+      loadingOverlay.classList.remove("loading-complete", "loading-failed");
+      if (loadingTitle) loadingTitle.textContent = "Loading week…";
+      if (loadingProgress) loadingProgress.textContent = "0%";
+    }
+
+    const failures = await preloadManifest(manifest, { showProgress: showOverlay });
+    if (failures.length) {
+      if (showOverlay && loadingOverlay) loadingOverlay.classList.add("loading-failed");
+      if (showOverlay && loadingTitle) loadingTitle.textContent = "Week loading failed";
+      if (showOverlay && loadingProgress) loadingProgress.textContent = "Reload to retry";
+      return false;
+    }
+
+    if (showOverlay && loadingOverlay) {
+      if (loadingProgress) loadingProgress.textContent = "100%";
+      if (loadingTitle) loadingTitle.textContent = "Pond ready";
+      loadingOverlay.classList.add("loading-complete");
+      window.setTimeout(() => { loadingOverlay.hidden = true; }, 180);
+    }
+    return true;
+  }
+
+  async function initialiseProductionAssets() {
+    setDuckControlsEnabled(false);
+    const initialContext = weekSelect?.value ? weekContextForMonday(weekSelect.value) : null;
+    const manifest = productionImageManifest(initialContext);
+    if (status) status.textContent = "Loading pond… 0%";
+    if (loadingOverlay) {
+      loadingOverlay.hidden = false;
+      loadingOverlay.classList.remove("loading-complete", "loading-failed");
+    }
+    if (loadingTitle) loadingTitle.textContent = "Loading pond…";
+    if (loadingProgress) loadingProgress.textContent = "0%";
+
+    const failures = await preloadManifest(manifest, { showProgress: true });
+
+    if (failures.length) {
+      setDuckControlsEnabled(false);
+      if (status) status.textContent = `Pond loading failed on ${failures.length} required image${failures.length === 1 ? "" : "s"}. Reload to retry.`;
+      if (loadingOverlay) loadingOverlay.classList.add("loading-failed");
+      if (loadingTitle) loadingTitle.textContent = "Pond loading failed";
+      if (loadingProgress) loadingProgress.textContent = "Reload to retry";
+      return;
+    }
+
+    setDuckControlsEnabled(true);
+    if (status) status.textContent = `Ready — ${manifest.length} images required for this pond loaded; remaining variants will warm in the background.`;
+    if (loadingProgress) loadingProgress.textContent = "100%";
+    if (loadingTitle) loadingTitle.textContent = "Pond ready";
+    if (loadingOverlay) {
+      loadingOverlay.classList.add("loading-complete");
+      window.setTimeout(() => {
+        loadingOverlay.hidden = true;
+        loadSelectedWeek({ assetsReady: true });
+        warmRemainingAssetsInBackground();
+      }, 220);
+    } else {
+      loadSelectedWeek({ assetsReady: true });
+      warmRemainingAssetsInBackground();
+    }
+  }
+
+  const ducks = new Map();
+  let nextDuckId = 1;
+  let activeSwimmers = 0;
+  const collisionPairs = new Map();
+  let nextGlobalCollisionReactionAt = 0;
+  let nextGlobalIdleWingAt = 0;
+
+  let snakeEventEnabled = false;
+  let snakeBusy = false;
+  let snakeWatchTimer = null;
+  let snakeNextPeekAt = Infinity;
+  let snakeNextEligibleAt = Infinity;
+  let snakeRunToken = 0;
+
+  function randomCollisionGap() {
+    return 8000 + Math.random() * 7000;
+  }
+
+  function randomDuckCollisionCooldown() {
+    return 18000 + Math.random() * 12000;
+  }
+  let worldScale = 1;
+  let mobilePanInitialised = false;
+  let mobilePondExpanded = false;
+  let mobileUserZoom = 1;
+  const MOBILE_USER_ZOOM_MIN = 1;
+  const MOBILE_USER_ZOOM_MAX = 2.5;
+  let pinchState = null;
+  let scaleScrollFrame = null;
+
+  const waterPolygon = [
+    [11.5,57.0],[20.0,53.5],[31.0,51.5],[44.0,50.7],
+    [59.0,51.0],[73.0,52.0],[84.5,54.5],[91.0,58.5],
+    [93.5,63.0],[92.0,67.5],[88.0,72.0],[81.5,76.5],
+    [73.0,81.0],[62.0,85.0],[50.5,87.5],[39.0,86.8],
+    [30.0,84.0],[22.5,80.5],[16.5,75.5],[12.5,69.5],
+    [10.0,63.0]
+  ];
+
+  const pierExclusionBoxes = [
+    { minX: -0.8, maxX: 30.8, minY: 66.2, maxY: 75.2 },
+    { minX: 28.8, maxX: 35.6, minY: 61.4, maxY: 67.6 },
+    { minX: 31.0, maxX: 35.8, minY: 67.0, maxY: 74.8 }
+  ];
+
+  const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+  const pctToWorldX = value => WORLD_WIDTH * value / 100;
+  const pctToWorldY = value => WORLD_HEIGHT * value / 100;
+
+  function mobilePondEnabled() {
+    return window.matchMedia("(max-width: 900px) and (pointer: coarse)").matches;
+  }
+
+  function portraitMobileMode() {
+    return mobilePondEnabled() && window.matchMedia("(orientation: portrait)").matches;
+  }
+
+  function landscapeMobileMode() {
+    return mobilePondEnabled() && window.matchMedia("(orientation: landscape)").matches;
+  }
+
+  function mobileBaseZoomFactor() {
+    if (!mobilePondEnabled()) return 1;
+    if (portraitMobileMode()) return mobilePondExpanded ? 1.92 : 1.60;
+    // Landscape already has useful width. Focus mode removes chrome but does
+    // not force an additional crop; the user can pinch in when desired.
+    return 1;
+  }
+
+  function mobileZoomFactor() {
+    if (!mobilePondEnabled()) return 1;
+    return mobileBaseZoomFactor() * mobileUserZoom;
+  }
+
+  function updateMobileZoomUi() {
+    if (!mobileZoomReset) return;
+    const zoomed = mobilePondEnabled() && mobileUserZoom > 1.01;
+    mobileZoomReset.hidden = !zoomed;
+    if (zoomed) mobileZoomReset.textContent = `Reset Zoom (${mobileUserZoom.toFixed(1)}×)`;
+  }
+
+  function applyWorldScale(options = {}) {
+    const preserveWorldPoint = options.preserveWorldPoint || null;
+    const previousScrollableX = Math.max(0, worldStage.offsetWidth - scene.clientWidth);
+    const previousScrollableY = Math.max(0, worldStage.offsetHeight - scene.clientHeight);
+    const previousRatioX = previousScrollableX > 0 ? scene.scrollLeft / previousScrollableX : 0;
+    const previousRatioY = previousScrollableY > 0 ? scene.scrollTop / previousScrollableY : 0;
+
+    const widthFitScale = scene.clientWidth / WORLD_WIDTH;
+    const landscapeViewportHeight = landscapeMobileMode()
+      ? Math.max(180, window.innerHeight - 12)
+      : null;
+    // In mobile landscape the pond must fit the actual visible browser height
+    // at 1x so the DOCUMENT never needs vertical scrolling. Zoomed views grow
+    // only inside this clipped scene viewport and are panned internally.
+    const fitScale = landscapeViewportHeight
+      ? Math.min(widthFitScale, landscapeViewportHeight / WORLD_HEIGHT)
+      : widthFitScale;
+    const baseZoom = mobileBaseZoomFactor();
+    const zoom = mobileZoomFactor();
+    worldScale = fitScale * zoom;
+
+    const renderedWidth = Math.round(WORLD_WIDTH * worldScale);
+    const renderedHeight = Math.round(WORLD_HEIGHT * worldScale);
+    const viewportHeight = landscapeViewportHeight
+      ? Math.round(WORLD_HEIGHT * fitScale)
+      : mobilePondEnabled()
+        ? Math.round(WORLD_HEIGHT * fitScale * baseZoom)
+        : renderedHeight;
+
+    worldStage.style.width = `${renderedWidth}px`;
+    worldStage.style.height = `${renderedHeight}px`;
+    scene.style.height = `${viewportHeight}px`;
+
+    world.style.left = "0";
+    world.style.top = "0";
+    world.style.transform = `scale(${worldScale})`;
+    updateMobileZoomUi();
+
+    if (scaleScrollFrame) cancelAnimationFrame(scaleScrollFrame);
+    scaleScrollFrame = requestAnimationFrame(() => {
+      scaleScrollFrame = null;
+      const maxScrollX = Math.max(0, renderedWidth - scene.clientWidth);
+      const maxScrollY = Math.max(0, renderedHeight - scene.clientHeight);
+
+      if (mobilePondEnabled()) {
+        if (preserveWorldPoint) {
+          // Preserve a logical world coordinate beneath the CURRENT pinch
+          // midpoint. This avoids the v0.64 drift toward a fixed corner.
+          const nextLeft = preserveWorldPoint.worldX * worldScale - preserveWorldPoint.viewportX;
+          const nextTop = preserveWorldPoint.worldY * worldScale - preserveWorldPoint.viewportY;
+          scene.scrollLeft = Math.max(0, Math.min(maxScrollX, nextLeft));
+          scene.scrollTop = Math.max(0, Math.min(maxScrollY, nextTop));
+        } else if (!mobilePanInitialised) {
+          scene.scrollLeft = 0;
+          scene.scrollTop = 0;
+          mobilePanInitialised = true;
+        } else {
+          scene.scrollLeft = Math.max(0, Math.min(maxScrollX, previousRatioX * maxScrollX));
+          scene.scrollTop = Math.max(0, Math.min(maxScrollY, previousRatioY * maxScrollY));
+        }
+      } else {
+        scene.scrollLeft = 0;
+        scene.scrollTop = 0;
+        mobilePanInitialised = false;
+        mobileUserZoom = 1;
+        updateMobileZoomUi();
+      }
+    });
+  }
+
+  function setWorldPosition(element, xPct, yPct) {
+    element.style.left = `${pctToWorldX(xPct)}px`;
+    element.style.top = `${pctToWorldY(yPct)}px`;
+  }
+
+  function updateCounts() {
+    const count = ducks.size;
+    if (panelDuckCount) panelDuckCount.textContent = String(count);
+    if (scoreboardMode === "leaderboard") showLeaderboardScoreboard();
+  }
+
+  function maxActiveSwimmers() {
+    return Math.max(4, Math.min(10, Math.round(ducks.size * .15)));
+  }
+
+  function scaleForY(y) {
+    const clamped = Math.max(51, Math.min(89, y));
+    const t = (clamped - 51) / 38;
+    return .45 + t * .43;
+  }
+
+  function applyDuckSize(duck) {
+    const variant = BUILD_VARIANTS[duck.dataset.buildVariant] || BUILD_VARIANTS.standard;
+    // Keep the underlying sprite canvas constant. Build is a deliberate
+    // caricature layer applied separately from pond-perspective scaling.
+    duck.style.setProperty("--duck-size", "130px");
+    duck.style.setProperty("--build-scale-x", variant.scaleX.toFixed(3));
+    duck.style.setProperty("--build-scale-y", variant.scaleY.toFixed(3));
+  }
+
+  // v0.67: restored verbatim from the stable v0.64 simulation/depth path.
+  // These helpers must remain independent of the mobile view/zoom layer.
+  function depthZForY(y) {
+    return 100 + Math.round(y * 10);
+  }
+
+  const FLAMINGO_DEPTH_Y_OFFSET = 1.32;
+
+  function setDepth(duck, y) {
+    duck.style.setProperty("--duck-scale", scaleForY(y).toFixed(3));
+
+    // Depth sorting is based on the visible water-contact point, not simply
+    // the duck sprite's logical Y. The flamingo wake finishes 49 source pixels
+    // lower than the standard wake (466 vs 417 on the 512px canvas), which is
+    // about 1.32 pond-Y units at the production sprite size. This means a
+    // flamingo swimmer now passes in front of/behind other ducks according to
+    // the bottom of its visible wake while preserving the same swim path/scale.
+    const depthY = y + (duckHasFlamingo(duck) ? FLAMINGO_DEPTH_Y_OFFSET : 0);
+
+    // Swimming ducks sort against one another by their visual waterline, but
+    // remain below the permanent pier layer (z-index 2200). Entry ducks are
+    // explicitly raised above the pier while waddling and jumping.
+    duck.style.zIndex = String(depthZForY(depthY));
+  }
+
+  function setEffectDepth(effect, y) {
+    // Splash/resurface effects participate in the same Y-depth field as the
+    // ducks. A duck lower on screen therefore passes in front of the splash;
+    // a duck higher on screen remains behind it.
+    effect.style.zIndex = String(depthZForY(y));
+  }
+
+  function pointOnSegment(x, y, x1, y1, x2, y2, tolerance = .12) {
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const lengthSq = dx * dx + dy * dy;
+    if (lengthSq === 0) return Math.hypot(x - x1, y - y1) <= tolerance;
+
+    const t = Math.max(0, Math.min(1, ((x - x1) * dx + (y - y1) * dy) / lengthSq));
+    const px = x1 + t * dx;
+    const py = y1 + t * dy;
+    return Math.hypot(x - px, y - py) <= tolerance;
+  }
+
+  function pointInPolygonInclusive(x, y, polygon) {
+    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+      if (pointOnSegment(x, y, polygon[j][0], polygon[j][1], polygon[i][0], polygon[i][1])) {
+        return true;
+      }
+    }
+
+    let inside = false;
+    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+      const [xi, yi] = polygon[i];
+      const [xj, yj] = polygon[j];
+      const intersects =
+        ((yi > y) !== (yj > y)) &&
+        (x < ((xj - xi) * (y - yi)) / ((yj - yi) || .000001) + xi);
+
+      if (intersects) inside = !inside;
+    }
+    return inside;
+  }
+
+  function pointInBox(x, y, box) {
+    return (
+      x >= box.minX &&
+      x <= box.maxX &&
+      y >= box.minY &&
+      y <= box.maxY
+    );
+  }
+
+  function inPier(x, y) {
+    return pierExclusionBoxes.some(box => pointInBox(x, y, box));
+  }
+
+  function inWater(x, y) {
+    return pointInPolygonInclusive(x, y, waterPolygon) && !inPier(x, y);
+  }
+
+  function underPierRestLineY(x) {
+    const minX = 7.5;
+    const maxX = 35.5;
+    const leftY = 76.8;
+    const rightY = 71.5;
+    const clampedX = Math.max(minX, Math.min(maxX, x));
+    const t = (clampedX - minX) / (maxX - minX);
+    return leftY + (rightY - leftY) * t;
+  }
+
+  function inUnderPierRestExclusion(x, y) {
+    if (x < 7.5 || x > 35.5) return false;
+    const bodyClearance = 1.2;
+    return y >= underPierRestLineY(x) - bodyClearance;
+  }
+
+  function canDuckStopAt(x, y) {
+    return (
+      Number.isFinite(x) &&
+      Number.isFinite(y) &&
+      inWater(x, y) &&
+      !inUnderPierRestExclusion(x, y)
+    );
+  }
+
+  function nearestValidStoppingPoint(point) {
+    if (canDuckStopAt(point.x, point.y)) return point;
+
+    for (let radius = .6; radius <= 18; radius += .6) {
+      const samples = Math.max(16, Math.round(radius * 7));
+      for (let i = 0; i < samples; i++) {
+        const angle = (i / samples) * Math.PI * 2;
+        const candidate = {
+          x: point.x + Math.cos(angle) * radius,
+          y: point.y + Math.sin(angle) * radius
+        };
+        if (canDuckStopAt(candidate.x, candidate.y)) return candidate;
+      }
+    }
+
+    return { x: 55, y: 70 };
+  }
+
+  function canDuckTravelAt(x, y) {
+    return inWater(x, y) && !inUnderPierRestExclusion(x, y);
+  }
+
+  function segmentClear(from, to) {
+    const steps = Math.max(
+      12,
+      Math.ceil(Math.hypot(to.x - from.x, to.y - from.y) * 1.6)
+    );
+
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const x = from.x + (to.x - from.x) * t;
+      const y = from.y + (to.y - from.y) * t;
+
+      // Do not let swimming routes cut underneath or in front of the pier.
+      // They must pass around its right-hand end.
+      if (!canDuckTravelAt(x, y)) return false;
+    }
+
+    return true;
+  }
+
+  function distance(a, b) {
+    return Math.hypot(a.x - b.x, a.y - b.y);
+  }
+
+  const PIER_REAR_WAYPOINT = { x: 38.4, y: 66.0 };
+  const PIER_FRONT_WAYPOINT = { x: 39.5, y: 79.0 };
+
+  function routeIsClear(points) {
+    for (let i = 0; i < points.length - 1; i++) {
+      if (!segmentClear(points[i], points[i + 1])) return false;
+    }
+    return true;
+  }
+
+  function planRoute(from, to) {
+    const safeTo = nearestValidStoppingPoint(to);
+
+    if (segmentClear(from, safeTo)) return [safeTo];
+
+    const destinationPrefersFront = safeTo.y >= 75.0;
+    const candidates = destinationPrefersFront
+      ? [
+          [PIER_FRONT_WAYPOINT, safeTo],
+          [PIER_REAR_WAYPOINT, PIER_FRONT_WAYPOINT, safeTo],
+          [PIER_REAR_WAYPOINT, safeTo]
+        ]
+      : [
+          [PIER_REAR_WAYPOINT, safeTo],
+          [PIER_FRONT_WAYPOINT, PIER_REAR_WAYPOINT, safeTo],
+          [PIER_FRONT_WAYPOINT, safeTo]
+        ];
+
+    for (const route of candidates) {
+      if (
+        route.every(point => canDuckStopAt(point.x, point.y)) &&
+        routeIsClear([from, ...route])
+      ) {
+        return route;
+      }
+    }
+
+    // Keep the endpoint safe even if a route cannot be found. This fallback
+    // should be rare and remains visible through Directed Add testing.
+    return [safeTo];
+  }
+
+  async function animateRoute(duck, from, to, duration) {
+    const route = planRoute(from, to);
+    const legs = [];
+    let current = from;
+    let totalDistance = 0;
+
+    for (const point of route) {
+      const legDistance = Math.max(.01, distance(current, point));
+      legs.push({ from: current, to: point, distance: legDistance });
+      totalDistance += legDistance;
+      current = point;
+    }
+
+    for (const leg of legs) {
+      const legDuration = Math.max(
+        500,
+        duration * (leg.distance / totalDistance)
+      );
+      const result = await animateMove(duck, leg.from, leg.to, legDuration);
+      if (result?.highFive) break;
+    }
+  }
+
+  function randomWaterPoint() {
+    for (let i = 0; i < 500; i++) {
+      const point = {
+        x: 11 + Math.random() * 82,
+        y: 51 + Math.random() * 37
+      };
+      if (canDuckStopAt(point.x, point.y)) return point;
+    }
+
+    return nearestValidStoppingPoint({ x: 55, y: 70 });
+  }
+
+  function distributedPoint(excludeDuck = null) {
+    let best = randomWaterPoint();
+    let bestDistance = -1;
+
+    for (let attempt = 0; attempt < 45; attempt++) {
+      const candidate = randomWaterPoint();
+      let nearest = Infinity;
+
+      for (const duck of ducks.values()) {
+        if (duck === excludeDuck || !duck.dataset.x) continue;
+        const other = {
+          x: Number(duck.dataset.x),
+          y: Number(duck.dataset.y)
+        };
+        nearest = Math.min(nearest, distance(candidate, other));
+      }
+
+      if (nearest > bestDistance) {
+        best = candidate;
+        bestDistance = nearest;
+      }
+    }
+
+    return nearestValidStoppingPoint(best);
+  }
+
+  function nearbyPoint(current) {
+    // v0.46: ducks make committed swims rather than tiny local hops.
+    // The vertical range is still compressed slightly to suit the pond perspective.
+    for (let i = 0; i < 180; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 9 + Math.random() * 13;
+      const candidate = {
+        x: current.x + Math.cos(angle) * radius,
+        y: current.y + Math.sin(angle) * radius * .64
+      };
+
+      if (canDuckStopAt(candidate.x, candidate.y) && segmentClear(current, candidate)) {
+        return candidate;
+      }
+    }
+
+    // If the duck is boxed in near an edge, fall back to the older shorter move.
+    for (let i = 0; i < 100; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 5 + Math.random() * 7;
+      const candidate = {
+        x: current.x + Math.cos(angle) * radius,
+        y: current.y + Math.sin(angle) * radius * .58
+      };
+      if (canDuckStopAt(candidate.x, candidate.y) && segmentClear(current, candidate)) {
+        return candidate;
+      }
+    }
+
+    return current;
+  }
+
+  async function createSplashAnimation(xPct, yPct, duckType = "standard") {
+    const splash = document.createElement("div");
+    splash.className = "splash-sprite";
+
+    const image = document.createElement("img");
+    image.alt = "";
+    splash.appendChild(image);
+
+    setWorldPosition(splash, xPct, yPct);
+    setEffectDepth(splash, yPct);
+    duckLayer.appendChild(splash);
+
+    const timings = [90, 105, 130, 175];
+    for (let i = 1; i <= 4; i++) {
+      image.src = splashFrameSrc(duckType, i);
+      await sleep(timings[i - 1]);
+    }
+
+    splash.remove();
+  }
+
+  function createResurfaceEffect(xPct, yPct, duckType = "standard") {
+    const ripple = document.createElement("div");
+    ripple.className = "resurface-sprite";
+
+    const image = document.createElement("img");
+    image.src = splashFrameSrc(duckType, 1);
+    image.alt = "";
+    ripple.appendChild(image);
+
+    setWorldPosition(ripple, xPct, yPct);
+    setEffectDepth(ripple, yPct);
+    // v0.85: the resurfacing ring should sit in front of the duck while the
+    // swimming sprite fades/rises into place, rather than sorting behind it.
+    ripple.style.zIndex = String(depthZForY(yPct) + 6);
+    duckLayer.appendChild(ripple);
+    ripple.addEventListener("animationend", () => ripple.remove(), { once: true });
+  }
+
+  function currentPosition(duck) {
+    return {
+      x: Number(duck.dataset.x),
+      y: Number(duck.dataset.y)
+    };
+  }
+
+  function setFacingForMovement(duck, dx) {
+    // Dead-zone prevents twitching when a duck is moving almost vertically.
+    if (Math.abs(dx) < .45) return;
+    const stack = duck.querySelector(".swim-stack");
+    if (!stack) return;
+
+    const nextFacing = dx > 0 ? "right" : "left";
+    if (duck.dataset.facing === nextFacing) return;
+
+    stack.style.setProperty("--facing-scale", nextFacing === "right" ? "-1" : "1");
+    stack.style.setProperty("--hat-counter-scale", nextFacing === "right" ? "-1" : "1");
+
+    const headwear = duck.querySelector(".swim-headwear");
+    if (headwear) {
+      const src = headwearSrc(duck, "swim", nextFacing);
+      if (src) {
+        headwear.src = src;
+        headwear.hidden = false;
+      } else {
+        headwear.removeAttribute("src");
+        headwear.hidden = true;
+      }
+    }
+
+    const whistle = duck.querySelector(".swim-coach-whistle");
+    if (whistle) whistle.src = coachWhistleSrc("swim", nextFacing);
+
+    duck.dataset.facing = nextFacing;
+  }
+
+  function curvedControlPoint(from, to) {
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const length = Math.max(1, Math.hypot(dx, dy));
+    const nx = -dy / length;
+    const ny = dx / length;
+    const direction = Math.random() < .5 ? -1 : 1;
+
+    // Deliberately larger bend than v0.45 so the curve is actually visible.
+    // Try successively smaller arcs if the wide curve would leave the water.
+    const preferredBend = Math.min(7.2, Math.max(2.0, length * (.26 + Math.random() * .10)));
+
+    for (const factor of [1, .78, .58, .38, .18]) {
+      const bend = preferredBend * factor;
+      const control = {
+        x: (from.x + to.x) / 2 + nx * bend * direction,
+        y: (from.y + to.y) / 2 + ny * bend * direction * .66
+      };
+
+      let valid = true;
+      for (let i = 1; i < 16; i++) {
+        const point = quadraticPoint(from, control, to, i / 16);
+        if (!canDuckTravelAt(point.x, point.y)) {
+          valid = false;
+          break;
+        }
+      }
+      if (valid) return control;
+    }
+
+    return { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
+  }
+
+  function quadraticPoint(from, control, to, t) {
+    const mt = 1 - t;
+    return {
+      x: mt * mt * from.x + 2 * mt * t * control.x + t * t * to.x,
+      y: mt * mt * from.y + 2 * mt * t * control.y + t * t * to.y
+    };
+  }
+
+  function quadraticTangent(from, control, to, t) {
+    return {
+      x: 2 * (1 - t) * (control.x - from.x) + 2 * t * (to.x - control.x),
+      y: 2 * (1 - t) * (control.y - from.y) + 2 * t * (to.y - control.y)
+    };
+  }
+
+  function swimProgress(t) {
+    // A visible accelerate -> cruise -> decelerate profile.
+    // 20% of the time is spent accelerating, 60% cruising, 20% slowing.
+    const ramp = .20;
+    const totalArea = .80;
+
+    if (t < ramp) {
+      return (0.5 * t * t / ramp) / totalArea;
+    }
+
+    if (t <= 1 - ramp) {
+      return (0.5 * ramp + (t - ramp)) / totalArea;
+    }
+
+    const u = t - (1 - ramp);
+    return (0.5 * ramp + (1 - 2 * ramp) + u - 0.5 * u * u / ramp) / totalArea;
+  }
+
+  function inverseSwimProgress(target) {
+    let lo = 0;
+    let hi = 1;
+    for (let i = 0; i < 18; i++) {
+      const mid = (lo + hi) / 2;
+      if (swimProgress(mid) < target) lo = mid;
+      else hi = mid;
+    }
+    return (lo + hi) / 2;
+  }
+
+  function animateMove(duck, from, to, duration, options = {}) {
+    const safeTo = nearestValidStoppingPoint(to);
+    const control = options.control || curvedControlPoint(from, safeTo);
+    const highFive = options.highFive || null;
+
+    return new Promise(resolve => {
+      const started = performance.now();
+      const initialTangent = quadraticTangent(from, control, safeTo, 0);
+      setFacingForMovement(duck, initialTangent.x);
+
+      const chord = { x: safeTo.x - from.x, y: safeTo.y - from.y };
+      const cross = chord.x * (control.y - from.y) - chord.y * (control.x - from.x);
+      const stack = duck.querySelector(".swim-stack");
+      const baseLean = Math.abs(cross) < .25 ? 0 : (cross > 0 ? 2.8 : -2.8);
+      if (stack) stack.style.setProperty("--swim-tilt", `${baseLean}deg`);
+
+      let highFiveStarted = false;
+      let highFiveFinished = false;
+      let contactRaw = 0;
+      let highFiveStartRaw = 0;
+      let highFiveEndRaw = 0;
+
+      if (highFive) {
+        contactRaw = inverseSwimProgress(highFive.contactT);
+        const leadMs = Math.max(560, Math.min(980, duration * .11));
+        const trailMs = Math.max(260, Math.min(540, duration * .05));
+        highFiveStartRaw = Math.max(0, contactRaw - leadMs / duration);
+        highFiveEndRaw = Math.min(1, contactRaw + trailMs / duration);
+        const wingDuration = Math.round((highFiveEndRaw - highFiveStartRaw) * duration);
+        highFive.wingDuration = Math.max(760, wingDuration);
+      }
+
+      function beginHighFive() {
+        if (!highFive || highFiveStarted) return;
+        const stationary = highFive.stationary;
+        if (!stationary?.isConnected || stationary.dataset.motionState !== "floating") return;
+
+        highFiveStarted = true;
+        duck.dataset.highFiveActive = "true";
+        stationary.dataset.highFiveActive = "true";
+        duck.dataset.reacting = "true";
+        stationary.dataset.reacting = "true";
+        clearTimeout(stationary._roamTimer);
+
+        const direction = highFive.direction;
+        setFacingForMovement(duck, direction);
+        setFacingForMovement(stationary, -direction);
+
+        const durationMs = `${highFive.wingDuration}ms`;
+        duck.style.setProperty("--highfive-duration", durationMs);
+        stationary.style.setProperty("--highfive-duration", durationMs);
+        duck.classList.add("same-player-highfive", "same-player-highfive-mover");
+        stationary.classList.add("same-player-highfive", "same-player-highfive-stationary");
+      }
+
+      function endHighFive() {
+        if (!highFive || highFiveFinished) return;
+        highFiveFinished = true;
+        const stationary = highFive.stationary;
+        const pair = [duck, stationary];
+        for (const actor of pair) {
+          if (!actor?.isConnected) continue;
+          actor.classList.remove(
+            "same-player-highfive",
+            "same-player-highfive-mover",
+            "same-player-highfive-stationary",
+            "same-player-highfive-contact"
+          );
+          actor.style.removeProperty("--highfive-duration");
+          actor.dataset.highFiveActive = "false";
+          actor.dataset.reacting = "false";
+          restoreIdleFace(actor);
+        }
+        if (stationary?.isConnected && stationary.dataset.motionState === "floating") {
+          scheduleRoam(stationary, 2200 + Math.random() * 2600);
+        }
+      }
+
+      function frame(now) {
+        if (!duck.isConnected) {
+          endHighFive();
+          resolve();
+          return;
+        }
+
+        const raw = Math.min(1, (now - started) / duration);
+        const progress = swimProgress(raw);
+        const point = quadraticPoint(from, control, safeTo, progress);
+        const tangent = quadraticTangent(from, control, safeTo, progress);
+
+        setFacingForMovement(duck, tangent.x);
+
+        if (stack) {
+          const settleStart = .80;
+          let tiltFactor = 1;
+          if (raw > settleStart) {
+            const u = Math.min(1, (raw - settleStart) / (1 - settleStart));
+            const smooth = u * u * (3 - 2 * u);
+            tiltFactor = 1 - smooth;
+          }
+          stack.style.setProperty("--swim-tilt", `${(baseLean * tiltFactor).toFixed(3)}deg`);
+        }
+
+        setWorldPosition(duck, point.x, point.y);
+        duck.dataset.x = point.x.toFixed(3);
+        duck.dataset.y = point.y.toFixed(3);
+        setDepth(duck, point.y);
+
+        if (highFive) {
+          if (!highFiveStarted && raw >= highFiveStartRaw) beginHighFive();
+          if (highFiveStarted && !highFiveFinished) {
+            const stationary = highFive.stationary;
+            if (!stationary?.isConnected || stationary.dataset.motionState !== "floating") {
+              endHighFive();
+            } else if (Math.abs(raw - contactRaw) < .018) {
+              duck.classList.add("same-player-highfive-contact");
+              stationary.classList.add("same-player-highfive-contact");
+            } else {
+              duck.classList.remove("same-player-highfive-contact");
+              stationary.classList.remove("same-player-highfive-contact");
+            }
+            if (raw >= highFiveEndRaw) endHighFive();
+          }
+        }
+
+        checkDuckCollisions(duck);
+
+        if (raw < 1) {
+          duck._moveFrame = requestAnimationFrame(frame);
+        } else {
+          if (stack) stack.style.setProperty("--swim-tilt", "0deg");
+          endHighFive();
+          resolve();
+        }
+      }
+
+      duck._moveFrame = requestAnimationFrame(frame);
+    });
+  }
+
+
+  function pointToSegmentProjection(point, from, to) {
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const len2 = dx * dx + dy * dy;
+    if (len2 < .0001) return { t: 0, distance: distance(point, from) };
+    const t = Math.max(0, Math.min(1, ((point.x - from.x) * dx + (point.y - from.y) * dy) / len2));
+    const projected = { x: from.x + dx * t, y: from.y + dy * t };
+    return { t, distance: distance(point, projected), projected };
+  }
+
+  function plannedSamePlayerHighFive(mover, from, to) {
+    const playerId = String(mover.dataset.playerId || "");
+    if (!playerId) return null;
+
+    const travelDx = to.x - from.x;
+    if (Math.abs(travelDx) < 4.0) return null;
+    const direction = Math.sign(travelDx);
+    let best = null;
+    let bestScore = Infinity;
+
+    for (const other of ducks.values()) {
+      if (other === mover || !other?.isConnected) continue;
+      if (other.dataset.motionState !== "floating") continue;
+      if (String(other.dataset.playerId || "") !== playerId) continue;
+      if (!samePlayerPairReady(mover, other)) continue;
+
+      const op = currentPosition(other);
+      const projection = pointToSegmentProjection(op, from, to);
+      if (projection.t < .24 || projection.t > .76) continue;
+      if (projection.distance > 6.2) continue;
+
+      const score = projection.distance + Math.abs(projection.t - .5) * 2.5;
+      if (score < bestScore) {
+        best = { stationary: other, point: op, projection };
+        bestScore = score;
+      }
+    }
+
+    if (!best) return null;
+
+    // Bring the pass line slightly closer so the raised front wings can
+    // visibly overlap/touch instead of reading as two separate waves.
+    const contactSpacing = 2.7;
+    const contact = {
+      x: best.point.x - direction * contactSpacing,
+      y: best.point.y
+    };
+
+    const contactT = Math.max(.28, Math.min(.72, best.projection.t));
+    const mt = 1 - contactT;
+    const denom = 2 * mt * contactT;
+    const control = {
+      x: (contact.x - mt * mt * from.x - contactT * contactT * to.x) / denom,
+      y: (contact.y - mt * mt * from.y - contactT * contactT * to.y) / denom
+    };
+
+    // Only accept the interaction if the resulting route stays within the
+    // actual swimable pond. If not, keep the original random swim untouched.
+    for (let i = 1; i < 24; i++) {
+      const p = quadraticPoint(from, control, to, i / 24);
+      if (!canDuckTravelAt(p.x, p.y)) return null;
+    }
+
+    const key = collisionPairKey(mover, best.stationary);
+    collisionPairs.set(key, performance.now());
+    best.stationary.dataset.highFiveReserved = "true";
+    clearTimeout(best.stationary._roamTimer);
+
+    return {
+      stationary: best.stationary,
+      direction,
+      contactT,
+      control
+    };
+  }
+
+  function scheduleRoam(duck, delay = 1000 + Math.random() * 5000) {
+    clearTimeout(duck._roamTimer);
+
+    duck._roamTimer = setTimeout(async () => {
+      if (!duck.isConnected || duck.dataset.motionState !== "floating") return;
+
+      if (activeSwimmers >= maxActiveSwimmers()) {
+        scheduleRoam(duck, 800 + Math.random() * 1800);
+        return;
+      }
+
+      const from = currentPosition(duck);
+      const to = nearbyPoint(from);
+      const pace = Number(duck.dataset.swimPace || "1");
+      const duration = Math.max(
+        4600,
+        Math.min(10500, (3000 + distance(from, to) * 350) / pace)
+      );
+
+      const highFive = plannedSamePlayerHighFive(duck, from, to);
+
+      activeSwimmers++;
+      duck.dataset.motionState = "swimming";
+      duck.dataset.routeKind = "normal";
+      duck.classList.remove("floating");
+
+      if (highFive) {
+        await animateMove(duck, from, to, duration, {
+          control: highFive.control,
+          highFive
+        });
+        if (highFive.stationary?.isConnected) {
+          highFive.stationary.dataset.highFiveReserved = "false";
+        }
+      } else {
+        await animateRoute(duck, from, to, duration);
+      }
+
+      duck.dataset.routeKind = "";
+      activeSwimmers = Math.max(0, activeSwimmers - 1);
+      if (!duck.isConnected) return;
+
+      duck.dataset.motionState = "floating";
+      duck.classList.add("floating");
+      if (!runPendingClickScoot(duck)) {
+        scheduleRoam(duck, 3200 + Math.random() * 9000);
+      }
+    }, delay);
+  }
+
+
+
+  function updateFeatherToneButton() {
+    const tone = FEATHER_TONES[selectedFeatherTone] || FEATHER_TONES.white;
+    featherToneButton.textContent = `Feather: ${tone.label}`;
+  }
+
+  function updateBuildVariantButton() {
+    const variant = BUILD_VARIANTS[selectedBuildVariant] || BUILD_VARIANTS.standard;
+    buildVariantButton.textContent = `Build: ${variant.label}`;
+  }
+
+  function setDuckFace(duck, faceName) {
+    const face = duck.querySelector(".swim-face");
+    if (!face) return;
+
+    if (!["neutral", "sad"].includes(faceName)) {
+      cancelBlink(duck, false);
+      cancelIdleWingFlick(duck);
+    } else if (duck.dataset.blinking === "true") {
+      cancelBlink(duck, false);
+    }
+
+    face.src = swimFaceSrc(faceName, duck.dataset.featherTone);
+    duck.dataset.face = faceName;
+  }
+
+  function chooseIdleFace(duck, forceChange = false) {
+    const current = duck.dataset.idleFace || "neutral";
+    let next = Math.random() < .68 ? "neutral" : "sad";
+
+    if (forceChange && next === current) {
+      next = current === "neutral" ? "sad" : "neutral";
+    }
+
+    duck.dataset.idleFace = next;
+    return next;
+  }
+
+  function restoreIdleFace(duck) {
+    if (!duck.isConnected || duck.dataset.reacting === "true") return;
+    setDuckFace(duck, duck.dataset.idleFace || "neutral");
+  }
+
+  function randomBlinkGap() {
+    return 6500 + Math.random() * 10500;
+  }
+
+  function cancelBlink(duck, restore = false) {
+    clearTimeout(duck._blinkReturnTimer);
+    clearTimeout(duck._doubleBlinkTimer);
+    clearTimeout(duck._doubleBlinkReturnTimer);
+    duck._blinkReturnTimer = null;
+    duck._doubleBlinkTimer = null;
+    duck._doubleBlinkReturnTimer = null;
+    duck.dataset.blinking = "false";
+
+    // v0.89: blink cancellation must not clear click-scoot state.
+    // reactToClick() changes the face immediately, which calls cancelBlink();
+    // clearing these flags here was cancelling the requested scoot before it began.
+    if (restore && duck.isConnected &&
+        duck.dataset.reacting !== "true" &&
+        duck.dataset.collisionEscaping !== "true") {
+      const idleFace = duck.dataset.idleFace || "neutral";
+      const face = duck.querySelector(".swim-face");
+      if (face) {
+        face.src = swimFaceSrc(idleFace, duck.dataset.featherTone);
+        duck.dataset.face = idleFace;
+      }
+    }
+  }
+
+  function canBlink(duck) {
+    return duck.isConnected &&
+      ["floating", "swimming"].includes(duck.dataset.motionState) &&
+      duck.dataset.reacting !== "true" &&
+      duck.dataset.collisionEscaping !== "true" &&
+      !duck.classList.contains("collision-bump") &&
+      !duck.classList.contains("reacting") &&
+      ["neutral", "sad"].includes(duck.dataset.face || "neutral");
+  }
+
+  function showBlinkFrame(duck) {
+    if (!canBlink(duck)) return false;
+    const face = duck.querySelector(".swim-face");
+    if (!face) return false;
+
+    const idleFace = duck.dataset.idleFace === "sad" ? "sad" : "neutral";
+    face.src = swimBlinkSrc(idleFace, duck.dataset.featherTone);
+    duck.dataset.blinking = "true";
+    return true;
+  }
+
+  function finishBlinkFrame(duck) {
+    if (!duck.isConnected) return;
+    duck.dataset.blinking = "false";
+    duck.dataset.clickScootPending = "false";
+    duck.dataset.clickScooting = "false";
+
+    if (!canBlink(duck)) return;
+
+    const idleFace = duck.dataset.idleFace || "neutral";
+    const face = duck.querySelector(".swim-face");
+    if (face) {
+      face.src = swimFaceSrc(idleFace, duck.dataset.featherTone);
+      duck.dataset.face = idleFace;
+    }
+  }
+
+  function playBlink(duck) {
+    if (!showBlinkFrame(duck)) return;
+
+    const doubleBlink = Math.random() < .14;
+    duck._blinkReturnTimer = setTimeout(() => {
+      finishBlinkFrame(duck);
+
+      if (!doubleBlink || !canBlink(duck)) return;
+
+      duck._doubleBlinkTimer = setTimeout(() => {
+        if (!showBlinkFrame(duck)) return;
+
+        duck._doubleBlinkReturnTimer = setTimeout(() => {
+          finishBlinkFrame(duck);
+        }, 95 + Math.random() * 45);
+      }, 85 + Math.random() * 65);
+    }, 100 + Math.random() * 55);
+  }
+
+  function scheduleBlink(duck, delay = randomBlinkGap()) {
+    clearTimeout(duck._blinkTimer);
+    duck._blinkTimer = setTimeout(() => {
+      if (!duck.isConnected) return;
+
+      if (canBlink(duck)) {
+        playBlink(duck);
+        scheduleBlink(duck, randomBlinkGap());
+      } else {
+        scheduleBlink(duck, 1800 + Math.random() * 3200);
+      }
+    }, delay);
+  }
+
+  function randomIdleWingGap() {
+    return 30000 + Math.random() * 48000;
+  }
+
+  function cancelIdleWingFlick(duck) {
+    clearTimeout(duck._idleWingEndTimer);
+    duck._idleWingEndTimer = null;
+    duck.classList.remove("idle-wing-front-flick", "idle-wing-back-flick");
+  }
+
+  function canIdleWingFlick(duck) {
+    return duck.isConnected &&
+      duck.dataset.motionState === "floating" &&
+      duck.dataset.reacting !== "true" &&
+      duck.dataset.collisionEscaping !== "true" &&
+      duck.dataset.blinking !== "true" &&
+      !duck.classList.contains("collision-bump") &&
+      !duck.classList.contains("reacting") &&
+      ["neutral", "sad"].includes(duck.dataset.face || "neutral");
+  }
+
+  function playIdleWingFlick(duck) {
+    if (!canIdleWingFlick(duck)) return false;
+
+    cancelIdleWingFlick(duck);
+    const backWing = Math.random() < .28;
+    duck.classList.add(backWing ? "idle-wing-back-flick" : "idle-wing-front-flick");
+    duck._idleWingEndTimer = setTimeout(() => {
+      if (!duck.isConnected) return;
+      cancelIdleWingFlick(duck);
+    }, backWing ? 620 : 560);
+    return true;
+  }
+
+  function scheduleIdleWingFlick(duck, delay = randomIdleWingGap()) {
+    clearTimeout(duck._idleWingTimer);
+    duck._idleWingTimer = setTimeout(() => {
+      if (!duck.isConnected) return;
+
+      const now = performance.now();
+      if (canIdleWingFlick(duck) && now >= nextGlobalIdleWingAt) {
+        if (playIdleWingFlick(duck)) {
+          nextGlobalIdleWingAt = now + 1100 + Math.random() * 1300;
+        }
+        scheduleIdleWingFlick(duck, randomIdleWingGap());
+      } else {
+        const globalWait = Math.max(0, nextGlobalIdleWingAt - now);
+        scheduleIdleWingFlick(duck, globalWait + 4500 + Math.random() * 8500);
+      }
+    }, delay);
+  }
+
+  function scheduleIdleLife(duck) {
+    scheduleBlink(duck, 1800 + Math.random() * 8500);
+    scheduleIdleWingFlick(duck, 12000 + Math.random() * 30000);
+  }
+
+  function scheduleMoodShift(duck, delay = 8000 + Math.random() * 10000) {
+    clearTimeout(duck._moodTimer);
+    duck._moodTimer = setTimeout(() => {
+      if (!duck.isConnected) return;
+
+      if (["floating", "swimming"].includes(duck.dataset.motionState) &&
+          duck.dataset.reacting !== "true" &&
+          duck.dataset.blinking !== "true") {
+        // Most ducks look neutral, but some remain sad and moods can change
+        // occasionally so the pond does not feel like a wall of identical faces.
+        const forceChange = Math.random() < .42;
+        const face = chooseIdleFace(duck, forceChange);
+        setDuckFace(duck, face);
+      }
+
+      scheduleMoodShift(duck, 9000 + Math.random() * 13000);
+    }, delay);
+  }
+
+
+  function snakeTargetScore(duck) {
+    // Only strike a duck that has settled. Interrupting an in-flight roam would
+    // leave the older animation promise unresolved; the watcher checks again
+    // every 700ms, so a duck that stops in the threat zone is caught immediately.
+    if (!duck?.isConnected || duck.dataset.motionState !== "floating") return Infinity;
+    const point = currentPosition(duck);
+    if (![point.x, point.y].every(Number.isFinite)) return Infinity;
+    const nx = (point.x - SNAKE_THREAT_POINT.x) / SNAKE_ENGAGE_RADIUS_X;
+    const ny = (point.y - SNAKE_THREAT_POINT.y) / SNAKE_ENGAGE_RADIUS_Y;
+    const score = nx * nx + ny * ny;
+    return score <= 1 ? score : Infinity;
+  }
+
+  function nearestSnakeTarget() {
+    let target = null;
+    let bestScore = Infinity;
+    for (const duck of ducks.values()) {
+      const score = snakeTargetScore(duck);
+      if (score < bestScore) {
+        target = duck;
+        bestScore = score;
+      }
+    }
+    return target;
+  }
+
+  function snakePanicScore(duck) {
+    if (!duck?.isConnected || duck.dataset.motionState !== "floating") return Infinity;
+    const point = currentPosition(duck);
+    if (![point.x, point.y].every(Number.isFinite)) return Infinity;
+    const nx = (point.x - SNAKE_PANIC_POINT.x) / SNAKE_PANIC_RADIUS_X;
+    const ny = (point.y - SNAKE_PANIC_POINT.y) / SNAKE_PANIC_RADIUS_Y;
+    const score = nx * nx + ny * ny;
+    return score <= 1 ? score : Infinity;
+  }
+
+  function snakePanicDucks(primaryTarget = null) {
+    const victims = [];
+    for (const duck of ducks.values()) {
+      if (snakePanicScore(duck) < Infinity) victims.push(duck);
+    }
+    // The locked strike target must always react even if it drifted a fraction
+    // outside the broader zone during the mouth-open anticipation.
+    if (primaryTarget?.isConnected && !victims.includes(primaryTarget)) victims.push(primaryTarget);
+    return victims;
+  }
+
+  function setSnakePose(pose) {
+    if (!snakeEvent || !snakeSprite) return;
+    snakeEvent.className = `snake-event ${pose}`;
+    if (["is-rising", "is-peeking", "is-descending", "is-dropping"].includes(pose)) {
+      snakeSprite.src = SNAKE_ASSETS.closed;
+    } else if (pose === "is-open") {
+      snakeSprite.src = SNAKE_ASSETS.open;
+    } else if (pose === "is-striking") {
+      snakeSprite.src = SNAKE_ASSETS.strike;
+    }
+  }
+
+  function hideSnakeImmediately() {
+    if (!snakeEvent || !snakeSprite) return;
+    snakeEvent.className = "snake-event is-hidden";
+    snakeSprite.removeAttribute("src");
+  }
+
+  function snakeEscapePoint(duck) {
+    const from = currentPosition(duck);
+    let dx = from.x - SNAKE_THREAT_POINT.x;
+    let dy = from.y - SNAKE_THREAT_POINT.y;
+    let length = Math.hypot(dx, dy);
+    if (length < .1) {
+      dx = -1;
+      dy = -.15;
+      length = Math.hypot(dx, dy);
+    }
+    dx /= length;
+    dy /= length;
+
+    // A snake escape is deliberately much more abrupt and committed than the
+    // normal collision scoot. Try a few slight angle variants so the duck still
+    // lands in valid water near the bank.
+    for (const distanceAway of [15, 12, 9]) {
+      for (const angleOffset of [0, .22, -.22, .40, -.40]) {
+        const c = Math.cos(angleOffset);
+        const s = Math.sin(angleOffset);
+        const rx = dx * c - dy * s;
+        const ry = dx * s + dy * c;
+        const candidate = {
+          x: from.x + rx * distanceAway,
+          y: from.y + ry * distanceAway * .62
+        };
+        if (canDuckStopAt(candidate.x, candidate.y) && segmentClear(from, candidate)) return candidate;
+      }
+    }
+    return nearbyPoint(from);
+  }
+
+  async function startSnakePanic(duck) {
+    if (!duck?.isConnected) return;
+    if (duck.dataset.motionState !== "floating") return;
+
+    clearTimeout(duck._roamTimer);
+    duck.dataset.motionState = "swimming";
+    duck.dataset.collisionEscaping = "false";
+    duck.dataset.clickScooting = "false";
+    duck.classList.remove("floating", "collision-bump", "reaction-angry");
+    duck.classList.add("reacting", "snake-panic", "reaction-surprised");
+    duck.dataset.reacting = "true";
+    setDuckFace(duck, "surprised");
+
+    const from = currentPosition(duck);
+    const to = snakeEscapePoint(duck);
+    const distanceAway = distance(from, to);
+    activeSwimmers++;
+    try {
+      await animateMove(duck, from, to, Math.max(620, Math.min(980, 440 + distanceAway * 34)));
+    } finally {
+      activeSwimmers = Math.max(0, activeSwimmers - 1);
+    }
+    if (!duck.isConnected) return;
+
+    duck.classList.remove("reacting", "snake-panic", "reaction-surprised");
+    duck.dataset.reacting = "false";
+    duck.dataset.motionState = "floating";
+    duck.classList.add("floating");
+    restoreIdleFace(duck);
+    scheduleRoam(duck, 2400 + Math.random() * 3600);
+  }
+
+  async function runSnakeSequence(initialTarget = null, token = snakeRunToken, allowAttack = true) {
+    if (!snakeEventEnabled || snakeBusy || token !== snakeRunToken) return;
+    snakeBusy = true;
+
+    try {
+      // Deliberate readable check: two seconds rising from behind the reeds,
+      // two seconds fully visible, then decide whether to attack.
+      setSnakePose("is-rising");
+      await sleep(2000);
+      if (!snakeEventEnabled || token !== snakeRunToken) return;
+
+      setSnakePose("is-peeking");
+      await sleep(2000);
+      if (!snakeEventEnabled || token !== snakeRunToken) return;
+
+      // Only evaluate the strike at the END of the linger. A duck can therefore
+      // swim into range while the snake is watching and trigger the attack.
+      let target = null;
+      if (allowAttack) {
+        target = initialTarget?.isConnected && snakeTargetScore(initialTarget) < Infinity
+          ? initialTarget
+          : nearestSnakeTarget();
+      }
+
+      if (!target) {
+        setSnakePose("is-descending");
+        await sleep(2000);
+        hideSnakeImmediately();
+        snakeNextPeekAt = performance.now() + 9000 + Math.random() * 12000;
+        return;
+      }
+
+      setSnakePose("is-open");
+      await sleep(210);
+      if (!snakeEventEnabled || token !== snakeRunToken) return;
+
+      // Everyone visually in the bank-biased strike/panic corridor scatters as
+      // the snake launches, rather than only one arbitrarily chosen duck.
+      const panicPromises = snakePanicDucks(target).map(duck => startSnakePanic(duck));
+      setSnakePose("is-striking");
+      await sleep(360);
+      if (!snakeEventEnabled || token !== snakeRunToken) return;
+
+      // Recoil through the existing open/closed poses, then retreat slowly
+      // behind the same reed-bank anchor.
+      setSnakePose("is-open");
+      await sleep(170);
+      setSnakePose("is-peeking");
+      await sleep(130);
+      setSnakePose("is-descending");
+      await sleep(2000);
+      hideSnakeImmediately();
+
+      snakeNextEligibleAt = performance.now() + 30000 + Math.random() * 30000;
+      snakeNextPeekAt = performance.now() + 8500 + Math.random() * 13000;
+      void Promise.allSettled(panicPromises);
+    } finally {
+      snakeBusy = false;
+    }
+  }
+
+  function snakeWatchTick() {
+    clearTimeout(snakeWatchTimer);
+    if (!snakeEventEnabled) return;
+
+    const now = performance.now();
+    if (!snakeBusy) {
+      const attackEligible = now >= snakeNextEligibleAt;
+      const target = attackEligible ? nearestSnakeTarget() : null;
+
+      if (target) {
+        void runSnakeSequence(target, snakeRunToken, true);
+      } else if (now >= snakeNextPeekAt) {
+        // Peeking is independent of the 30–60 second strike cooldown.
+        void runSnakeSequence(null, snakeRunToken, attackEligible);
+      }
+    }
+    snakeWatchTimer = setTimeout(snakeWatchTick, 700);
+  }
+
+  function enableSnakeEvent() {
+    snakeEventEnabled = true;
+    snakeRunToken++;
+    snakeBusy = false;
+    hideSnakeImmediately();
+    const now = performance.now();
+    snakeNextEligibleAt = now + 5500 + Math.random() * 4500;
+    snakeNextPeekAt = now + 6500 + Math.random() * 6500;
+    snakeWatchTick();
+  }
+
+  function disableSnakeEvent() {
+    snakeEventEnabled = false;
+    snakeRunToken++;
+    snakeBusy = false;
+    if (snakeWatchTimer) clearTimeout(snakeWatchTimer);
+    snakeWatchTimer = null;
+    snakeNextEligibleAt = Infinity;
+    snakeNextPeekAt = Infinity;
+    hideSnakeImmediately();
+  }
+
+  function collisionPairKey(a, b) {
+    const aId = Number(a.dataset.duckId);
+    const bId = Number(b.dataset.duckId);
+    return aId < bId ? `${aId}:${bId}` : `${bId}:${aId}`;
+  }
+
+  function ducksAreTouching(a, b) {
+    const ap = currentPosition(a);
+    const bp = currentPosition(b);
+    if (![ap.x, ap.y, bp.x, bp.y].every(Number.isFinite)) return false;
+
+    // Elliptical hit area: ducks are visually wider than they are tall.
+    const nx = (ap.x - bp.x) / 3.7;
+    const ny = (ap.y - bp.y) / 2.8;
+    return nx * nx + ny * ny < 1;
+  }
+
+  function collisionEscapePoint(duck, sourceDuck) {
+    const from = currentPosition(duck);
+    const source = currentPosition(sourceDuck);
+    let dx = from.x - source.x;
+    let dy = from.y - source.y;
+    let length = Math.hypot(dx, dy);
+
+    if (length < .1) {
+      const angle = Math.random() * Math.PI * 2;
+      dx = Math.cos(angle);
+      dy = Math.sin(angle);
+      length = 1;
+    }
+
+    dx /= length;
+    dy /= length;
+
+    for (const distanceAway of [10, 8, 6]) {
+      for (const angleOffset of [0, .28, -.28, .5, -.5]) {
+        const c = Math.cos(angleOffset);
+        const s = Math.sin(angleOffset);
+        const rx = dx * c - dy * s;
+        const ry = dx * s + dy * c;
+        const candidate = {
+          x: from.x + rx * distanceAway,
+          y: from.y + ry * distanceAway * .62
+        };
+        if (canDuckStopAt(candidate.x, candidate.y) && segmentClear(from, candidate)) {
+          return candidate;
+        }
+      }
+    }
+
+    return nearbyPoint(from);
+  }
+
+  async function startCollisionEscape(duck, sourceDuck) {
+    if (!duck.isConnected || duck.dataset.motionState !== "floating") return;
+    if (duck.dataset.collisionEscaping === "true") return;
+
+    duck.dataset.collisionEscaping = "true";
+    clearTimeout(duck._roamTimer);
+
+    // The duck that actually scoots away should look startled, not angry.
+    setDuckFace(duck, "surprised");
+
+    const from = currentPosition(duck);
+    const to = collisionEscapePoint(duck, sourceDuck);
+    const distanceAway = distance(from, to);
+
+    if (distanceAway < .5) {
+      duck.dataset.collisionEscaping = "false";
+    duck.dataset.nextCollisionReactionAt = String(performance.now() + 2500 + Math.random() * 6500);
+      restoreIdleFace(duck);
+      scheduleRoam(duck, 1800 + Math.random() * 2500);
+      return;
+    }
+
+    duck.dataset.motionState = "swimming";
+    duck.classList.remove("floating");
+    activeSwimmers++;
+
+    await animateRoute(duck, from, to, Math.max(1900, Math.min(3200, 1250 + distanceAway * 160)));
+
+    activeSwimmers = Math.max(0, activeSwimmers - 1);
+    if (!duck.isConnected) return;
+
+    duck.dataset.motionState = "floating";
+    duck.dataset.collisionEscaping = "false";
+    duck.classList.add("floating");
+    restoreIdleFace(duck);
+    if (!runPendingClickScoot(duck)) {
+      scheduleRoam(duck, 3600 + Math.random() * 5500);
+    }
+  }
+
+
+  function samePlayerEscapePoint(duck, sourcePoint) {
+    const from = currentPosition(duck);
+    let dx = from.x - sourcePoint.x;
+    let dy = from.y - sourcePoint.y;
+    let length = Math.hypot(dx, dy);
+
+    if (length < .1) {
+      const angle = Math.random() * Math.PI * 2;
+      dx = Math.cos(angle);
+      dy = Math.sin(angle);
+      length = 1;
+    }
+
+    dx /= length;
+    dy /= length;
+
+    for (const distanceAway of [12, 10, 8]) {
+      for (const angleOffset of [0, .22, -.22, .42, -.42]) {
+        const c = Math.cos(angleOffset);
+        const s = Math.sin(angleOffset);
+        const rx = dx * c - dy * s;
+        const ry = dx * s + dy * c;
+        const candidate = {
+          x: from.x + rx * distanceAway,
+          y: from.y + ry * distanceAway * .60
+        };
+        if (canDuckStopAt(candidate.x, candidate.y) && segmentClear(from, candidate)) {
+          return candidate;
+        }
+      }
+    }
+
+    return nearbyPoint(from);
+  }
+
+  function samePlayerPairReady(a, b, now = performance.now()) {
+    if (!a?.isConnected || !b?.isConnected) return false;
+    if (a.dataset.reacting === "true" || b.dataset.reacting === "true") return false;
+    if (a.dataset.highFiveActive === "true" || b.dataset.highFiveActive === "true") return false;
+    if (a.dataset.highFiveReserved === "true" || b.dataset.highFiveReserved === "true") return false;
+    if (a.classList.contains("snake-panic") || b.classList.contains("snake-panic")) return false;
+    const key = collisionPairKey(a, b);
+    return now - Number(collisionPairs.get(key) || 0) >= 9000;
+  }
+
+  function triggerCollisionReaction(a, b) {
+    const aPlayerId = String(a.dataset.playerId || "");
+    const bPlayerId = String(b.dataset.playerId || "");
+    if (aPlayerId && aPlayerId === bPlayerId) {
+      // v0.125: same-player high-fives are choreography on normal roaming,
+      // not collision reactions.
+      return;
+    }
+
+    const now = performance.now();
+    const key = collisionPairKey(a, b);
+    const lastPair = collisionPairs.get(key) || 0;
+    const aReadyAt = Number(a.dataset.nextCollisionReactionAt || 0);
+    const bReadyAt = Number(b.dataset.nextCollisionReactionAt || 0);
+
+    // A crowded pond should have occasional character moments, not constant
+    // pinball reactions. Gate collisions globally, per-duck and per-pair.
+    if (now < nextGlobalCollisionReactionAt) return;
+    if (now < aReadyAt || now < bReadyAt) return;
+    if (now - lastPair < 30000) return;
+
+    // Even when two sprites touch, most encounters are ignored visually.
+    if (Math.random() > .28) return;
+
+    collisionPairs.set(key, now);
+    nextGlobalCollisionReactionAt = now + randomCollisionGap();
+    a.dataset.nextCollisionReactionAt = String(now + randomDuckCollisionCooldown());
+    b.dataset.nextCollisionReactionAt = String(now + randomDuckCollisionCooldown());
+
+    // Prefer a stationary duck as the one that scoots away. If both are
+    // stationary, choose randomly. If both are already moving, just shudder.
+    let escapee = null;
+    if (a.dataset.motionState === "floating" && b.dataset.motionState === "floating") {
+      escapee = Math.random() < .5 ? a : b;
+    } else if (a.dataset.motionState === "floating") {
+      escapee = a;
+    } else if (b.dataset.motionState === "floating") {
+      escapee = b;
+    }
+    const source = escapee === a ? b : escapee === b ? a : null;
+
+    a.dataset.reacting = "true";
+    b.dataset.reacting = "true";
+    a.classList.add("collision-bump");
+    b.classList.add("collision-bump");
+
+    // The duck that will retreat is shocked; the other gets annoyed.
+    if (escapee) {
+      setDuckFace(escapee, "surprised");
+      setDuckFace(source, "angry");
+    } else {
+      setDuckFace(a, "angry");
+      setDuckFace(b, Math.random() < .55 ? "angry" : "surprised");
+    }
+
+    setTimeout(() => {
+      for (const duck of [a, b]) {
+        if (!duck.isConnected) continue;
+        duck.classList.remove("collision-bump");
+        duck.dataset.reacting = "false";
+        // Keep the escapee shocked until its scoot is complete.
+        if (duck !== escapee || duck.dataset.collisionEscaping !== "true") {
+          restoreIdleFace(duck);
+        }
+      }
+    }, 720);
+
+    if (escapee && source) {
+      setTimeout(() => startCollisionEscape(escapee, source), 220);
+    }
+  }
+
+  function checkDuckCollisions(duck) {
+    if (!duck.isConnected || !["floating", "swimming"].includes(duck.dataset.motionState)) return;
+
+    const now = performance.now();
+    if (now - Number(duck._lastCollisionCheck || 0) < 110) return;
+    duck._lastCollisionCheck = now;
+
+    for (const other of ducks.values()) {
+      if (other === duck || !other.isConnected) continue;
+      if (!["floating", "swimming"].includes(other.dataset.motionState)) continue;
+      if (ducksAreTouching(duck, other)) {
+        triggerCollisionReaction(duck, other);
+        break;
+      }
+    }
+  }
+
+  function appendEntryImage(stack, className, src) {
+    const image = document.createElement("img");
+    image.className = `entry-layer ${className}`;
+    image.src = src;
+    image.alt = "";
+    stack.appendChild(image);
+    return image;
+  }
+
+  function buildEntryVisual(duck, frameIndex = 1) {
+    const visual = duck.querySelector(".duck-visual");
+    visual.replaceChildren();
+
+    const presentation = duck.dataset.presentation === "female" ? "female" : "male";
+    const tone = duck.dataset.featherTone;
+    const stack = document.createElement("span");
+    stack.className = `entry-stack entry-${presentation}`;
+    visual.appendChild(stack);
+
+    // Layered walking architecture (v0.93 blink/wing refinement). The supplied 512px components stay
+    // aligned on one canvas while the legs and wings move independently in code/CSS.
+    appendEntryImage(stack, "entry-leg entry-leg-rear", walkLegSrc("rear", tone));
+    appendEntryImage(stack, "entry-shirt", walkShirtSrc(duck.dataset.duckType, presentation));
+    appendEntryImage(stack, "entry-body", walkBodySrc(tone, presentation));
+    if (duckHasFlamingo(duck)) appendEntryImage(stack, "entry-flamingo", FLAMINGO_ASSETS.walk);
+    const walkHair = visualHairSrc(duck, "walk");
+    if (walkHair) appendEntryImage(stack, "entry-hair", walkHair);
+    appendEntryImage(stack, "entry-wing entry-wing-rear", walkWingSrc("rear", tone, presentation));
+    appendEntryImage(stack, "entry-leg entry-leg-front", walkLegSrc("front", tone));
+    appendEntryImage(stack, "entry-wing entry-wing-front", walkWingSrc("front", tone, presentation));
+
+    const idleFace = duck.dataset.idleFace === "sad" ? "sad" : "neutral";
+    appendEntryImage(stack, "entry-face", walkFaceSrc(idleFace, tone));
+    const blinkOverlay = appendEntryImage(stack, "entry-face-blink", walkFaceSrc(`${idleFace}-blink`, tone));
+    blinkOverlay.hidden = true;
+
+    if (duckHasRole(duck, "captain")) {
+      const captainLayer = document.createElement("span");
+      captainLayer.className = "entry-role-overlay entry-captain-layer";
+      captainLayer.setAttribute("aria-hidden", "true");
+
+      const captainMark = document.createElement("span");
+      captainMark.className = "captain-mark captain-mark-walk";
+      captainMark.textContent = "C";
+      captainLayer.appendChild(captainMark);
+      stack.appendChild(captainLayer);
+    }
+
+    if (duckHasRole(duck, "coach")) {
+      const whistle = document.createElement("img");
+      whistle.className = "entry-layer entry-role-overlay entry-coach-whistle";
+      whistle.src = coachWhistleSrc("walk");
+      whistle.alt = "";
+      stack.appendChild(whistle);
+    }
+
+    const headwearPath = headwearSrc(duck, "walk");
+    if (headwearPath) {
+      const headwear = document.createElement("img");
+      headwear.className = "entry-layer entry-hat entry-headwear";
+      headwear.src = headwearPath;
+      headwear.alt = "";
+      stack.appendChild(headwear);
+    }
+
+    setWalkFrame(duck, frameIndex);
+  }
+
+  function setEntryFace(duck, faceName) {
+    const face = duck.querySelector(".entry-face");
+    const blink = duck.querySelector(".entry-face-blink");
+    if (!face) return;
+
+    if (blink) blink.hidden = true;
+    face.src = walkFaceSrc(faceName, duck.dataset.featherTone);
+  }
+
+  function setWalkFrame(duck, frameNumber) {
+    const safeFrame = Math.max(1, Math.min(3, Number(frameNumber) || 2));
+    const stack = duck.querySelector(".entry-stack");
+    if (!stack) return;
+    stack.dataset.walkStep = String(safeFrame);
+    duck.dataset.walkFrame = String(safeFrame);
+  }
+
+  function cancelEntryBlink(duck, restore = true) {
+    clearTimeout(duck._entryBlinkTimer);
+    clearTimeout(duck._entryBlinkReturnTimer);
+    duck._entryBlinkTimer = null;
+    duck._entryBlinkReturnTimer = null;
+    if (restore && duck.isConnected) {
+      setEntryFace(duck, duck.dataset.idleFace === "sad" ? "sad" : "neutral");
+    }
+  }
+
+  function scheduleEntryBlink(duck, delay = 850 + Math.random() * 1500) {
+    clearTimeout(duck._entryBlinkTimer);
+    duck._entryBlinkTimer = setTimeout(() => {
+      if (!duck.isConnected || duck.dataset.motionState !== "entering") return;
+      const idle = duck.dataset.idleFace === "sad" ? "sad" : "neutral";
+      setEntryFace(duck, `${idle}-blink`);
+      duck._entryBlinkReturnTimer = setTimeout(() => {
+        if (!duck.isConnected || duck.dataset.motionState !== "entering") return;
+        setEntryFace(duck, idle);
+        scheduleEntryBlink(duck, 1200 + Math.random() * 1900);
+      }, 130 + Math.random() * 60);
+    }, delay);
+  }
+
+  function buildSwimVisual(duck, faceName = "sad") {
+    const visual = duck.querySelector(".duck-visual");
+    visual.replaceChildren();
+
+    const stack = document.createElement("span");
+    stack.className = duckHasFlamingo(duck) ? "swim-stack swim-stack-flamingo" : "swim-stack";
+    const facingRight = duck.dataset.facing === "right";
+    stack.style.setProperty(
+      "--facing-scale",
+      facingRight ? "-1" : "1"
+    );
+    stack.style.setProperty(
+      "--hat-counter-scale",
+      facingRight ? "-1" : "1"
+    );
+
+    const presentation = duck.dataset.presentation === "female" ? "female" : "male";
+
+    const wake = document.createElement("img");
+    wake.className = "swim-layer swim-wake";
+    wake.src = swimWakeSrc(duck);
+    wake.alt = "";
+
+    const wingBack = document.createElement("img");
+    wingBack.className = "swim-layer swim-wing-back";
+    wingBack.src = swimWingSrc("back", duck.dataset.featherTone, presentation);
+    wingBack.alt = "";
+
+    const body = document.createElement("img");
+    body.className = "swim-layer swim-body";
+    // Swimming presentation is mutually exclusive: exactly one base body element
+    // is created, selected from the male OR female asset matrix.
+    body.src = swimBodySrc(duck.dataset.duckType, duck.dataset.featherTone, presentation);
+    body.alt = "";
+
+    const hairSrc = visualHairSrc(duck, "swim");
+    const hair = document.createElement("img");
+    hair.className = "swim-layer swim-hair";
+    if (hairSrc) hair.src = hairSrc;
+    hair.alt = "";
+    const showHair = Boolean(hairSrc);
+
+    const face = document.createElement("img");
+    face.className = "swim-layer swim-face";
+    face.src = swimFaceSrc(faceName, duck.dataset.featherTone);
+    face.alt = "";
+
+    const flamingo = document.createElement("img");
+    if (duckHasFlamingo(duck)) {
+      flamingo.className = "swim-layer swim-flamingo";
+      flamingo.src = FLAMINGO_ASSETS.swim;
+      flamingo.alt = "";
+    }
+
+    const captainLayer = document.createElement("span");
+    if (duckHasRole(duck, "captain")) {
+      captainLayer.className = "swim-layer swim-role-layer swim-captain-layer";
+      captainLayer.setAttribute("aria-hidden", "true");
+
+      const captainMark = document.createElement("span");
+      captainMark.className = "captain-mark captain-mark-swim";
+      captainMark.textContent = "C";
+      captainLayer.appendChild(captainMark);
+    }
+
+    const whistle = document.createElement("img");
+    if (duckHasRole(duck, "coach")) {
+      whistle.className = "swim-layer swim-role-layer swim-coach-whistle";
+      whistle.src = coachWhistleSrc("swim", duck.dataset.facing);
+      whistle.alt = "";
+    }
+
+    const wingFront = document.createElement("img");
+    wingFront.className = "swim-layer swim-wing-front";
+    wingFront.src = swimWingSrc("front", duck.dataset.featherTone, presentation);
+    wingFront.alt = "";
+
+    const headwearPath = headwearSrc(duck, "swim", duck.dataset.facing);
+    let headwear = null;
+    if (headwearPath) {
+      headwear = document.createElement("img");
+      headwear.className = "swim-layer swim-hat swim-headwear";
+      headwear.src = headwearPath;
+      headwear.alt = "";
+    }
+
+    stack.append(wingBack, body, wake);
+    if (showHair) stack.appendChild(hair);
+    stack.appendChild(face);
+    if (duckHasFlamingo(duck)) stack.appendChild(flamingo);
+    if (duckHasRole(duck, "captain")) stack.appendChild(captainLayer);
+    if (duckHasRole(duck, "coach")) stack.appendChild(whistle);
+    stack.appendChild(wingFront);
+    if (headwear) stack.appendChild(headwear);
+    visual.appendChild(stack);
+
+    duck.dataset.face = faceName;
+  }
+
+  function hidePlayerStats() {
+    if (playerStatsHideTimer) {
+      clearTimeout(playerStatsHideTimer);
+      playerStatsHideTimer = null;
+    }
+    if (playerStatsFollowFrame) {
+      cancelAnimationFrame(playerStatsFollowFrame);
+      playerStatsFollowFrame = null;
+    }
+    playerStatsDuck = null;
+    if (playerStatsCard) {
+      playerStatsCard.hidden = true;
+      playerStatsCard.classList.remove(
+        "callout-above-right", "callout-above-left",
+        "callout-below-right", "callout-below-left"
+      );
+    }
+  }
+
+  function positionPlayerStatsCallout() {
+    if (!playerStatsCard || playerStatsCard.hidden || !playerStatsDuck?.isConnected) {
+      hidePlayerStats();
+      return;
+    }
+
+    const duckRect = playerStatsDuck.getBoundingClientRect();
+    const frameRect = sceneFrame.getBoundingClientRect();
+    const sceneRect = scene.getBoundingClientRect();
+    const cardRect = playerStatsCard.getBoundingClientRect();
+
+    // Keep the callout inside the visible pond viewport, not merely inside the
+    // outer scene frame. This also behaves correctly while mobile zoom/pan is active.
+    const minX = sceneRect.left - frameRect.left + 7;
+    const maxX = sceneRect.right - frameRect.left - 7;
+    const minY = sceneRect.top - frameRect.top + 7;
+    const maxY = sceneRect.bottom - frameRect.top - 7;
+    const gap = 12;
+
+    const duckLeft = duckRect.left - frameRect.left;
+    const duckRight = duckRect.right - frameRect.left;
+    const duckTop = duckRect.top - frameRect.top;
+    const duckBottom = duckRect.bottom - frameRect.top;
+
+    let horizontal = "right";
+    let vertical = "above";
+    let left = duckRight + gap;
+    let top = duckTop - cardRect.height - gap;
+
+    if (left + cardRect.width > maxX) {
+      horizontal = "left";
+      left = duckLeft - cardRect.width - gap;
+    }
+    if (left < minX) {
+      // If neither diagonal side has full room, clamp to the viewport while
+      // retaining the tail on the closest useful side.
+      left = Math.max(minX, Math.min(maxX - cardRect.width, left));
+    }
+
+    if (top < minY) {
+      vertical = "below";
+      top = duckBottom + gap;
+    }
+    if (top + cardRect.height > maxY) {
+      // Prefer above if below overflows and above can fit; otherwise clamp.
+      const aboveTop = duckTop - cardRect.height - gap;
+      if (aboveTop >= minY) {
+        vertical = "above";
+        top = aboveTop;
+      } else {
+        top = Math.max(minY, Math.min(maxY - cardRect.height, top));
+      }
+    }
+
+    playerStatsCard.style.left = `${Math.round(left)}px`;
+    playerStatsCard.style.top = `${Math.round(top)}px`;
+    playerStatsCard.classList.remove(
+      "callout-above-right", "callout-above-left",
+      "callout-below-right", "callout-below-left"
+    );
+    playerStatsCard.classList.add(`callout-${vertical}-${horizontal}`);
+
+    playerStatsFollowFrame = requestAnimationFrame(positionPlayerStatsCallout);
+  }
+
+  function showPlayerStatsForDuck(duck) {
+    const player = playerById(duck?.dataset.playerId);
+    if (!player || !playerStatsCard) return;
+
+    const events = playerEventsThrough(player.id);
+    const counts = { standard: 0, golden: 0, diamond: 0 };
+    const teams = new Set();
+    for (const event of events) {
+      if (counts[event.duckType] !== undefined) counts[event.duckType] += 1;
+      if (event.team) teams.add(event.team);
+    }
+
+    const leaders = currentLeaderboard();
+    const rankEntry = leaders.find(entry => entry.player.id === player.id);
+    const rankText = rankEntry ? `#${rankEntry.rank} on pond leaderboard` : "Unranked";
+    const latest = events[events.length - 1] || null;
+    const display = displayPlayerName(player);
+
+    if (playerStatsName) playerStatsName.textContent = display;
+    if (playerStatsMeta) {
+      const realName = display !== player.name ? `${player.name} • ` : "";
+      playerStatsMeta.textContent = `${realName}${rankText}`;
+    }
+    if (playerStatsSummary) {
+      playerStatsSummary.textContent = `${events.length} duck${events.length === 1 ? "" : "s"} this season`;
+    }
+    if (playerStatsTypes) {
+      playerStatsTypes.textContent = `${counts.standard} standard • ${counts.golden} golden • ${counts.diamond} diamond`;
+    }
+    if (playerStatsLatest) {
+      playerStatsLatest.textContent = latest
+        ? `Latest: ${formatClubDate(latest.date)} • ${latest.team || "—"}${teams.size > 1 ? ` • ${teams.size} teams` : ""}`
+        : "No duck events loaded yet.";
+    }
+
+    if (playerStatsHideTimer) clearTimeout(playerStatsHideTimer);
+    if (playerStatsFollowFrame) cancelAnimationFrame(playerStatsFollowFrame);
+    playerStatsDuck = duck;
+    playerStatsCard.hidden = false;
+    playerStatsCard.style.left = "0px";
+    playerStatsCard.style.top = "0px";
+    // Position once immediately after layout, then keep following the duck as
+    // it scoots or resumes normal swimming.
+    positionPlayerStatsCallout();
+    playerStatsHideTimer = setTimeout(hidePlayerStats, PLAYER_STATS_TIMEOUT_MS);
+  }
+
+  function clickScootPoint(duck) {
+    const from = currentPosition(duck);
+    let best = null;
+    let bestClearance = -1;
+
+    for (let attempt = 0; attempt < 36; attempt++) {
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 10 + Math.random() * 8;
+      const candidate = {
+        x: from.x + Math.cos(angle) * radius,
+        y: from.y + Math.sin(angle) * radius * .68
+      };
+      if (!canDuckStopAt(candidate.x, candidate.y) || !segmentClear(from, candidate)) continue;
+
+      let nearest = Infinity;
+      for (const other of ducks.values()) {
+        if (other === duck || !other.dataset.x) continue;
+        nearest = Math.min(nearest, distance(candidate, currentPosition(other)));
+      }
+      if (nearest > bestClearance) {
+        best = candidate;
+        bestClearance = nearest;
+      }
+    }
+
+    return best || nearbyPoint(from);
+  }
+
+  async function startClickScoot(duck) {
+    if (!duck?.isConnected || duck.dataset.motionState !== "floating") return false;
+    if (duck.dataset.clickScooting === "true") return false;
+
+    duck.dataset.clickScootPending = "false";
+    duck.dataset.clickScooting = "true";
+    clearTimeout(duck._roamTimer);
+
+    const from = currentPosition(duck);
+    const to = clickScootPoint(duck);
+    const distanceAway = distance(from, to);
+    if (distanceAway < .5) {
+      duck.dataset.clickScooting = "false";
+      scheduleRoam(duck, 1400);
+      return false;
+    }
+
+    duck.dataset.motionState = "swimming";
+    duck.classList.remove("floating");
+    activeSwimmers++;
+    await animateRoute(duck, from, to, Math.max(1450, Math.min(2450, 950 + distanceAway * 95)));
+    activeSwimmers = Math.max(0, activeSwimmers - 1);
+    if (!duck.isConnected) return true;
+
+    duck.dataset.motionState = "floating";
+    duck.dataset.clickScooting = "false";
+    duck.classList.add("floating");
+    restoreIdleFace(duck);
+    scheduleRoam(duck, 3000 + Math.random() * 4500);
+    return true;
+  }
+
+  function runPendingClickScoot(duck) {
+    if (!duck?.isConnected || duck.dataset.clickScootPending !== "true") return false;
+    if (duck.dataset.motionState !== "floating") return false;
+    startClickScoot(duck);
+    return true;
+  }
+
+  function reactToClick(duck) {
+    if (!["floating", "swimming"].includes(duck.dataset.motionState)) return;
+
+    // v0.89: stats + reaction + clearing scoot are one interaction.
+
+    showPlayerStatsForDuck(duck);
+    duck.dataset.clickScootPending = "true";
+    setTimeout(() => {
+      if (!runPendingClickScoot(duck) && duck?.isConnected) {
+        // A duck already swimming finishes its current route first, then takes
+        // the extra clearing scoot when that motion settles.
+        duck.dataset.clickScootPending = "true";
+      }
+    }, 150);
+
+    if (duck.dataset.reacting === "true") return;
+    const angry = Math.random() < 0.5;
+    duck.dataset.reacting = "true";
+    duck.classList.add("reacting");
+    duck.classList.toggle("reaction-angry", angry);
+    duck.classList.toggle("reaction-surprised", !angry);
+    setDuckFace(duck, angry ? "angry" : "surprised");
+
+    setTimeout(() => {
+      if (!duck.isConnected) return;
+      duck.classList.remove("reacting", "reaction-angry", "reaction-surprised");
+      duck.dataset.reacting = "false";
+
+      // iOS Safari can briefly retain the composited reaction frame if the
+      // transform animation ends and the face image source is swapped in the
+      // same rendering tick. Restore the idle face on the next painted frame
+      // so the stack returns to its normal transform before the image changes.
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (duck.isConnected && duck.dataset.reacting !== "true") {
+            restoreIdleFace(duck);
+          }
+        });
+      });
+    }, angry ? 900 : 820);
+  }
+
+  function makeDuck({
+    point,
+    instant = false,
+    duckType = selectedDuckType,
+    featherTone = selectedFeatherTone,
+    buildVariant = selectedBuildVariant,
+    clubRole = "player",
+    roles = [],
+    isLeader = false,
+    testRole = "",
+    presentation = "male",
+    hair = "none",
+    playerHeadwear = "none",
+    swimAccessory = "none",
+    playerId = "",
+    playerName = "",
+    eventId = "",
+    eventDate = ""
+  }) {
+    const id = nextDuckId++;
+    const duck = document.createElement("button");
+    duck.type = "button";
+    duck.className = "duck";
+    duck.dataset.motionState = instant ? "floating" : "entering";
+    duck.dataset.reacting = "false";
+    duck.dataset.duckId = String(id);
+    duck.dataset.presentation = presentation === "female" ? "female" : "male";
+    duck.dataset.buildVariant = BUILD_VARIANTS[buildVariant] ? buildVariant : "standard";
+    duck.dataset.duckType = DUCK_TYPES.includes(duckType) ? duckType : "standard";
+    duck.dataset.featherTone = FEATHER_TONES[featherTone] ? featherTone : "white";
+    duck.dataset.hair = canonicalHairKey(hair) || "none";
+    duck.dataset.playerHeadwear = canonicalPlayerHeadwear(playerHeadwear) || "none";
+    duck.dataset.swimAccessory = canonicalSwimAccessory(swimAccessory) || "none";
+    const assignedRoles = normalizedRoles(roles, clubRole);
+    duck.dataset.roles = assignedRoles.join(",");
+    duck.dataset.clubRole = assignedRoles.includes("president") ? "president" : "player";
+    duck.dataset.isLeader = isLeader ? "true" : "false";
+    duck.dataset.testRole = testRole || "";
+    duck.dataset.playerId = playerId || "";
+    duck.dataset.playerName = playerName || "";
+    duck.dataset.eventId = eventId || "";
+    duck.dataset.eventDate = eventDate || "";
+    // Existing pond ducks should not all materialise facing the source-art direction.
+    // Entrants still walk in facing left; instant pond reconstruction is randomised.
+    duck.dataset.facing = instant && Math.random() < 0.5 ? "right" : "left";
+    duck.dataset.collisionEscaping = "false";
+    duck.dataset.blinking = "false";
+    duck.dataset.clickScootPending = "false";
+    duck.dataset.clickScooting = "false";
+    chooseIdleFace(duck);
+    duck.dataset.swimPace = (0.88 + (id % 5) * 0.06).toFixed(2);
+    const hairAria = duck.dataset.hair && duck.dataset.hair !== "none" ? `, ${hairLabel(duck.dataset.hair)}` : ", no hair";
+    const headwearAria = duck.dataset.headwear === "none" ? ", no hat" : duck.dataset.headwear === "normal" ? ", club cap" : duck.dataset.headwear === "leader" ? ", leader cap" : ", crown";
+    duck.setAttribute(
+      "aria-label",
+      playerName
+        ? `${playerName}, ${duck.dataset.presentation} ${duck.dataset.duckType} duck${hairAria}${headwearAria}`
+        : `Duck ${id}, ${duck.dataset.presentation} ${duck.dataset.duckType} duck${hairAria}${headwearAria}`
+    );
+
+    applyDuckSize(duck);
+    duck.style.setProperty("--bob-duration", `${4 + (id % 7) * .27}s`);
+
+    const visual = document.createElement("span");
+    visual.className = "duck-visual";
+    duck.appendChild(visual);
+
+    if (instant) {
+      buildSwimVisual(duck, duck.dataset.idleFace || "neutral");
+    } else {
+      buildEntryVisual(duck, 1);
+    }
+
+    duck.addEventListener("click", () => reactToClick(duck));
+    duckLayer.appendChild(duck);
+    ducks.set(id, duck);
+
+    if (instant) {
+      const safePoint = nearestValidStoppingPoint(point);
+      setWorldPosition(duck, safePoint.x, safePoint.y);
+      duck.dataset.x = safePoint.x.toFixed(3);
+      duck.dataset.y = safePoint.y.toFixed(3);
+      setDepth(duck, safePoint.y);
+      duck.classList.add("floating");
+      scheduleMoodShift(duck);
+      scheduleRoam(duck, 1000 + Math.random() * 9000);
+      scheduleIdleLife(duck);
+    }
+
+    updateCounts();
+    return duck;
+  }
+
+  function setEntryVisual(duck, rotation, scale) {
+    duck.style.setProperty("--entry-rotation", `${rotation}deg`);
+    duck.style.setProperty("--entry-scale", String(scale));
+  }
+
+  function clearEntryVisual(duck) {
+    duck.style.removeProperty("--entry-rotation");
+    duck.style.removeProperty("--entry-scale");
+  }
+
+  function animateEntrySegment(
+    duck,
+    keyframes,
+    duration,
+    easing = t => t,
+    anchor = "centre"
+  ) {
+    return new Promise(resolve => {
+      const started = performance.now();
+
+      function frame(now) {
+        if (!duck.isConnected) {
+          resolve();
+          return;
+        }
+
+        const raw = Math.min(1, (now - started) / duration);
+        const t = easing(raw);
+
+        let left = keyframes[0];
+        let right = keyframes[keyframes.length - 1];
+
+        for (let i = 0; i < keyframes.length - 1; i++) {
+          if (t >= keyframes[i].at && t <= keyframes[i + 1].at) {
+            left = keyframes[i];
+            right = keyframes[i + 1];
+            break;
+          }
+        }
+
+        const span = Math.max(.0001, right.at - left.at);
+        const local = Math.max(0, Math.min(1, (t - left.at) / span));
+        const x = left.x + (right.x - left.x) * local;
+        const y = left.y + (right.y - left.y) * local;
+        const rotation = left.rotation + (right.rotation - left.rotation) * local;
+        const scale = left.scale + (right.scale - left.scale) * local;
+        const opacity = left.opacity + (right.opacity - left.opacity) * local;
+
+        setWorldPosition(duck, x, y);
+        duck.style.opacity = String(opacity);
+
+        if (anchor === "feet") {
+          setEntryVisual(duck, rotation, scale);
+        } else {
+          duck.style.transform =
+            `translate(-50%,-50%) rotate(${rotation}deg) scale(${scale})`;
+        }
+
+        if (raw < 1) {
+          duck._entryFrame = requestAnimationFrame(frame);
+        } else {
+          resolve();
+        }
+      }
+
+      duck._entryFrame = requestAnimationFrame(frame);
+    });
+  }
+
+  async function animateEntry(duck, requestedDestination = null, hooks = {}) {
+    duck.classList.add("entrying");
+    duck.style.zIndex = "2600";
+    duck.style.opacity = "1";
+
+    // v0.83 hero-entry follow-up: keep the larger pier walk but push it lower on the pier and make the splash read bigger.
+    // The duck is ~60% larger than the old entry scale while walking, then
+    // smoothly shrinks during the jump back to the existing splash/pond scale.
+    const HERO_WALK_SCALE = 1.31;
+    const walkFrames = [
+      { at:0,    x:-11, y:76.75, rotation:-2, scale:HERO_WALK_SCALE, opacity:1 },
+      { at:.16,  x:-4,  y:76.58, rotation:2,  scale:HERO_WALK_SCALE, opacity:1 },
+      { at:.33,  x:3,   y:76.75, rotation:-2, scale:HERO_WALK_SCALE, opacity:1 },
+      { at:.50,  x:10,  y:76.58, rotation:2,  scale:HERO_WALK_SCALE, opacity:1 },
+      { at:.67,  x:17,  y:76.75, rotation:-2, scale:HERO_WALK_SCALE, opacity:1 },
+      { at:.82,  x:23.5,y:76.58, rotation:2,  scale:HERO_WALK_SCALE, opacity:1 },
+      { at:.94,  x:28.5,y:76.70, rotation:-1, scale:HERO_WALK_SCALE, opacity:1 },
+      { at:1,    x:31,  y:76.45, rotation:0,  scale:HERO_WALK_SCALE, opacity:1 }
+    ];
+
+    // Requested walk cycle: 1 -> 2 -> 3 -> 2 -> 1, repeating.
+    // Explicitly finish on frame 2 before the pre-jump squash.
+    const walkCycle = [1, 2, 3, 2, 1];
+    let walkIndex = 0;
+    setWalkFrame(duck, walkCycle[walkIndex]);
+    scheduleEntryBlink(duck);
+
+    duck._walkTimer = setInterval(() => {
+      if (!duck.isConnected) return;
+      walkIndex = (walkIndex + 1) % walkCycle.length;
+      setWalkFrame(duck, walkCycle[walkIndex]);
+    }, 175);
+
+    await animateEntrySegment(duck, walkFrames, 4600, t => t, "feet");
+    clearInterval(duck._walkTimer);
+    duck._walkTimer = null;
+    cancelEntryBlink(duck, true);
+    setWalkFrame(duck, 2);
+
+    // v0.98: most ducks use the normal confident entry. A minority pause at
+    // the edge, look nervous, tremble, close their eyes and take a slow breath
+    // before committing to the existing squash/jump sequence.
+    const nervousEntry = Math.random() < 0.22;
+    if (nervousEntry) {
+      setEntryFace(duck, "nervous");
+      duck.classList.add("nervous-entry-shake");
+      await sleep(2400);
+      duck.classList.remove("nervous-entry-shake");
+
+      // Eyes stay closed from the calming breath through the jump itself.
+      setEntryFace(duck, "sad-blink");
+      duck.classList.add("nervous-entry-breathe");
+      await sleep(1500);
+      duck.classList.remove("nervous-entry-breathe");
+    }
+
+    // Brief anticipation squash at the pier edge. Nervous ducks keep their
+    // eyes closed here and throughout the jump; normal ducks retain their face.
+    duck.classList.add("prejump");
+    await sleep(300);
+    duck.classList.remove("prejump");
+
+    const jumpFrames = [
+      { at:0,   x:31,   y:76.45, rotation:0, scale:HERO_WALK_SCALE, opacity:1 },
+      { at:.38, x:33.8, y:69.5,  rotation:5, scale:1.05, opacity:1 },
+      { at:1,   x:37,   y:77.6,  rotation:8, scale:.64, opacity:0 }
+    ];
+
+    let splashCreated = false;
+    const jumpStarted = performance.now();
+
+    await new Promise(resolve => {
+      function frame(now) {
+        if (!duck.isConnected) {
+          resolve();
+          return;
+        }
+
+        const raw = Math.min(1, (now - jumpStarted) / 850);
+        const eased = raw * raw * (3 - 2 * raw);
+
+        let left = jumpFrames[0];
+        let right = jumpFrames[jumpFrames.length - 1];
+
+        for (let i = 0; i < jumpFrames.length - 1; i++) {
+          if (eased >= jumpFrames[i].at && eased <= jumpFrames[i + 1].at) {
+            left = jumpFrames[i];
+            right = jumpFrames[i + 1];
+            break;
+          }
+        }
+
+        const span = Math.max(.0001, right.at - left.at);
+        const local = Math.max(0, Math.min(1, (eased - left.at) / span));
+        const x = left.x + (right.x - left.x) * local;
+        const y = left.y + (right.y - left.y) * local;
+        const rotation = left.rotation + (right.rotation - left.rotation) * local;
+        const scale = left.scale + (right.scale - left.scale) * local;
+
+        setWorldPosition(duck, x, y);
+        setEntryVisual(duck, rotation, scale);
+
+        if (!splashCreated && raw >= .68) {
+          splashCreated = true;
+          duck.style.opacity = "0";
+          createSplashAnimation(37, 77.6, duck.dataset.duckType);
+          if (typeof hooks.onSplash === "function") hooks.onSplash(duck);
+        } else if (!splashCreated) {
+          duck.style.opacity = "1";
+        }
+
+        if (raw < 1) {
+          duck._entryFrame = requestAnimationFrame(frame);
+        } else {
+          resolve();
+        }
+      }
+
+      duck._entryFrame = requestAnimationFrame(frame);
+    });
+
+    duck.style.opacity = "0";
+    await sleep(460);
+
+    // The swimming sprite replaces the walking sprite while the duck is
+    // underwater. The small first splash cell acts as the resurfacing ring.
+    duck.classList.remove("entrying");
+    clearEntryVisual(duck);
+    buildSwimVisual(duck, duck.dataset.idleFace || "neutral");
+
+    const entry = { x: 37, y: 77.6 };
+    setWorldPosition(duck, entry.x, entry.y);
+    duck.dataset.x = entry.x.toFixed(3);
+    duck.dataset.y = entry.y.toFixed(3);
+    setDepth(duck, entry.y);
+
+    createResurfaceEffect(entry.x, entry.y, duck.dataset.duckType);
+
+    const appearStarted = performance.now();
+    await new Promise(resolve => {
+      function appearFrame(now) {
+        if (!duck.isConnected) {
+          resolve();
+          return;
+        }
+
+        const raw = Math.min(1, (now - appearStarted) / 520);
+        const eased = 1 - Math.pow(1 - raw, 3);
+        // v0.84: the swim sprite should surface upward from beneath the water,
+        // not drift down from above the final resting point.
+        const submergedStartY = entry.y + 3.0;
+        const y = submergedStartY + (entry.y - submergedStartY) * eased;
+
+        setWorldPosition(duck, entry.x, y);
+        duck.style.opacity = String(eased);
+        setDepth(duck, y);
+
+        if (raw < 1) {
+          duck._entryFrame = requestAnimationFrame(appearFrame);
+        } else {
+          resolve();
+        }
+      }
+
+      duck._entryFrame = requestAnimationFrame(appearFrame);
+    });
+
+    setWorldPosition(duck, entry.x, entry.y);
+    duck.style.opacity = "1";
+    duck.dataset.x = entry.x.toFixed(3);
+    duck.dataset.y = entry.y.toFixed(3);
+    setDepth(duck, entry.y);
+
+    const destination = requestedDestination
+      ? nearestValidStoppingPoint(requestedDestination)
+      : distributedPoint(duck);
+
+    duck.dataset.motionState = "swimming";
+    activeSwimmers++;
+
+    await animateRoute(
+      duck,
+      entry,
+      destination,
+      Math.max(4800, Math.min(9000, (3300 + distance(entry, destination) * 150) / Number(duck.dataset.swimPace || "1")))
+    );
+
+    activeSwimmers = Math.max(0, activeSwimmers - 1);
+    duck.dataset.motionState = "floating";
+    duck.classList.add("floating");
+    scheduleMoodShift(duck);
+    if (!runPendingClickScoot(duck)) scheduleRoam(duck);
+    scheduleIdleLife(duck);
+  }
+
+  function makePlayerDuck(player, event = {}, { instant = false, point = null } = {}) {
+    if (!player) return null;
+    const duckType = DUCK_TYPES.includes(event.duckType) ? event.duckType : selectedDuckType;
+    const spawnPoint = point || (instant ? distributedPoint() : { x: 37, y: 77.6 });
+
+    return makeDuck({
+      point: spawnPoint,
+      instant,
+      duckType,
+      featherTone: player.featherTone,
+      buildVariant: player.build,
+      presentation: player.presentation,
+      hair: player.hair || "none",
+      playerHeadwear: player.playerHeadwear || "none",
+      swimAccessory: player.swimAccessory || "none",
+      roles: player.roles || [],
+      clubRole: (player.roles || []).includes("president") ? "president" : "player",
+      isLeader: currentLeaderPlayerIds.has(player.id),
+      playerId: player.id,
+      playerName: displayPlayerName(player),
+      eventId: event.id || "",
+      eventDate: event.date || ""
+    });
+  }
+
+  function populatePlayerSelect() {
+    if (!playerSelect) return;
+    playerSelect.replaceChildren();
+    for (const player of PLAYER_PROFILES) {
+      const option = document.createElement("option");
+      option.value = player.id;
+      // Developer/player test controls always show the canonical roster name.
+      // Nickname overrides are reserved for public pond displays.
+      option.textContent = player.name || player.id;
+      playerSelect.appendChild(option);
+    }
+    updatePlayerIdentitySummary();
+  }
+
+  function updatePlayerIdentitySummary() {
+    if (!playerIdentitySummary) return;
+    const player = playerById(playerSelect?.value);
+    playerIdentitySummary.textContent = player
+      ? `${describePlayer(player)} • event shirt currently ${selectedDuckType}`
+      : "No player profile loaded.";
+  }
+
+  function populateWeekSelect() {
+    if (!weekSelect) return;
+    weekSelect.replaceChildren();
+    const currentMonday = mostRecentMonday(new Date());
+    const earliestEvent = DUCK_EVENTS.reduce((earliest, event) => !earliest || event.date < earliest ? event.date : earliest, "");
+    const latestEvent = DUCK_EVENTS.reduce((latest, event) => !latest || event.date > latest ? event.date : latest, "");
+    const earliestMonday = earliestEvent ? mostRecentMonday(localDateFromIso(earliestEvent)) : currentMonday;
+    // To include an event in a playback week we need the Monday immediately
+    // AFTER its Monday-Sunday club week (the dropdown is the as-at marker).
+    const latestEventWeekMonday = latestEvent ? mostRecentMonday(localDateFromIso(latestEvent)) : currentMonday;
+    const latestMarkerMonday = latestEvent ? addLocalDays(latestEventWeekMonday, 7) : currentMonday;
+    const firstMonday = latestMarkerMonday > currentMonday ? latestMarkerMonday : currentMonday;
+
+    // Show every relevant Monday marker across the loaded dataset. If the
+    // loaded data extends into a later club week than the current marker, use
+    // that latest marker by default so the newest entrants are not hidden.
+    let monday = firstMonday;
+    const options = [];
+    for (let guard = 0; guard < 60; guard++) {
+      const context = weekContextForMonday(monday);
+      options.push(context);
+      if (monday <= earliestMonday) break;
+      monday = addLocalDays(monday, -7);
+    }
+
+    for (const context of options) {
+      const option = document.createElement("option");
+      option.value = context.monday;
+      option.textContent = formatClubWeekRange(context.start, context.end);
+      weekSelect.appendChild(option);
+    }
+    const preferredMonday = latestMarkerMonday > currentMonday ? latestMarkerMonday : currentMonday;
+    weekSelect.value = [...weekSelect.options].some(option => option.value === preferredMonday)
+      ? preferredMonday
+      : options[0]?.monday || "";
+    updateWeekSummary();
+  }
+
+  function updateWeekSummary() {
+    if (!weekSummary || !weekSelect?.value) return;
+    const context = weekContextForMonday(weekSelect.value);
+    const earlier = DUCK_EVENTS.filter(event => event.date < context.start).length;
+    const entering = DUCK_EVENTS.filter(event => event.date >= context.start && event.date <= context.end).length;
+    const future = DUCK_EVENTS.filter(event => event.date > context.end).length;
+    weekSummary.textContent = `${entering} new duck${entering === 1 ? "" : "s"} • ${earlier + entering} in pond`;
+  }
+
+  function addSelectedPlayerDuck() {
+    const player = playerById(playerSelect?.value);
+    if (!player) return;
+    const event = {
+      id: `manual-${Date.now()}`,
+      playerId: player.id,
+      date: "",
+      team: "Test",
+      duckType: selectedDuckType
+    };
+    const duck = makePlayerDuck(player, event, { instant: false });
+    if (!duck) return;
+    status.textContent = `Adding ${player.name}: permanent ${player.presentation}/${FEATHER_TONES[player.featherTone]?.label || player.featherTone}/${BUILD_VARIANTS[player.build]?.label || player.build}/${player.hair && player.hair !== "none" ? hairLabel(player.hair) : "No hair"}/${PLAYER_HEADWEAR_LABELS[player.playerHeadwear] || "No hat"}; ${selectedDuckType} event shirt.`;
+    showEntrantScoreboard(player, event, 1, 1);
+    animateEntry(duck, null, { onSplash: showLeaderboardScoreboard });
+  }
+
+  async function loadSelectedWeek({ assetsReady = false } = {}) {
+    const monday = weekSelect?.value || "";
+    if (!monday) {
+      status.textContent = "Choose a week first.";
+      return;
+    }
+
+    const context = weekContextForMonday(monday);
+    selectedWeekContext = context;
+    if (!assetsReady) {
+      const ready = await ensureAssetsForWeek(context, { showOverlay: true });
+      if (!ready) return;
+    }
+    resetPond();
+    // resetPond increments the cancellation token, so capture the fresh value afterwards.
+    const loadToken = dateRangeLoadToken;
+    selectedWeekContext = context;
+
+    const events = [...DUCK_EVENTS].sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
+    const earlierEvents = events.filter(event => event.date < context.start);
+    const weekEvents = events.filter(event => event.date >= context.start && event.date <= context.end);
+    const pondEvents = events.filter(event => event.date <= context.end);
+    const leaderboard = leaderboardForEvents(pondEvents);
+    const activeLeader = leaderboardHasActiveLeader(leaderboard);
+    currentLeaderPlayerIds = new Set(
+      activeLeader
+        ? leaderboard.filter(entry => entry.rank === 1).map(entry => entry.player.id)
+        : []
+    );
+
+    for (const event of earlierEvents) {
+      const player = playerById(event.playerId);
+      if (!player) continue;
+      makePlayerDuck(player, event, { instant: true, point: distributedPoint() });
+    }
+
+    renderDataDebug(context, weekEvents, pondEvents);
+    showLeaderboardScoreboard();
+    status.textContent = `${earlierEvents.length} earlier ducks are already in the pond. ${weekEvents.length} ducks from ${formatClubDate(context.start)}–${formatClubDate(context.end)} will enter via the pier.`;
+
+    for (let index = 0; index < weekEvents.length; index++) {
+      if (loadToken !== dateRangeLoadToken) return;
+      const event = weekEvents[index];
+      const player = playerById(event.playerId);
+      if (!player) continue;
+      const duck = makePlayerDuck(player, event, { instant: false });
+      if (!duck) continue;
+
+      showEntrantScoreboard(player, event, index + 1, weekEvents.length);
+      status.textContent = `${displayPlayerName(player)} entering (${index + 1}/${weekEvents.length}) • ${formatClubDate(event.date)} • ${event.duckType}.`;
+
+      await new Promise(resolveSplash => {
+        let resolved = false;
+        const finish = () => {
+          if (resolved) return;
+          resolved = true;
+          resolveSplash();
+        };
+        animateEntry(duck, null, { onSplash: finish });
+        // Defensive fallback only; normal progression is driven by the actual splash hook.
+        setTimeout(finish, 6200);
+      });
+
+      if (loadToken !== dateRangeLoadToken) return;
+      if (index < weekEvents.length - 1) {
+        const nextEvent = weekEvents[index + 1];
+        const nextPlayer = playerById(nextEvent.playerId);
+        showEntrantScoreboard(nextPlayer, nextEvent, index + 2, weekEvents.length);
+        await sleep(500);
+      }
+    }
+
+    if (loadToken !== dateRangeLoadToken) return;
+    showLeaderboardScoreboard();
+    status.textContent = `${formatClubDate(context.start)}–${formatClubDate(context.end)} loaded. ${pondEvents.length} cumulative ducks are now represented in the pond.`;
+    enableSnakeEvent();
+  }
+
+  function addAnimatedDuck(presentation = "male") {
+    const resolvedPresentation = presentation === "female" ? "female" : "male";
+    const duck = makeDuck({
+      point:{x:37,y:73.6},
+      instant:false,
+      duckType:selectedDuckType,
+      featherTone:selectedFeatherTone,
+      buildVariant:selectedBuildVariant,
+      presentation: resolvedPresentation
+    });
+    status.textContent = `Adding ${resolvedPresentation} ${selectedDuckType} duck with ${FEATHER_TONES[selectedFeatherTone].label.toLowerCase()} feathers and ${BUILD_VARIANTS[selectedBuildVariant].label.toLowerCase()} build.`;
+    animateEntry(duck, null);
+  }
+
+  function disposeDuck(duck) {
+    if (!duck) return;
+    clearTimeout(duck._roamTimer);
+    clearTimeout(duck._moodTimer);
+    clearTimeout(duck._blinkTimer);
+    clearTimeout(duck._blinkReturnTimer);
+    clearTimeout(duck._doubleBlinkTimer);
+    clearTimeout(duck._doubleBlinkReturnTimer);
+    clearTimeout(duck._idleWingTimer);
+    clearTimeout(duck._idleWingEndTimer);
+    if (duck._walkTimer) clearInterval(duck._walkTimer);
+    if (duck._moveFrame) cancelAnimationFrame(duck._moveFrame);
+    if (duck._entryFrame) cancelAnimationFrame(duck._entryFrame);
+    duck.getAnimations().forEach(animation => animation.cancel());
+
+    if (duck.dataset.motionState === "swimming") {
+      activeSwimmers = Math.max(0, activeSwimmers - 1);
+    }
+
+    const id = Number(duck.dataset.duckId);
+    ducks.delete(id);
+    for (const key of [...collisionPairs.keys()]) {
+      if (key.startsWith(`${id}:`) || key.endsWith(`:${id}`)) collisionPairs.delete(key);
+    }
+    duck.remove();
+  }
+
+  function existingRoleDuck(role) {
+    for (const duck of ducks.values()) {
+      if (duck.dataset.testRole === role) return duck;
+    }
+
+    // President and current leader are single-instance test concepts for now,
+    // so their Load 60 representatives can be replaced by the replay button.
+    for (const duck of ducks.values()) {
+      if (role === "president" && duckHasRole(duck, "president")) return duck;
+      if (role === "leader" &&
+          duck.dataset.isLeader === "true" &&
+          !duckHasRole(duck, "president")) return duck;
+    }
+    return null;
+  }
+
+  function replayRoleEntry(role) {
+    const existing = existingRoleDuck(role);
+    if (existing) disposeDuck(existing);
+
+    const president = role === "president";
+    const leader = role === "leader";
+    const roles = president ? ["president"] : ["captain", "coach"].filter(item => item === role);
+    const duck = makeDuck({
+      point: { x:37, y:73.6 },
+      instant: false,
+      duckType: selectedDuckType,
+      // The president is always the known white duck. Other role tests follow
+      // the current feather/build controls so overlays can be judged broadly.
+      featherTone: president ? "white" : selectedFeatherTone,
+      buildVariant: selectedBuildVariant,
+      roles,
+      clubRole: president ? "president" : "player",
+      isLeader: leader,
+      testRole: role
+    });
+
+    const roleStatus = {
+      president: `President re-entering from the pier (white duck, ${selectedDuckType} shirt, crown).`,
+      leader: "Duck leader re-entering from the pier with the yellow leader cap.",
+      captain: "Captain re-entering from the pier with the shirt C marker.",
+      coach: "Coach re-entering from the pier with the whistle and lanyard."
+    };
+    status.textContent = roleStatus[role] || "Role test duck re-entering from the pier.";
+    animateEntry(duck, null);
+  }
+
+  function resetPond() {
+    dateRangeLoadToken++;
+    disableSnakeEvent();
+    for (const duck of [...ducks.values()]) disposeDuck(duck);
+
+    duckLayer.replaceChildren();
+    splashLayer.replaceChildren();
+    ducks.clear();
+    nextDuckId = 1;
+    activeSwimmers = 0;
+    collisionPairs.clear();
+    hidePlayerStats();
+    nextGlobalCollisionReactionAt = performance.now() + 3000 + Math.random() * 4000;
+    nextGlobalIdleWingAt = 0;
+    currentLeaderPlayerIds = new Set();
+    updateCounts();
+
+    destinationMarker.hidden = true;
+    status.textContent = "Pond reset.";
+  }
+
+  function loadPopulation(target = 60) {
+    resetPond();
+    const points = [];
+
+    // Development population includes one president and one current leader so
+    // both role overlays can be judged in a busy pond. Keep them away from the
+    // golden/diamond tail of the fixed stress-test distribution.
+    const presidentIndex = target > 20 ? 18 : 0;
+    const leaderIndex = target > 20 ? 19 : Math.min(1, Math.max(0, target - 1));
+
+    // Repeatable club roles: six captain examples and two coach examples in
+    // the 60-duck stress population. Deliberate overlaps prove roles stack:
+    // the current leader is also a captain, and one captain is also a coach.
+    const captainIndexes = new Set([2, 8, 14, 19, 36, 47].filter(index => index < target));
+    const coachIndexes = new Set([11, 36].filter(index => index < target));
+    // Make around 30% of the stress population female-presentation ducks,
+    // spread across the pond rather than clustered together.
+    const femaleTarget = Math.max(0, Math.round(target * 0.3));
+    const femaleCandidates = Array.from({ length: target }, (_, index) => index)
+      .filter(index => index !== presidentIndex);
+    const femaleIndexes = new Set();
+    if (femaleTarget > 0 && femaleCandidates.length > 0) {
+      for (let n = 0; n < Math.min(femaleTarget, femaleCandidates.length); n++) {
+        const pick = Math.floor((n + 0.5) * femaleCandidates.length / Math.min(femaleTarget, femaleCandidates.length));
+        femaleIndexes.add(femaleCandidates[pick]);
+      }
+    }
+
+    // Yellow feathering is intentionally rare. For Load 60 this produces
+    // exactly three yellow-feather ducks (never the white president), and no
+    // population generated here can exceed three.
+    const loadFeathers = Array.from({ length: target }, () => {
+      const nonYellow = ["white", "lightBrown", "darkBrown"];
+      return nonYellow[Math.floor(Math.random() * nonYellow.length)];
+    });
+    const yellowCandidates = Array.from({ length: target }, (_, index) => index)
+      .filter(index => index !== presidentIndex && index !== leaderIndex);
+    for (let i = yellowCandidates.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [yellowCandidates[i], yellowCandidates[j]] = [yellowCandidates[j], yellowCandidates[i]];
+    }
+    for (const index of yellowCandidates.slice(0, Math.min(3, yellowCandidates.length))) {
+      loadFeathers[index] = "yellow";
+    }
+    if (target > 0) loadFeathers[presidentIndex] = "white";
+
+    for (let i = 0; i < target; i++) {
+      let best = null;
+      let bestNearest = -1;
+
+      for (let attempt = 0; attempt < 120; attempt++) {
+        const candidate = randomWaterPoint();
+        if (!canDuckStopAt(candidate.x, candidate.y)) continue;
+
+        const nearest = points.length
+          ? Math.min(...points.map(other => distance(candidate, other)))
+          : 999;
+
+        if (nearest > bestNearest) {
+          bestNearest = nearest;
+          best = candidate;
+        }
+      }
+
+      const safeBest = nearestValidStoppingPoint(best || randomWaterPoint());
+      points.push(safeBest);
+
+      // Fixed stress-test distribution: 55 standard, 4 golden, 1 diamond.
+      let loadDuckType = "standard";
+      if (i >= target - 1) loadDuckType = "diamond";
+      else if (i >= target - 5) loadDuckType = "golden";
+
+      let featherTone = loadFeathers[i];
+
+      // For the 60-duck stress test, exaggeration is deliberately uncommon:
+      // one beanpole, a handful of broader ducks, some short ducks, mostly standard.
+      let buildVariant = "standard";
+      if (i === 0) buildVariant = "beanpole";
+      else if (i < 7) buildVariant = "stocky";
+      else if (i < 10) buildVariant = "big";
+      else if (i < 18) buildVariant = "short";
+
+      const isPresident = i === presidentIndex;
+      const isLeader = i === leaderIndex && !isPresident;
+      const presentation = femaleIndexes.has(i) ? "female" : "male";
+      const roles = [];
+      let hair = randomHairKey();
+      let playerHeadwear = Math.random() < 0.35 ? "cap" : "none";
+      if (isPresident) hair = "short-gray";
+      if (isPresident) roles.push("president");
+      if (captainIndexes.has(i)) roles.push("captain");
+      if (coachIndexes.has(i)) roles.push("coach");
+
+      if (isPresident) {
+        // President is a role/headwear rule, not a duck-type rule. Keep white
+        // feathers, but allow the current selected standard/golden/diamond type.
+        loadDuckType = selectedDuckType;
+        featherTone = "white";
+      }
+      makeDuck({
+        point: safeBest,
+        instant: true,
+        duckType: loadDuckType,
+        featherTone,
+        buildVariant,
+        roles,
+        clubRole: isPresident ? "president" : "player",
+        isLeader,
+        presentation,
+        hair,
+        playerHeadwear
+      });
+    }
+
+    const yellowCount = [...ducks.values()]
+      .filter(duck => duck.dataset.featherTone === "yellow").length;
+    status.textContent =
+      `Loaded ${target} ducks with president crown, leader cap, optional club caps, ${captainIndexes.size} captains, ${coachIndexes.size} coaches, ${femaleIndexes.size} female-presentation ducks, ${yellowCount} yellow-feather ducks and mixed hair overlays.`;
+  }
+
+  function updateDuckTypeButton() {
+    const label = selectedDuckType.charAt(0).toUpperCase() + selectedDuckType.slice(1);
+    duckTypeButton.textContent = `Duck Type: ${label}`;
+  }
+
+  featherToneButton.addEventListener("click", () => {
+    const index = FEATHER_TONE_KEYS.indexOf(selectedFeatherTone);
+    selectedFeatherTone = FEATHER_TONE_KEYS[(index + 1) % FEATHER_TONE_KEYS.length];
+    updateFeatherToneButton();
+    status.textContent = `New ducks will use ${FEATHER_TONES[selectedFeatherTone].label.toLowerCase()} feathers.`;
+  });
+
+  buildVariantButton.addEventListener("click", () => {
+    const index = BUILD_VARIANT_KEYS.indexOf(selectedBuildVariant);
+    selectedBuildVariant = BUILD_VARIANT_KEYS[(index + 1) % BUILD_VARIANT_KEYS.length];
+    updateBuildVariantButton();
+    status.textContent = `New ducks will use the ${BUILD_VARIANTS[selectedBuildVariant].label.toLowerCase()} build.`;
+  });
+
+  duckTypeButton.addEventListener("click", () => {
+    const index = DUCK_TYPES.indexOf(selectedDuckType);
+    selectedDuckType = DUCK_TYPES[(index + 1) % DUCK_TYPES.length];
+    updateDuckTypeButton();
+    status.textContent =
+      `New ducks will be ${selectedDuckType}.`;
+    updatePlayerIdentitySummary();
+  });
+
+  if (playerSelect) playerSelect.addEventListener("change", updatePlayerIdentitySummary);
+  if (addPlayerButton) addPlayerButton.addEventListener("click", addSelectedPlayerDuck);
+  if (weekSelect) weekSelect.addEventListener("change", () => {
+    updateWeekSummary();
+    loadSelectedWeek();
+  });
+  if (loadWeekButton) loadWeekButton.addEventListener("click", loadSelectedWeek);
+
+  addMaleButton.addEventListener("click", () => addAnimatedDuck("male"));
+  addFemaleButton.addEventListener("click", () => addAnimatedDuck("female"));
+  load60Button.addEventListener("click", () => loadPopulation(60));
+  testPresidentButton.addEventListener("click", () => replayRoleEntry("president"));
+  testLeaderButton.addEventListener("click", () => replayRoleEntry("leader"));
+  testCaptainButton.addEventListener("click", () => replayRoleEntry("captain"));
+  testCoachButton.addEventListener("click", () => replayRoleEntry("coach"));
+  resetButton.addEventListener("click", resetPond);
+
+  liveScoreboard.addEventListener("click", () => {
+    scoreboardPanel.hidden = false;
+  });
+
+  closeScoreboard.addEventListener("click", () => {
+    scoreboardPanel.hidden = true;
+  });
+
+  if (closePlayerStats) {
+    closePlayerStats.addEventListener("click", event => {
+      event.stopPropagation();
+      hidePlayerStats();
+    });
+  }
+
+  function touchDistance(a, b) {
+    return Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
+  }
+
+  function touchMidpoint(a, b) {
+    return {
+      x: (a.clientX + b.clientX) / 2,
+      y: (a.clientY + b.clientY) / 2
+    };
+  }
+
+  function startPondPinch(event) {
+    if (!mobilePondEnabled() || event.touches.length !== 2) return;
+    const rect = scene.getBoundingClientRect();
+    const midpoint = touchMidpoint(event.touches[0], event.touches[1]);
+    pinchState = {
+      startDistance: Math.max(1, touchDistance(event.touches[0], event.touches[1])),
+      startZoom: mobileUserZoom,
+      worldX: (scene.scrollLeft + (midpoint.x - rect.left)) / worldScale,
+      worldY: (scene.scrollTop + (midpoint.y - rect.top)) / worldScale,
+      lastAppliedZoom: mobileUserZoom
+    };
+    event.preventDefault();
+  }
+
+  function movePondPinch(event) {
+    if (!pinchState || event.touches.length !== 2 || !mobilePondEnabled()) return;
+    event.preventDefault();
+
+    const distance = Math.max(1, touchDistance(event.touches[0], event.touches[1]));
+    const requested = pinchState.startZoom * (distance / pinchState.startDistance);
+    const nextZoom = Math.max(MOBILE_USER_ZOOM_MIN, Math.min(MOBILE_USER_ZOOM_MAX, requested));
+
+    // Do not reflow for sub-pixel finger jitter. Each accepted update only
+    // changes the transform/stage dimensions and scroll position; it never
+    // rebuilds ducks, effects, timers, listeners or the preload queue.
+    if (Math.abs(nextZoom - pinchState.lastAppliedZoom) < 0.015) return;
+    mobileUserZoom = nextZoom;
+    pinchState.lastAppliedZoom = nextZoom;
+    const rect = scene.getBoundingClientRect();
+    const midpoint = touchMidpoint(event.touches[0], event.touches[1]);
+    applyWorldScale({
+      preserveWorldPoint: {
+        worldX: pinchState.worldX,
+        worldY: pinchState.worldY,
+        viewportX: midpoint.x - rect.left,
+        viewportY: midpoint.y - rect.top
+      }
+    });
+  }
+
+  function endPondPinch(event) {
+    if (!pinchState) return;
+    if (event.touches.length < 2) pinchState = null;
+  }
+
+  // On mobile iPhone/iPad, two-finger gestures over the pond are handled
+  // by the app rather than magnifying Safari's visual viewport. Native Safari
+  // pinch was capable of multiplying compositor/tile memory for this already
+  // transformed, animated scene until WebKit killed and reloaded the page.
+  scene.addEventListener("touchstart", startPondPinch, { passive: false });
+  scene.addEventListener("touchmove", movePondPinch, { passive: false });
+  scene.addEventListener("touchend", endPondPinch, { passive: true });
+  scene.addEventListener("touchcancel", endPondPinch, { passive: true });
+
+  function setMobileControlsOpen(open) {
+    if (!developerControls || !mobileControlsToggle) return;
+    developerControls.classList.toggle("mobile-open", open);
+    mobileControlsToggle.setAttribute("aria-expanded", String(open));
+    mobileControlsToggle.textContent = open ? "Hide Controls" : "Test Controls";
+  }
+
+  if (mobileControlsToggle) {
+    mobileControlsToggle.addEventListener("click", () => {
+      setMobileControlsOpen(!developerControls.classList.contains("mobile-open"));
+    });
+  }
+
+  if (mobilePondToggle) {
+    mobilePondToggle.addEventListener("click", () => {
+      mobilePondExpanded = !mobilePondExpanded;
+      document.body.classList.toggle("pond-focus-mode", mobilePondExpanded);
+      mobilePondToggle.setAttribute("aria-pressed", String(mobilePondExpanded));
+      mobilePondToggle.textContent = mobilePondExpanded ? "Normal View" : "Expand Pond";
+      if (mobilePondExpanded) setMobileControlsOpen(false);
+      applyWorldScale();
+    });
+  }
+
+  if (mobileZoomReset) {
+    mobileZoomReset.addEventListener("click", () => {
+      mobileUserZoom = 1;
+      pinchState = null;
+      applyWorldScale();
+    });
+  }
+
+  let resizeFrame = null;
+  let orientationTimer = null;
+  let lastLayoutWidth = document.documentElement.clientWidth;
+
+  function handleViewportChange(force = false) {
+    // Only layout-width changes are allowed to rescale the world. Safari's
+    // visualViewport resize stream is intentionally ignored: browser chrome
+    // motion and native pinch can emit dozens of events while the page layout
+    // itself is unchanged.
+    const layoutWidth = document.documentElement.clientWidth;
+    if (!force && Math.abs(layoutWidth - lastLayoutWidth) < 2) return;
+    lastLayoutWidth = layoutWidth;
+
+    if (resizeFrame) cancelAnimationFrame(resizeFrame);
+    resizeFrame = requestAnimationFrame(() => applyWorldScale());
+  }
+
+  window.addEventListener("resize", () => handleViewportChange(false), { passive: true });
+  window.addEventListener("orientationchange", () => {
+    if (orientationTimer) clearTimeout(orientationTimer);
+    orientationTimer = setTimeout(() => {
+      mobileUserZoom = 1;
+      pinchState = null;
+      handleViewportChange(true);
+    }, 180);
+  }, { passive: true });
+
+
+  function showStartupFailure(error) {
+    console.error("Duck Pond startup failed", error);
+    setDuckControlsEnabled(false);
+    if (loadingOverlay) {
+      loadingOverlay.hidden = false;
+      loadingOverlay.classList.remove("loading-complete");
+      loadingOverlay.classList.add("loading-failed");
+    }
+    if (loadingTitle) loadingTitle.textContent = "Pond failed to start";
+    if (loadingProgress) loadingProgress.textContent = "Reload to retry";
+    if (status) status.textContent = `Pond startup error: ${error?.message || error || "Unknown error"}`;
+  }
+
+  try {
+    applyWorldScale();
+    updateCounts();
+    updateDuckTypeButton();
+    updateFeatherToneButton();
+    updateBuildVariantButton();
+    setDuckControlsEnabled(false);
+    loadProductionData()
+      .then(() => {
+        populatePlayerSelect();
+        populateWeekSelect();
+        return initialiseProductionAssets();
+      })
+      .catch(showStartupFailure);
+  } catch (error) {
+    showStartupFailure(error);
+  }
+
+  window.addEventListener("load", applyWorldScale, { once: true });
+})();
