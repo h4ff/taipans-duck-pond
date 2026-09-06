@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Taipans Duck Pond — v0.128</title>
-  <link rel="stylesheet" href="src/styles.css?v=0.128">
+  <title>Taipans Duck Pond — v0.129</title>
+  <link rel="stylesheet" href="src/styles.css?v=0.129">
 </head>
 <body>
   <main class="app-shell production-shell">
@@ -26,6 +26,11 @@
         <button id="mobileZoomReset" type="button" class="secondary" hidden>Reset Zoom</button>
       </div>
     </header>
+
+    <div class="fight-test-rig" aria-label="Temporary fight testing control">
+      <button id="fightTestButton" type="button" disabled>Trigger Fight</button>
+      <span>Temporary duel test</span>
+    </div>
 
     <!-- Development hooks remain in the DOM so the test architecture can be
          re-enabled later without carrying the test rig in the production UI. -->
@@ -127,6 +132,6 @@
     <div id="status" hidden aria-live="polite"></div>
   </main>
 
-  <script src="src/app.js?v=0.128"></script>
+  <script src="src/app.js?v=0.129"></script>
 </body>
 </html>

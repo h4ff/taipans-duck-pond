@@ -1,5 +1,16 @@
-# Duck Pond – v0.128
+# Duck Pond – v0.129
 
+
+## v0.129 – Cricket Fight Test Rig
+
+- Added a temporary visible `Trigger Fight` control for portrait/normal-view testing; it is hidden in landscape and expanded pond mode.
+- Added the supplied 512×512 cricket bat as a separate fight overlay and the supplied maniacal winner face.
+- Two settled ducks are selected, aligned face-to-face, draw bats from below the water, then run a seven-clash duel with deliberately varied rhythms.
+- The rear wing performs the bat retrieval while the horizontally flipped front wing becomes the visible holding wing.
+- On the final two clashes the winner switches to the maniacal face and the loser to surprised.
+- After the deciding clash the loser drops the bat and scoots away surprised while the winner raises the bat and both wings in a short victory pose.
+- Both ducks then reset to normal pond behaviour as if the fight never happened.
+- This version is intentionally test-triggered only; random production fight scheduling will be added only after the choreography is approved.
 
 ## v0.128 – High-Five Contact + Front-End Cache Busting
 

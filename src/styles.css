@@ -566,9 +566,10 @@ body {
 .swim-flamingo { z-index: 6; }
 .swim-role-layer { z-index: 6; }
 .swim-wing-front { z-index: 7; }
+.swim-fight-bat { z-index: 8; opacity: 0; transform-origin: 50% 20%; }
 .swim-captain-layer { z-index: 6; }
 .swim-hat {
-  z-index: 8;
+  z-index: 9;
   transform: scaleX(var(--hat-counter-scale));
   transform-origin: 50% 50%;
 }
@@ -1679,4 +1680,86 @@ footer {
   70%  { transform: rotate(-138deg) translate(-15px, -11px); }
   78%  { transform: rotate(-104deg) translate(-7px, -6px); }
   100% { transform: rotate(0deg) translate(0, 0); }
+}
+
+
+/* v0.129 temporary fight-test control. Kept deliberately obvious while the
+   duel choreography is being tuned; hidden in expanded/landscape pond mode. */
+.fight-test-rig {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: -2px 2px 8px;
+  font-size: .68rem;
+  font-weight: 800;
+  color: var(--muted);
+}
+
+.fight-test-rig button {
+  min-height: 38px;
+  padding: .42rem .7rem;
+  border: 2px solid var(--ink);
+  border-radius: 9px;
+  background: var(--cream);
+  color: var(--ink);
+  box-shadow: 0 3px 0 var(--ink);
+  font: inherit;
+  font-weight: 900;
+}
+
+.fight-test-rig button:disabled { opacity: .58; }
+body.pond-focus-mode .fight-test-rig { display: none !important; }
+
+/* Cricket-fight presentation. The front wing uses a deliberate local horizontal
+   flip because that supplied pose reads much better as a gripping/holding wing. */
+.duck.fight-active .swim-wing-front {
+  transform-origin: 40% 58%;
+  transform: scaleX(-1) rotate(-54deg) translate(-2px,-2px);
+}
+
+.duck.fight-active .swim-wing-back {
+  transform-origin: 45% 58%;
+}
+
+.duck.fight-drawing .swim-wing-back {
+  opacity: 1;
+  animation: fight-rear-draw .9s ease-in-out 1 both;
+}
+
+.duck.fight-drawing .swim-fight-bat {
+  opacity: 1;
+  animation: fight-bat-draw .9s ease-out 1 both;
+}
+
+.duck.fight-ready .swim-fight-bat,
+.duck.fight-active:not(.fight-drawing) .swim-fight-bat {
+  opacity: 1;
+  transform: translate(-104px, 154px) rotate(94deg) scale(.70);
+}
+
+.duck.fight-ready .swim-wing-front {
+  transform: scaleX(-1) rotate(-58deg) translate(-2px,-3px);
+}
+
+.duck.fight-loser-scoot .swim-wing-front,
+.duck.fight-loser-scoot .swim-wing-back {
+  animation: front-wing-flap .12s ease-in-out 5;
+}
+
+.duck.fight-victory .swim-wing-back { opacity: 1; }
+
+@keyframes fight-rear-draw {
+  0%   { opacity: .2; transform: rotate(8deg) translateY(8px); }
+  45%  { opacity: 1; transform: rotate(70deg) translateY(2px); }
+  100% { opacity: .65; transform: rotate(28deg); }
+}
+
+@keyframes fight-bat-draw {
+  0%   { opacity: 0; transform: translate(-104px, 270px) rotate(18deg) scale(.64); }
+  55%  { opacity: 1; transform: translate(-104px, 185px) rotate(64deg) scale(.68); }
+  100% { opacity: 1; transform: translate(-104px, 154px) rotate(94deg) scale(.70); }
+}
+
+@media (max-width: 900px) and (pointer: coarse) and (orientation: landscape) {
+  .fight-test-rig { display: none !important; }
 }
