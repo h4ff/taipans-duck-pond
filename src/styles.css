@@ -1638,24 +1638,45 @@ footer {
   animation-name: female-back-wing-flap;
 }
 
-/* v0.126: the high-five is part of the swimmer's normal route. There is no
-   stop/reposition step: both wings reach forward as the moving duck naturally
-   passes the stationary same-player duck. */
+/* v0.127: same-player high-fives stay on the natural swim path, but the
+   stationary duck now lifts a beat earlier and the moving duck reaches later.
+   That offset timing, plus a shorter recoil, reads more like a real high-five
+   and less like two ducks waving in sync. */
 .duck.same-player-highfive .swim-wing-front {
   transform-origin: 40% 58%;
-  animation: same-player-highfive-wing var(--highfive-duration, 720ms) ease-in-out 1 both;
+}
+
+.duck.same-player-highfive.same-player-highfive-stationary .swim-wing-front {
+  animation: same-player-highfive-wing-stationary var(--highfive-duration, 760ms) ease-in-out 1 both;
+}
+
+.duck.same-player-highfive.same-player-highfive-mover .swim-wing-front {
+  animation: same-player-highfive-wing-mover var(--highfive-duration, 760ms) ease-in-out 1 both;
 }
 
 .duck.same-player-highfive-contact .swim-wing-front {
   filter: brightness(1.03);
 }
 
-@keyframes same-player-highfive-wing {
+@keyframes same-player-highfive-wing-stationary {
   0%   { transform: rotate(0deg) translate(0, 0); }
-  30%  { transform: rotate(-78deg) translate(-2px, -4px); }
-  48%  { transform: rotate(-120deg) translate(-7px, -8px); }
-  56%  { transform: rotate(-124deg) translate(-8px, -8px); }
-  66%  { transform: rotate(-94deg) translate(-3px, -4px); }
-  76%  { transform: rotate(-102deg) translate(-4px, -5px); }
+  14%  { transform: rotate(-22deg) translate(-1px, -1px); }
+  28%  { transform: rotate(-60deg) translate(-2px, -3px); }
+  42%  { transform: rotate(-98deg) translate(-7px, -7px); }
+  54%  { transform: rotate(-138deg) translate(-15px, -12px); }
+  60%  { transform: rotate(-142deg) translate(-16px, -12px); }
+  68%  { transform: rotate(-108deg) translate(-7px, -6px); }
+  100% { transform: rotate(0deg) translate(0, 0); }
+}
+
+@keyframes same-player-highfive-wing-mover {
+  0%   { transform: rotate(0deg) translate(0, 0); }
+  18%  { transform: rotate(0deg) translate(0, 0); }
+  34%  { transform: rotate(-18deg) translate(-1px, -1px); }
+  48%  { transform: rotate(-72deg) translate(-3px, -4px); }
+  58%  { transform: rotate(-116deg) translate(-8px, -8px); }
+  64%  { transform: rotate(-142deg) translate(-16px, -12px); }
+  70%  { transform: rotate(-138deg) translate(-15px, -11px); }
+  78%  { transform: rotate(-104deg) translate(-7px, -6px); }
   100% { transform: rotate(0deg) translate(0, 0); }
 }

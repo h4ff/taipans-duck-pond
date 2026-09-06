@@ -1990,12 +1990,12 @@
 
       if (highFive) {
         contactRaw = inverseSwimProgress(highFive.contactT);
-        const leadMs = Math.max(420, Math.min(820, duration * .085));
-        const trailMs = Math.max(360, Math.min(720, duration * .075));
+        const leadMs = Math.max(560, Math.min(980, duration * .11));
+        const trailMs = Math.max(260, Math.min(540, duration * .05));
         highFiveStartRaw = Math.max(0, contactRaw - leadMs / duration);
         highFiveEndRaw = Math.min(1, contactRaw + trailMs / duration);
         const wingDuration = Math.round((highFiveEndRaw - highFiveStartRaw) * duration);
-        highFive.wingDuration = Math.max(620, wingDuration);
+        highFive.wingDuration = Math.max(760, wingDuration);
       }
 
       function beginHighFive() {
@@ -2147,7 +2147,9 @@
 
     if (!best) return null;
 
-    const contactSpacing = 4.45;
+    // Bring the pass line slightly closer so the raised front wings can
+    // visibly overlap/touch instead of reading as two separate waves.
+    const contactSpacing = 2.15;
     const contact = {
       x: best.point.x - direction * contactSpacing,
       y: best.point.y

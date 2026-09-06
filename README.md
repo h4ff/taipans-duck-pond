@@ -1,5 +1,12 @@
-# Duck Pond – v0.127
+# Duck Pond – v0.128
 
+
+## v0.128 – High-Five Contact + Front-End Cache Busting
+
+- Added versioned query strings to `src/styles.css` and `src/app.js` so GitHub Pages/mobile browsers do not keep serving an older high-five implementation after a deploy.
+- Tightened the same-player pass spacing slightly.
+- Extended both front-wing contact poses further so the wing tips visibly overlap/touch at the pass point.
+- Kept the staggered timing: stationary duck offers the wing first, moving duck joins later, then both use a short recoil and tuck.
 
 ## v0.127 – Staggered High-Five Timing
 
