@@ -712,8 +712,8 @@
   // wing-tip anchor while the existing swim-stack mirror supplies the opposite
   // fighter automatically.
   const FIGHT_BAT_POSE = {
-    hidden: "translate(-50%, 68%) rotate(90deg) scale(.90)",
-    drawMid: "translate(-50%, 18%) rotate(112deg) scale(.96)",
+    hidden: "translate(-50%, 140%) rotate(90deg) scale(.90)",
+    drawMid: "translate(-50%, 42%) rotate(112deg) scale(.96)",
     ready: "translate(-50%, -29.2%) rotate(136deg)",
     attackHigh: "translate(-50%, -29.2%) rotate(112deg)",
     attackRecover: "translate(-50%, -29.2%) rotate(134deg)",
@@ -2885,7 +2885,7 @@
     const ap = currentPosition(a);
     const bp = currentPosition(b);
     const mid = { x: (ap.x + bp.x) / 2, y: (ap.y + bp.y) / 2 };
-    const spacing = 6.8;
+    const spacing = 6.1;
     const candidates = [0, -2.5, 2.5, -5, 5];
     for (const yOffset of candidates) {
       const y = mid.y + yOffset;
@@ -3018,19 +3018,36 @@
   async function fightLoserScoot(loser, winner) {
     if (!loser?.isConnected) return;
     const bat = fightBat(loser);
+
+    // Keep the successful v0.133 "throw the bat away" beat before the duck
+    // turns tail. The normal swim wings take over once fight-ready is removed.
     if (bat) {
       await fightAnimation(bat, [
         { transform: FIGHT_BAT_POSE.ready, opacity: 1 },
         { transform: FIGHT_BAT_POSE.loserDrop, opacity: 0 }
       ], { duration: 280, easing: "ease-in" });
     }
+
     loser.classList.remove("fight-ready");
     const from = currentPosition(loser);
     const away = collisionEscapePoint(loser, winner);
+    const dx = away.x - from.x;
+
+    // Explicitly turn away before the escape starts. animateRoute then uses the
+    // same facing/curved-motion machinery as a normal click scoot.
+    setFacingForMovement(loser, dx);
+    await sleep(90);
+
     loser.dataset.motionState = "swimming";
     loser.classList.remove("floating");
     loser.classList.add("fight-loser-scoot");
-    await animateFightMove(loser, from, away, 720);
+    const distanceAway = distance(from, away);
+    await animateRoute(
+      loser,
+      from,
+      away,
+      Math.max(1250, Math.min(1900, 900 + distanceAway * 82))
+    );
     loser.classList.remove("fight-loser-scoot");
     loser.dataset.motionState = "floating";
     loser.classList.add("floating");
@@ -3458,6 +3475,12 @@
     const fightArm = document.createElement("span");
     fightArm.className = "swim-fight-arm";
     fightArm.setAttribute("aria-hidden", "true");
+    // Female front-wing artwork has a slightly different leading/grip point.
+    // Keep one choreography and compensate only at the grip anchor.
+    if (presentation === "female") {
+      fightArm.style.setProperty("--fight-grip-x", "12.5%");
+      fightArm.style.setProperty("--fight-grip-y", "60.2%");
+    }
 
     const fightBat = document.createElement("img");
     fightBat.className = "swim-layer fight-arm-bat";

@@ -1789,9 +1789,20 @@ body.pond-focus-mode .fight-test-rig { display: none !important; }
   opacity: 0;
 }
 
-.duck.fight-loser-scoot .swim-wing-front,
+.duck.fight-loser-scoot .swim-wing-front {
+  transform-origin: 40% 58%;
+  animation: front-wing-flap .12s ease-in-out 7;
+}
+
 .duck.fight-loser-scoot .swim-wing-back {
-  animation: front-wing-flap .12s ease-in-out 5;
+  opacity: 1;
+  transform-origin: 45% 58%;
+  animation: back-wing-flap .12s ease-in-out 7;
+}
+
+.duck[data-presentation="female"].fight-loser-scoot .swim-wing-back {
+  transform-origin: 49% 66%;
+  animation-name: female-back-wing-flap;
 }
 
 .duck.fight-victory .swim-wing-back { opacity: 1; }
@@ -1803,8 +1814,9 @@ body.pond-focus-mode .fight-test-rig { display: none !important; }
 }
 
 @keyframes fight-bat-draw {
-  0%   { opacity: 0; transform: translate(-50%, 68%) rotate(90deg) scale(.90); }
-  55%  { opacity: 1; transform: translate(-50%, 18%) rotate(112deg) scale(.96); }
+  0%   { opacity: 0; transform: translate(-50%, 140%) rotate(90deg) scale(.90); }
+  22%  { opacity: 0; transform: translate(-50%, 112%) rotate(96deg) scale(.92); }
+  58%  { opacity: 1; transform: translate(-50%, 42%) rotate(112deg) scale(.96); }
   100% { opacity: 1; transform: translate(-50%, -29.2%) rotate(136deg); }
 }
 
