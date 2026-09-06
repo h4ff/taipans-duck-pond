@@ -566,7 +566,7 @@ body {
 .swim-flamingo { z-index: 6; }
 .swim-role-layer { z-index: 6; }
 .swim-wing-front { z-index: 7; }
-.swim-fight-bat { z-index: 8; opacity: 0; transform-origin: 50% 20%; }
+.swim-fight-bat { z-index: 8; opacity: 0; transform-origin: 50% 20%; will-change: transform, opacity; }
 .swim-captain-layer { z-index: 6; }
 .swim-hat {
   z-index: 9;
@@ -1714,7 +1714,7 @@ body.pond-focus-mode .fight-test-rig { display: none !important; }
    flip because that supplied pose reads much better as a gripping/holding wing. */
 .duck.fight-active .swim-wing-front {
   transform-origin: 40% 58%;
-  transform: scaleX(-1) rotate(-54deg) translate(-2px,-2px);
+  transform: scaleX(-1) rotate(-70deg) translate(-3px,-4px);
 }
 
 .duck.fight-active .swim-wing-back {
@@ -1734,11 +1734,11 @@ body.pond-focus-mode .fight-test-rig { display: none !important; }
 .duck.fight-ready .swim-fight-bat,
 .duck.fight-active:not(.fight-drawing) .swim-fight-bat {
   opacity: 1;
-  transform: translate(-104px, 154px) rotate(94deg) scale(.70);
+  transform: translate(-4px, 40px) rotate(76deg) scale(1.18);
 }
 
 .duck.fight-ready .swim-wing-front {
-  transform: scaleX(-1) rotate(-58deg) translate(-2px,-3px);
+  transform: scaleX(-1) rotate(-70deg) translate(-3px,-4px);
 }
 
 .duck.fight-loser-scoot .swim-wing-front,
@@ -1755,9 +1755,53 @@ body.pond-focus-mode .fight-test-rig { display: none !important; }
 }
 
 @keyframes fight-bat-draw {
-  0%   { opacity: 0; transform: translate(-104px, 270px) rotate(18deg) scale(.64); }
-  55%  { opacity: 1; transform: translate(-104px, 185px) rotate(64deg) scale(.68); }
-  100% { opacity: 1; transform: translate(-104px, 154px) rotate(94deg) scale(.70); }
+  0%   { opacity: 0; transform: translate(-4px, 138px) rotate(14deg) scale(1.02); }
+  55%  { opacity: 1; transform: translate(-4px, 76px) rotate(48deg) scale(1.12); }
+  100% { opacity: 1; transform: translate(-4px, 40px) rotate(76deg) scale(1.18); }
+}
+
+
+/* v0.130: tiny code-drawn cartoon spark at the actual bat contact point. */
+.fight-clash-spark {
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  transform: translate(-50%, -50%);
+  z-index: 3050;
+  pointer-events: none;
+  animation: fight-spark-pop .22s ease-out 1 both;
+}
+
+.fight-clash-spark i {
+  --spark-angle: 0deg;
+  --spark-length: 14px;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--spark-length);
+  height: 3px;
+  border-radius: 999px;
+  background: #fff6a7;
+  box-shadow: 0 0 2px rgba(255,255,255,.9);
+  transform-origin: 0 50%;
+  transform: rotate(var(--spark-angle)) translateX(4px);
+}
+
+.fight-clash-spark b {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: white;
+  transform: translate(-50%, -50%);
+}
+
+@keyframes fight-spark-pop {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(.35) rotate(0deg); }
+  32% { opacity: 1; transform: translate(-50%, -50%) scale(1.15) rotate(7deg); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(.72) rotate(-5deg); }
 }
 
 @media (max-width: 900px) and (pointer: coarse) and (orientation: landscape) {

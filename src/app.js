@@ -2836,6 +2836,7 @@
     if (duck.dataset.reacting === "true" || duck.dataset.fightActive === "true") return false;
     if (duck.dataset.highFiveActive === "true" || duck.dataset.highFiveReserved === "true") return false;
     if (duck.classList.contains("snake-panic")) return false;
+    if (duckHasFlamingo(duck)) return false;
     return true;
   }
 
@@ -2866,7 +2867,7 @@
     const ap = currentPosition(a);
     const bp = currentPosition(b);
     const mid = { x: (ap.x + bp.x) / 2, y: (ap.y + bp.y) / 2 };
-    const spacing = 8.4;
+    const spacing = 6.8;
     const candidates = [0, -2.5, 2.5, -5, 5];
     for (const yOffset of candidates) {
       const y = mid.y + yOffset;
@@ -2920,34 +2921,56 @@
     return animation.finished.catch(() => {});
   }
 
+  function spawnFightSpark(left, right) {
+    if (!duckLayer || !left?.isConnected || !right?.isConnected) return;
+    const lp = currentPosition(left);
+    const rp = currentPosition(right);
+    const spark = document.createElement("span");
+    spark.className = "fight-clash-spark";
+    spark.setAttribute("aria-hidden", "true");
+    for (let i = 0; i < 6; i++) {
+      const ray = document.createElement("i");
+      ray.style.setProperty("--spark-angle", `${i * 60 + (Math.random() * 12 - 6)}deg`);
+      ray.style.setProperty("--spark-length", `${10 + Math.random() * 9}px`);
+      spark.appendChild(ray);
+    }
+    const centre = document.createElement("b");
+    spark.appendChild(centre);
+    setWorldPosition(spark, (lp.x + rp.x) / 2, (lp.y + rp.y) / 2 - 2.6);
+    duckLayer.appendChild(spark);
+    setTimeout(() => spark.remove(), 240);
+  }
+
   async function animateFightClash(left, right, attacker, durationMs) {
     const leftBat = fightBat(left);
     const rightBat = fightBat(right);
     const leftWing = fightWing(left);
     const rightWing = fightWing(right);
     const attackerIsLeft = attacker === left;
-    const defenderDelay = 55 + Math.random() * 45;
-    const swing = Math.max(220, Math.round(durationMs * .48));
+    const defenderDelay = 45 + Math.random() * 55;
+    const swing = Math.max(250, Math.round(durationMs * .58));
 
+    // v0.130: all bat positions stay anchored close to the holding wing. The
+    // opposing parent stacks mirror the same local geometry automatically.
     const attackFrames = [
-      { transform: "translate(-104px, 154px) rotate(86deg) scale(.70)" },
-      { transform: "translate(-104px, 154px) rotate(56deg) scale(.70)", offset: .62 },
-      { transform: "translate(-104px, 154px) rotate(94deg) scale(.70)" }
+      { transform: "translate(-4px, 40px) rotate(70deg) scale(1.18)" },
+      { transform: "translate(-4px, 40px) rotate(104deg) scale(1.18)", offset: .60 },
+      { transform: "translate(-4px, 40px) rotate(76deg) scale(1.18)" }
     ];
     const defendFrames = [
-      { transform: "translate(-104px, 154px) rotate(96deg) scale(.70)" },
-      { transform: "translate(-104px, 154px) rotate(74deg) scale(.70)", offset: .62 },
-      { transform: "translate(-104px, 154px) rotate(100deg) scale(.70)" }
+      { transform: "translate(-4px, 40px) rotate(82deg) scale(1.18)" },
+      { transform: "translate(-4px, 40px) rotate(56deg) scale(1.18)", offset: .60 },
+      { transform: "translate(-4px, 40px) rotate(76deg) scale(1.18)" }
     ];
     const wingAttack = [
-      { transform: "scaleX(-1) rotate(-56deg) translate(-2px,-3px)" },
-      { transform: "scaleX(-1) rotate(-74deg) translate(-4px,-5px)", offset: .62 },
-      { transform: "scaleX(-1) rotate(-58deg) translate(-2px,-3px)" }
+      { transform: "scaleX(-1) rotate(-66deg) translate(-3px,-3px)" },
+      { transform: "scaleX(-1) rotate(-88deg) translate(-5px,-6px)", offset: .60 },
+      { transform: "scaleX(-1) rotate(-70deg) translate(-3px,-4px)" }
     ];
     const wingDefend = [
-      { transform: "scaleX(-1) rotate(-52deg) translate(-2px,-2px)" },
-      { transform: "scaleX(-1) rotate(-64deg) translate(-3px,-4px)", offset: .62 },
-      { transform: "scaleX(-1) rotate(-54deg) translate(-2px,-2px)" }
+      { transform: "scaleX(-1) rotate(-70deg) translate(-3px,-3px)" },
+      { transform: "scaleX(-1) rotate(-58deg) translate(-3px,-4px)", offset: .60 },
+      { transform: "scaleX(-1) rotate(-70deg) translate(-3px,-3px)" }
     ];
 
     const tasks = [];
@@ -2964,8 +2987,12 @@
       tasks.push(fightAnimation(leftBat, defendFrames, { duration: swing - defenderDelay, easing: "ease-in-out" }));
       tasks.push(fightAnimation(leftWing, wingDefend, { duration: swing - defenderDelay, easing: "ease-in-out" }));
     }
+
+    const sparkDelay = Math.max(80, Math.round(swing * .58) - defenderDelay);
+    const sparkTimer = setTimeout(() => spawnFightSpark(left, right), sparkDelay);
     await Promise.all(tasks);
-    await sleep(Math.max(100, durationMs - swing));
+    clearTimeout(sparkTimer);
+    await sleep(Math.max(90, durationMs - swing));
   }
 
   async function fightLoserScoot(loser, winner) {
@@ -2973,8 +3000,8 @@
     const bat = fightBat(loser);
     if (bat) {
       await fightAnimation(bat, [
-        { transform: "translate(-104px, 154px) rotate(94deg) scale(.70)", opacity: 1 },
-        { transform: "translate(-104px, 255px) rotate(78deg) scale(.66)", opacity: 0 }
+        { transform: "translate(-4px, 40px) rotate(76deg) scale(1.18)", opacity: 1 },
+        { transform: "translate(-4px, 132px) rotate(64deg) scale(1.08)", opacity: 0 }
       ], { duration: 280, easing: "ease-in" });
     }
     const from = currentPosition(loser);
@@ -2996,12 +3023,12 @@
     const rear = fightRearWing(winner);
     const tasks = [
       fightAnimation(bat, [
-        { transform: "translate(-104px, 154px) rotate(94deg) scale(.70)" },
-        { transform: "translate(-36px, 24px) rotate(172deg) scale(.72)" }
+        { transform: "translate(-4px, 40px) rotate(76deg) scale(1.18)" },
+        { transform: "translate(0px, 20px) rotate(178deg) scale(1.20)" }
       ], { duration: 520, easing: "ease-out", fill: "forwards" }),
       fightAnimation(wing, [
-        { transform: "scaleX(-1) rotate(-58deg) translate(-2px,-3px)" },
-        { transform: "scaleX(-1) rotate(-132deg) translate(-5px,-8px)" }
+        { transform: "scaleX(-1) rotate(-70deg) translate(-3px,-4px)" },
+        { transform: "scaleX(-1) rotate(-136deg) translate(-6px,-9px)" }
       ], { duration: 520, easing: "ease-out", fill: "forwards" }),
       fightAnimation(rear, [
         { opacity: .4, transform: "rotate(20deg)" },
@@ -3009,7 +3036,13 @@
       ], { duration: 520, easing: "ease-out", fill: "forwards" })
     ];
     await Promise.all(tasks);
-    await sleep(1250);
+    await sleep(1150);
+    if (bat) {
+      await fightAnimation(bat, [
+        { transform: "translate(0px, 20px) rotate(178deg) scale(1.20)", opacity: 1 },
+        { transform: "translate(-4px, 132px) rotate(82deg) scale(1.06)", opacity: 0 }
+      ], { duration: 300, easing: "ease-in", fill: "forwards" });
+    }
     if (bat) bat.getAnimations().forEach(a => a.cancel());
     if (wing) wing.getAnimations().forEach(a => a.cancel());
     if (rear) rear.getAnimations().forEach(a => a.cancel());
@@ -3037,6 +3070,10 @@
         duck.classList.remove("floating");
         duck.classList.add("fight-active");
       }
+
+      // Both fighters stay angry through the setup and main duel. The final
+      // two clashes tell the winner/loser story with maniacal/surprised faces.
+      for (const duck of actors) setDuckFace(duck, "angry");
 
       const leftFrom = currentPosition(leftActor);
       const rightFrom = currentPosition(rightActor);
