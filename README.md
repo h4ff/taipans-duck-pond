@@ -1,5 +1,14 @@
-# Duck Pond – v0.133
+# Duck Pond – v0.134
 
+
+## v0.134 – Fight Polish: Draw, Escape + Female Grip
+
+- Preserved the accepted v0.133 bat size, clash angles, spark timing and facial-expression choreography.
+- Tightened fighter spacing slightly so the bats meet more naturally without changing the successful swing motion.
+- Reworked the bat draw so each bat starts genuinely below the duck/waterline and rises into the existing grip instead of appearing near the ready pose.
+- Kept the loser bat-throw/drop beat, then turns the losing duck away from the winner and sends it off using the normal curved scoot movement.
+- Corrected the loser escape wing animation so front and rear wings use their proper flap directions; female rear wings retain their dedicated female flap geometry.
+- Added a small female-only fight-grip offset while keeping the same fight choreography, bringing the bat handle into the differently shaped female front wing.
 
 ## v0.133 – Bat Grip Geometry / Cropped Fight Asset
 
