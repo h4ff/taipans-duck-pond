@@ -1,5 +1,14 @@
-# Duck Pond – v0.130
+# Duck Pond – v0.131
 
+
+## v0.131 – Articulated Fight Arm / Bat Layering
+
+- Rebuilt the duel holding pose around a dedicated fight-arm group so the front wing and bat pivot together from the shoulder instead of moving as two unrelated overlays.
+- The fight-specific front wing is flipped forward and held approximately horizontal, matching the supplied mock-up rather than slanting up across the face.
+- Reduced the bat from the oversized v0.130 presentation and anchored its handle to the gripping-wing area. The bat now adds only a smaller secondary snap during each clash while the shoulder/wing supplies the broad swing.
+- Fight layering is now explicit: normal duck layers/headwear → bat → gripping front wing. This allows the bat to cross in front of face/hair/caps/crown while the wing still visibly grips it.
+- Removed the v0.130 rule that could leave the fight bat visible simply because a duck remained in `fight-active`; bats are now visible only during draw/ready/victory states and are explicitly reset during cleanup.
+- Kept the existing cartoon clash sparks unchanged for later review.
 
 ## v0.130 – Fight Choreography + Clash Sparks
 
