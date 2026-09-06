@@ -1955,9 +1955,21 @@
     return (0.5 * ramp + (1 - 2 * ramp) + u - 0.5 * u * u / ramp) / totalArea;
   }
 
-  function animateMove(duck, from, to, duration) {
+  function inverseSwimProgress(target) {
+    let lo = 0;
+    let hi = 1;
+    for (let i = 0; i < 18; i++) {
+      const mid = (lo + hi) / 2;
+      if (swimProgress(mid) < target) lo = mid;
+      else hi = mid;
+    }
+    return (lo + hi) / 2;
+  }
+
+  function animateMove(duck, from, to, duration, options = {}) {
     const safeTo = nearestValidStoppingPoint(to);
-    const control = curvedControlPoint(from, safeTo);
+    const control = options.control || curvedControlPoint(from, safeTo);
+    const highFive = options.highFive || null;
 
     return new Promise(resolve => {
       const started = performance.now();
@@ -1968,12 +1980,73 @@
       const cross = chord.x * (control.y - from.y) - chord.y * (control.x - from.x);
       const stack = duck.querySelector(".swim-stack");
       const baseLean = Math.abs(cross) < .25 ? 0 : (cross > 0 ? 2.8 : -2.8);
-      if (stack) {
-        stack.style.setProperty("--swim-tilt", `${baseLean}deg`);
+      if (stack) stack.style.setProperty("--swim-tilt", `${baseLean}deg`);
+
+      let highFiveStarted = false;
+      let highFiveFinished = false;
+      let contactRaw = 0;
+      let highFiveStartRaw = 0;
+      let highFiveEndRaw = 0;
+
+      if (highFive) {
+        contactRaw = inverseSwimProgress(highFive.contactT);
+        const leadMs = Math.max(420, Math.min(820, duration * .085));
+        const trailMs = Math.max(360, Math.min(720, duration * .075));
+        highFiveStartRaw = Math.max(0, contactRaw - leadMs / duration);
+        highFiveEndRaw = Math.min(1, contactRaw + trailMs / duration);
+        const wingDuration = Math.round((highFiveEndRaw - highFiveStartRaw) * duration);
+        highFive.wingDuration = Math.max(620, wingDuration);
+      }
+
+      function beginHighFive() {
+        if (!highFive || highFiveStarted) return;
+        const stationary = highFive.stationary;
+        if (!stationary?.isConnected || stationary.dataset.motionState !== "floating") return;
+
+        highFiveStarted = true;
+        duck.dataset.highFiveActive = "true";
+        stationary.dataset.highFiveActive = "true";
+        duck.dataset.reacting = "true";
+        stationary.dataset.reacting = "true";
+        clearTimeout(stationary._roamTimer);
+
+        const direction = highFive.direction;
+        setFacingForMovement(duck, direction);
+        setFacingForMovement(stationary, -direction);
+
+        const durationMs = `${highFive.wingDuration}ms`;
+        duck.style.setProperty("--highfive-duration", durationMs);
+        stationary.style.setProperty("--highfive-duration", durationMs);
+        duck.classList.add("same-player-highfive", "same-player-highfive-mover");
+        stationary.classList.add("same-player-highfive", "same-player-highfive-stationary");
+      }
+
+      function endHighFive() {
+        if (!highFive || highFiveFinished) return;
+        highFiveFinished = true;
+        const stationary = highFive.stationary;
+        const pair = [duck, stationary];
+        for (const actor of pair) {
+          if (!actor?.isConnected) continue;
+          actor.classList.remove(
+            "same-player-highfive",
+            "same-player-highfive-mover",
+            "same-player-highfive-stationary",
+            "same-player-highfive-contact"
+          );
+          actor.style.removeProperty("--highfive-duration");
+          actor.dataset.highFiveActive = "false";
+          actor.dataset.reacting = "false";
+          restoreIdleFace(actor);
+        }
+        if (stationary?.isConnected && stationary.dataset.motionState === "floating") {
+          scheduleRoam(stationary, 2200 + Math.random() * 2600);
+        }
       }
 
       function frame(now) {
         if (!duck.isConnected) {
+          endHighFive();
           resolve();
           return;
         }
@@ -1985,8 +2058,6 @@
 
         setFacingForMovement(duck, tangent.x);
 
-        // Ease the turn lean back to level during the final 20% of the swim.
-        // This removes the visible snap/jolt that occurred when the duck stopped.
         if (stack) {
           const settleStart = .80;
           let tiltFactor = 1;
@@ -2003,16 +2074,20 @@
         duck.dataset.y = point.y.toFixed(3);
         setDepth(duck, point.y);
 
-        if (duck.dataset.routeKind === "normal" && duck.dataset.highFiveActive !== "true") {
-          const candidate = samePlayerHighFiveCandidate(duck, point, tangent.x);
-          if (candidate) {
-            const remainingDistance = Math.max(.01, distance(point, safeTo));
-            const remainingMs = Math.max(1, duration * (1 - raw));
-            const msPerUnit = remainingMs / remainingDistance;
-            if (stack) stack.style.setProperty("--swim-tilt", "0deg");
-            void runSamePlayerPassHighFive(duck, candidate, point, tangent.x, msPerUnit)
-              .finally(() => resolve({ highFive: true }));
-            return;
+        if (highFive) {
+          if (!highFiveStarted && raw >= highFiveStartRaw) beginHighFive();
+          if (highFiveStarted && !highFiveFinished) {
+            const stationary = highFive.stationary;
+            if (!stationary?.isConnected || stationary.dataset.motionState !== "floating") {
+              endHighFive();
+            } else if (Math.abs(raw - contactRaw) < .018) {
+              duck.classList.add("same-player-highfive-contact");
+              stationary.classList.add("same-player-highfive-contact");
+            } else {
+              duck.classList.remove("same-player-highfive-contact");
+              stationary.classList.remove("same-player-highfive-contact");
+            }
+            if (raw >= highFiveEndRaw) endHighFive();
           }
         }
 
@@ -2022,12 +2097,88 @@
           duck._moveFrame = requestAnimationFrame(frame);
         } else {
           if (stack) stack.style.setProperty("--swim-tilt", "0deg");
+          endHighFive();
           resolve();
         }
       }
 
       duck._moveFrame = requestAnimationFrame(frame);
     });
+  }
+
+
+  function pointToSegmentProjection(point, from, to) {
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const len2 = dx * dx + dy * dy;
+    if (len2 < .0001) return { t: 0, distance: distance(point, from) };
+    const t = Math.max(0, Math.min(1, ((point.x - from.x) * dx + (point.y - from.y) * dy) / len2));
+    const projected = { x: from.x + dx * t, y: from.y + dy * t };
+    return { t, distance: distance(point, projected), projected };
+  }
+
+  function plannedSamePlayerHighFive(mover, from, to) {
+    const playerId = String(mover.dataset.playerId || "");
+    if (!playerId) return null;
+
+    const travelDx = to.x - from.x;
+    if (Math.abs(travelDx) < 4.0) return null;
+    const direction = Math.sign(travelDx);
+    let best = null;
+    let bestScore = Infinity;
+
+    for (const other of ducks.values()) {
+      if (other === mover || !other?.isConnected) continue;
+      if (other.dataset.motionState !== "floating") continue;
+      if (String(other.dataset.playerId || "") !== playerId) continue;
+      if (!samePlayerPairReady(mover, other)) continue;
+
+      const op = currentPosition(other);
+      const projection = pointToSegmentProjection(op, from, to);
+      if (projection.t < .24 || projection.t > .76) continue;
+      if (projection.distance > 6.2) continue;
+
+      const score = projection.distance + Math.abs(projection.t - .5) * 2.5;
+      if (score < bestScore) {
+        best = { stationary: other, point: op, projection };
+        bestScore = score;
+      }
+    }
+
+    if (!best) return null;
+
+    const contactSpacing = 4.45;
+    const contact = {
+      x: best.point.x - direction * contactSpacing,
+      y: best.point.y
+    };
+
+    const contactT = Math.max(.28, Math.min(.72, best.projection.t));
+    const mt = 1 - contactT;
+    const denom = 2 * mt * contactT;
+    const control = {
+      x: (contact.x - mt * mt * from.x - contactT * contactT * to.x) / denom,
+      y: (contact.y - mt * mt * from.y - contactT * contactT * to.y) / denom
+    };
+
+    // Only accept the interaction if the resulting route stays within the
+    // actual swimable pond. If not, keep the original random swim untouched.
+    for (let i = 1; i < 24; i++) {
+      const p = quadraticPoint(from, control, to, i / 24);
+      if (!canDuckTravelAt(p.x, p.y)) return null;
+    }
+
+    const key = collisionPairKey(mover, best.stationary);
+    collisionPairs.set(key, performance.now());
+    best.stationary.dataset.highFiveReserved = "true";
+    clearTimeout(best.stationary._roamTimer);
+
+    return {
+      stationary: best.stationary,
+      direction,
+      contactT,
+      control
+    };
   }
 
   function scheduleRoam(duck, delay = 1000 + Math.random() * 5000) {
@@ -2049,12 +2200,24 @@
         Math.min(10500, (3000 + distance(from, to) * 350) / pace)
       );
 
+      const highFive = plannedSamePlayerHighFive(duck, from, to);
+
       activeSwimmers++;
       duck.dataset.motionState = "swimming";
       duck.dataset.routeKind = "normal";
       duck.classList.remove("floating");
 
-      await animateRoute(duck, from, to, duration);
+      if (highFive) {
+        await animateMove(duck, from, to, duration, {
+          control: highFive.control,
+          highFive
+        });
+        if (highFive.stationary?.isConnected) {
+          highFive.stationary.dataset.highFiveReserved = "false";
+        }
+      } else {
+        await animateRoute(duck, from, to, duration);
+      }
 
       duck.dataset.routeKind = "";
       activeSwimmers = Math.max(0, activeSwimmers - 1);
@@ -2067,6 +2230,7 @@
       }
     }, delay);
   }
+
 
 
   function updateFeatherToneButton() {
@@ -2650,148 +2814,10 @@
     if (!a?.isConnected || !b?.isConnected) return false;
     if (a.dataset.reacting === "true" || b.dataset.reacting === "true") return false;
     if (a.dataset.highFiveActive === "true" || b.dataset.highFiveActive === "true") return false;
+    if (a.dataset.highFiveReserved === "true" || b.dataset.highFiveReserved === "true") return false;
     if (a.classList.contains("snake-panic") || b.classList.contains("snake-panic")) return false;
     const key = collisionPairKey(a, b);
     return now - Number(collisionPairs.get(key) || 0) >= 9000;
-  }
-
-  function samePlayerHighFiveCandidate(mover, point, tangentX) {
-    if (mover.dataset.routeKind !== "normal") return null;
-    if (mover.dataset.highFiveActive === "true" || mover.classList.contains("snake-panic")) return null;
-
-    const playerId = String(mover.dataset.playerId || "");
-    if (!playerId) return null;
-
-    const direction = Math.sign(tangentX) || (mover.dataset.facing === "right" ? 1 : -1);
-    let best = null;
-    let bestScore = Infinity;
-
-    for (const other of ducks.values()) {
-      if (other === mover || !other?.isConnected) continue;
-      if (other.dataset.motionState !== "floating") continue;
-      if (String(other.dataset.playerId || "") !== playerId) continue;
-      if (!samePlayerPairReady(mover, other)) continue;
-
-      const op = currentPosition(other);
-      const dx = op.x - point.x;
-      const dy = op.y - point.y;
-      if (dx * direction <= 0) continue;
-      if (Math.abs(dx) > 9.0 || Math.abs(dy) > 5.5) continue;
-
-      const score = Math.abs(dx) + Math.abs(dy) * 1.4;
-      if (score < bestScore) {
-        best = other;
-        bestScore = score;
-      }
-    }
-    return best;
-  }
-
-  function animateHighFiveMove(duck, from, to, duration, facingX = null) {
-    return new Promise(resolve => {
-      const started = performance.now();
-      const dx = to.x - from.x;
-      const dy = to.y - from.y;
-      if (facingX != null) setFacingForMovement(duck, facingX);
-
-      function frame(now) {
-        if (!duck?.isConnected) { resolve(); return; }
-        const raw = Math.min(1, (now - started) / Math.max(1, duration));
-        const eased = raw * raw * (3 - 2 * raw);
-        const point = { x: from.x + dx * eased, y: from.y + dy * eased };
-        setWorldPosition(duck, point.x, point.y);
-        duck.dataset.x = point.x.toFixed(3);
-        duck.dataset.y = point.y.toFixed(3);
-        setDepth(duck, point.y);
-        if (raw < 1) duck._moveFrame = requestAnimationFrame(frame);
-        else resolve();
-      }
-      duck._moveFrame = requestAnimationFrame(frame);
-    });
-  }
-
-  async function runSamePlayerPassHighFive(mover, stationary, fromPoint, tangentX, msPerUnit) {
-    if (!samePlayerPairReady(mover, stationary)) return false;
-
-    const key = collisionPairKey(mover, stationary);
-    collisionPairs.set(key, performance.now());
-    mover.dataset.highFiveActive = "true";
-    stationary.dataset.highFiveActive = "true";
-    mover.dataset.reacting = "true";
-    stationary.dataset.reacting = "true";
-    clearTimeout(stationary._roamTimer);
-
-    const sp = currentPosition(stationary);
-    let direction = Math.sign(sp.x - fromPoint.x);
-    if (!direction) direction = Math.sign(tangentX) || 1;
-
-    const contactSpacing = 5.15;
-    const approachGap = 2.2;
-    const passGap = 3.6;
-
-    const approach = nearestValidStoppingPoint({
-      x: sp.x - direction * (contactSpacing + approachGap),
-      y: sp.y
-    });
-    const contact = nearestValidStoppingPoint({
-      x: sp.x - direction * contactSpacing,
-      y: sp.y
-    });
-    const pass = nearestValidStoppingPoint({
-      x: sp.x + direction * (contactSpacing + passGap),
-      y: sp.y
-    });
-
-    const paceMs = Math.max(85, Math.min(420, Number(msPerUnit) || 180));
-    const approachDuration = Math.max(280, Math.min(1050, distance(fromPoint, approach) * paceMs));
-    const highFiveDuration = Math.round(Math.max(520, Math.min(980, paceMs * 3.4)));
-    const recoilDuration = Math.round(Math.max(180, Math.min(360, paceMs * 1.1)));
-    const passDuration = Math.max(420, Math.min(1200, distance(contact, pass) * paceMs));
-
-    try {
-      await animateHighFiveMove(mover, fromPoint, approach, approachDuration, direction);
-      if (!mover.isConnected || !stationary.isConnected) return true;
-
-      setFacingForMovement(mover, direction);
-      setFacingForMovement(stationary, -direction);
-      mover.style.setProperty("--highfive-duration", `${highFiveDuration}ms`);
-      stationary.style.setProperty("--highfive-duration", `${highFiveDuration}ms`);
-      mover.classList.add("same-player-highfive", "same-player-highfive-mover");
-      stationary.classList.add("same-player-highfive", "same-player-highfive-stationary");
-
-      await animateHighFiveMove(
-        mover, approach, contact,
-        Math.max(260, Math.round(highFiveDuration * .46)),
-        direction
-      );
-
-      mover.classList.add("same-player-highfive-contact");
-      stationary.classList.add("same-player-highfive-contact");
-      await sleep(Math.max(90, Math.round(highFiveDuration * .14)));
-      mover.classList.remove("same-player-highfive-contact");
-      stationary.classList.remove("same-player-highfive-contact");
-
-      await animateHighFiveMove(mover, contact, pass, passDuration, direction);
-      await sleep(recoilDuration);
-    } finally {
-      for (const duck of [mover, stationary]) {
-        if (!duck?.isConnected) continue;
-        duck.classList.remove(
-          "same-player-highfive",
-          "same-player-highfive-mover",
-          "same-player-highfive-stationary",
-          "same-player-highfive-contact"
-        );
-        duck.style.removeProperty("--highfive-duration");
-        duck.dataset.highFiveActive = "false";
-        duck.dataset.reacting = "false";
-        restoreIdleFace(duck);
-      }
-      if (stationary?.isConnected && stationary.dataset.motionState === "floating") {
-        scheduleRoam(stationary, 1800 + Math.random() * 2200);
-      }
-    }
-    return true;
   }
 
   function triggerCollisionReaction(a, b) {
