@@ -1,80 +1,100 @@
-# Duck Pond – v0.129
+# Duck Pond – v0.130
 
+
+## v0.130 – Fight Choreography + Clash Sparks
+
+- Kept the temporary `Trigger Fight` test control while the duel is being tuned.
+- Both fighters now switch to the angry face as soon as the fight starts and stay angry through the setup/main duel. The final two clashes still switch the winner to maniacal and the loser to surprised.
+- Re-anchored the cricket bats to the holding-wing area instead of translating them far outside the duck sprite.
+- Increased the bat scale substantially and brought the fighters closer together so the bats visibly meet.
+- Added a tiny code-drawn cartoon spark burst at every bat contact point; no new spark artwork asset is required.
+- Reworked attack/defence swing angles and wing movement so clashes read more like two swords meeting.
+- Loser bat now drops back under the water before the surprised scoot. Winner raises the bat overhead with both wings, then the bat sinks away before normal behaviour resumes.
+- Flamingo swimmers are temporarily excluded from fight selection because their swim geometry is different.
+- Added front-end cache-busting for v0.130.
 
 ## v0.129 – Cricket Fight Test Rig
 
 - Added a temporary visible `Trigger Fight` control for portrait/normal-view testing; it is hidden in landscape and expanded pond mode.
-- Added the supplied 512×512 cricket bat as a separate fight overlay and the supplied maniacal winner face.
+- Added the supplied cricket bat as a separate fight overlay and the supplied maniacal winner face.
 - Two settled ducks are selected, aligned face-to-face, draw bats from below the water, then run a seven-clash duel with deliberately varied rhythms.
-- The rear wing performs the bat retrieval while the horizontally flipped front wing becomes the visible holding wing.
 - On the final two clashes the winner switches to the maniacal face and the loser to surprised.
-- After the deciding clash the loser drops the bat and scoots away surprised while the winner raises the bat and both wings in a short victory pose.
-- Both ducks then reset to normal pond behaviour as if the fight never happened.
-- This version is intentionally test-triggered only; random production fight scheduling will be added only after the choreography is approved.
+- After the deciding clash the loser scoots away while the winner performs a short victory pose.
+- This version is intentionally test-triggered only; random production fight scheduling waits until the choreography is approved.
 
 ## v0.128 – High-Five Contact + Front-End Cache Busting
 
 - Added versioned query strings to `src/styles.css` and `src/app.js` so GitHub Pages/mobile browsers do not keep serving an older high-five implementation after a deploy.
-- Tightened the same-player pass spacing slightly.
-- Extended both front-wing contact poses further so the wing tips visibly overlap/touch at the pass point.
-- Kept the staggered timing: stationary duck offers the wing first, moving duck joins later, then both use a short recoil and tuck.
+- Tightened the same-player pass spacing and extended both front-wing contact poses so the wing tips visibly meet.
+- Preserved the staggered timing: stationary duck offers first, moving duck joins later, brief recoil, then tuck.
 
 ## v0.127 – Staggered High-Five Timing
 
-- Reworked same-player high-five timing so the stationary duck lifts first and the moving duck joins a beat later instead of both wings rising in sync.
-- Shortened the recoil so the action reads as extend → touch → small recoil → tuck, rather than a two-part wave.
-- Brought the swim pass line slightly closer so the front wings can visibly make contact more reliably.
+- Changed the high-five so the stationary duck lifts first and the moving duck joins a beat later instead of both wings rising in sync.
+- Shortened the recoil so the interaction reads as extend → touch → small recoil → tuck.
 
-## v0.126 – High-Five Motion + README Repair
+## v0.126 – Route-Planned Same-Player High Five
 
-- Reworked same-player high-fives so ducks keep swimming past one another while extending the front wing forward into a much larger contact pose.
-- Added a visible recoil after contact before the wing tucks back against the body.
-- Preserved the deliberate post-interaction separation so the same pair must naturally meet again before another high-five.
-- Added the corrected scoreboard-reflection background to the authoritative build package.
-- Repaired the missing/mislabeled README history for v0.119 through v0.123.
+- Rebuilt same-player high-fives around route planning rather than a separate interaction manoeuvre.
+- A normal random swim route can bend subtly toward a stationary same-player duck while preserving the swimmer's natural speed.
+- Wing timing is calculated from the planned contact point instead of stopping/repositioning the swimmer.
+- Snake panic/scatter and other directed movement do not trigger the interaction.
+
+## v0.125 – Choreographed Same-Player High Five
+
+- Rebuilt the interaction as one moving duck and one stationary same-player duck.
+- Added controlled alignment/contact choreography as an intermediate prototype before the later route-planned rewrite.
+
+## v0.124 – High-Five Motion + README Repair
+
+- Increased the visible high-five wing reach and repaired the README history around the snake/high-five builds.
+- Added the corrected scoreboard-reflection background to the authoritative package.
 
 ## v0.123 – Same-Player High-Five Interaction
 
-- Ducks belonging to the same `playerId` trigger an interaction on every close encounter rather than relying on a random chance.
-- Both ducks face toward one another for the interaction and then deliberately separate so they do not immediately retrigger.
-- Added a short pair cooldown as a secondary guard against repeat collisions.
-- Snake panic and normal different-player collision reactions remain unchanged.
+- Added same-player high-five interactions on close encounters as the first prototype.
+- Both ducks faced one another, raised the front wing and separated afterward to avoid immediate repeat interactions.
 
 ## v0.122 – Snake Strike Corridor + Group Panic
 
 - Replaced the narrow snake engagement area with a broader, bank-biased horizontal strike corridor.
 - Added a secondary panic zone so multiple nearby ducks can scatter from the same strike.
-- The primary target always reacts even if it moves slightly during the warning pose.
 - Adjusted the strike motion to read more horizontally and reduced the vertical lift that made the snake body appear to leave the bank.
 
 ## v0.121 – Readable Snake Peek Cycle
 
 - Snake checks use a readable 2-second rise, 2-second linger, then either attack or 2-second descent.
 - The attack decision is made at the end of the linger.
-- If a duck is in range, the existing mouth-open, strike, recoil and panic-scoot sequence runs.
-- If no duck is in range, the snake slowly drops back behind the reeds.
+- If a duck is in range, the mouth-open, strike, recoil and panic-scoot sequence runs; otherwise the snake slowly drops back behind the reeds.
 
 ## v0.120 – Snake Scale / Reed Placement / Peek Behaviour
 
 - Replaced the first-pass snake artwork with the normalised closed-mouth, open-mouth and strike assets.
-- Reduced the on-screen snake substantially and moved its anchor back into the far-right reed bank.
-- Moved the engagement area closer to the reeds.
-- Harmless peeks run independently of the longer strike cooldown so the snake can check the pond between attacks.
+- Reduced the snake scale substantially and moved its anchor into the far-right reed bank.
+- Harmless peeks run independently of the longer strike cooldown.
 
 ## v0.119 – Snake Pond Event
 
 - Added the right-bank snake Easter egg using closed-mouth, open-mouth and strike poses.
-- The snake lives behind the foreground reeds and periodically checks the pond.
 - If a duck is in range, the snake opens its mouth, strikes and recoils behind the reeds.
-- Targeted ducks switch to a surprised face, flap their wings and make a fast panic escape.
-- Strike events use a long cooldown so the snake remains an occasional pond event.
+- Targeted ducks switch to surprised, flap their wings and make a fast panic escape.
 
-## v0.118 – Female Swim Wing Test
+## v0.118 – Female Rear-Wing Lift + Latest Week Default
+
+- Increased the female rear swimming-wing rotation so the new tucked asset clears the body silhouette during rear-wing flicks/reactions.
+- Male wing motion is unchanged.
+- The week selector defaults to the latest Monday marker represented by loaded duck data when that data extends beyond the current marker.
+
+## v0.117 – Female Swim Startup Fix
+
+- Fixed a v0.116 JavaScript runtime error where `presentation` was referenced before it was resolved in the swimming visual builder.
+- Restored normal pond rendering and weekly entrants while keeping the new female swim wings.
+
+## v0.116 – Female Swim Wing Test
 
 - Added dedicated female swimming front/rear wing assets for all four feather tones.
-- Female swimmers now use the supplied smaller/repositioned wing set; male swimmers remain unchanged.
-- Preload logic now requests the correct swim-wing set by presentation.
-- Added a future polish note to normalise sprite/model alignment across the full asset library.
+- Female swimmers use the supplied smaller/repositioned wing set while male swimmers remain unchanged.
+- Added a future model/asset normalisation pass to the backlog.
 
 ## v0.115 – Flamingo Pond Depth Anchor Fix
 

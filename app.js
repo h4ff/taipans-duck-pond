@@ -25,6 +25,7 @@
   const testCaptainButton = document.getElementById("testCaptainButton");
   const testCoachButton = document.getElementById("testCoachButton");
   const resetButton = document.getElementById("resetButton");
+  const fightTestButton = document.getElementById("fightTestButton");
   const developerControls = document.getElementById("developerControls");
   const mobileControlsToggle = document.getElementById("mobileControlsToggle");
   const mobilePondToggle = document.getElementById("mobilePondToggle");
@@ -699,6 +700,12 @@
     strike: "assets/events/snake/snake-strike.png"
   };
 
+  const FIGHT_ASSETS = {
+    bat: "assets/events/fight/bat.png",
+    maniacal: "assets/duck/swim/face/face-maniacal.png"
+  };
+  let fightBusy = false;
+
   // v0.122: the snake attacks along the bank, so use an elongated leftward
   // corridor rather than a small circular target. A slightly broader panic
   // zone catches ducks that visually sit in the strike line, including those
@@ -722,7 +729,8 @@
       neutral: "assets/duck/swim/face/face-neutral.png",
       sad: "assets/duck/swim/face/face-sad-white.png",
       surprised: "assets/duck/swim/face/face-surprised.png",
-      angry: "assets/duck/swim/face/face-angry.png"
+      angry: "assets/duck/swim/face/face-angry.png",
+      maniacal: FIGHT_ASSETS.maniacal
     },
     blinks: {
       neutral: "assets/duck/swim/face/face-neutral-blink.png",
@@ -961,6 +969,7 @@
       SWIM_ASSETS.faces.neutral,
       SWIM_ASSETS.faces.surprised,
       SWIM_ASSETS.faces.angry,
+      SWIM_ASSETS.faces.maniacal,
       SWIM_ASSETS.blinks.neutral,
       walkFaceSrc("neutral"),
       walkFaceSrc("angry"),
@@ -1075,9 +1084,9 @@
     urls.add(FLAMINGO_ASSETS.swim);
     for (const wake of Object.values(FLAMINGO_ASSETS.wakes)) urls.add(wake);
 
-    // Snake is a low-priority pond event, so its artwork warms after the first
-    // usable pond paint rather than increasing the blocking startup manifest.
+    // Snake and duel artwork warm in the background after the first usable paint.
     Object.values(SNAKE_ASSETS).forEach(url => urls.add(url));
+    Object.values(FIGHT_ASSETS).forEach(url => urls.add(url));
 
     urls.add(ROLE_ASSETS.coach.walk);
     urls.add(ROLE_ASSETS.coach.swim.left);
@@ -1207,7 +1216,7 @@
   const duckControlButtons = [
     duckTypeButton, featherToneButton, buildVariantButton, addMaleButton, addFemaleButton,
     load60Button, testPresidentButton, testLeaderButton, testCaptainButton,
-    testCoachButton, resetButton, addPlayerButton, loadWeekButton,
+    testCoachButton, resetButton, addPlayerButton, loadWeekButton, fightTestButton,
     playerSelect, weekSelect
   ];
 
@@ -2149,7 +2158,7 @@
 
     // Bring the pass line slightly closer so the raised front wings can
     // visibly overlap/touch instead of reading as two separate waves.
-    const contactSpacing = 2.7;
+    const contactSpacing = 2.15;
     const contact = {
       x: best.point.x - direction * contactSpacing,
       y: best.point.y
@@ -2822,7 +2831,329 @@
     return now - Number(collisionPairs.get(key) || 0) >= 9000;
   }
 
+  function fightEligibleDuck(duck) {
+    if (!duck?.isConnected || duck.dataset.motionState !== "floating") return false;
+    if (duck.dataset.reacting === "true" || duck.dataset.fightActive === "true") return false;
+    if (duck.dataset.highFiveActive === "true" || duck.dataset.highFiveReserved === "true") return false;
+    if (duck.classList.contains("snake-panic")) return false;
+    if (duckHasFlamingo(duck)) return false;
+    return true;
+  }
+
+  function chooseFightPair() {
+    const eligible = [...ducks.values()].filter(fightEligibleDuck);
+    if (eligible.length < 2) return null;
+    let best = null;
+    let bestScore = Infinity;
+    for (let i = 0; i < eligible.length - 1; i++) {
+      for (let j = i + 1; j < eligible.length; j++) {
+        const a = eligible[i];
+        const b = eligible[j];
+        const ap = currentPosition(a);
+        const bp = currentPosition(b);
+        const d = distance(ap, bp);
+        // Prefer a pair already reasonably close so the setup itself is subtle.
+        const score = Math.abs(d - 10) + Math.abs(ap.y - bp.y) * .8;
+        if (score < bestScore) {
+          best = [a, b];
+          bestScore = score;
+        }
+      }
+    }
+    return best;
+  }
+
+  function fightAlignmentFor(a, b) {
+    const ap = currentPosition(a);
+    const bp = currentPosition(b);
+    const mid = { x: (ap.x + bp.x) / 2, y: (ap.y + bp.y) / 2 };
+    const spacing = 6.8;
+    const candidates = [0, -2.5, 2.5, -5, 5];
+    for (const yOffset of candidates) {
+      const y = mid.y + yOffset;
+      const left = { x: mid.x - spacing / 2, y };
+      const right = { x: mid.x + spacing / 2, y };
+      if (canDuckStopAt(left.x, left.y) && canDuckStopAt(right.x, right.y)) return { left, right };
+    }
+    return {
+      left: nearestValidStoppingPoint({ x: mid.x - spacing / 2, y: mid.y }),
+      right: nearestValidStoppingPoint({ x: mid.x + spacing / 2, y: mid.y })
+    };
+  }
+
+  function animateFightMove(duck, from, to, duration) {
+    return new Promise(resolve => {
+      const started = performance.now();
+      const dx = to.x - from.x;
+      const dy = to.y - from.y;
+      function frame(now) {
+        if (!duck?.isConnected) return resolve();
+        const raw = Math.min(1, (now - started) / duration);
+        const eased = raw * raw * (3 - 2 * raw);
+        const x = from.x + dx * eased;
+        const y = from.y + dy * eased;
+        setWorldPosition(duck, x, y);
+        duck.dataset.x = x.toFixed(3);
+        duck.dataset.y = y.toFixed(3);
+        setDepth(duck, y);
+        if (raw < 1) duck._moveFrame = requestAnimationFrame(frame);
+        else resolve();
+      }
+      duck._moveFrame = requestAnimationFrame(frame);
+    });
+  }
+
+  function fightBat(duck) {
+    return duck?.querySelector(".swim-fight-bat") || null;
+  }
+
+  function fightWing(duck) {
+    return duck?.querySelector(".swim-wing-front") || null;
+  }
+
+  function fightRearWing(duck) {
+    return duck?.querySelector(".swim-wing-back") || null;
+  }
+
+  function fightAnimation(element, frames, options) {
+    if (!element?.animate) return Promise.resolve();
+    const animation = element.animate(frames, options);
+    return animation.finished.catch(() => {});
+  }
+
+  function spawnFightSpark(left, right) {
+    if (!duckLayer || !left?.isConnected || !right?.isConnected) return;
+    const lp = currentPosition(left);
+    const rp = currentPosition(right);
+    const spark = document.createElement("span");
+    spark.className = "fight-clash-spark";
+    spark.setAttribute("aria-hidden", "true");
+    for (let i = 0; i < 6; i++) {
+      const ray = document.createElement("i");
+      ray.style.setProperty("--spark-angle", `${i * 60 + (Math.random() * 12 - 6)}deg`);
+      ray.style.setProperty("--spark-length", `${10 + Math.random() * 9}px`);
+      spark.appendChild(ray);
+    }
+    const centre = document.createElement("b");
+    spark.appendChild(centre);
+    setWorldPosition(spark, (lp.x + rp.x) / 2, (lp.y + rp.y) / 2 - 2.6);
+    duckLayer.appendChild(spark);
+    setTimeout(() => spark.remove(), 240);
+  }
+
+  async function animateFightClash(left, right, attacker, durationMs) {
+    const leftBat = fightBat(left);
+    const rightBat = fightBat(right);
+    const leftWing = fightWing(left);
+    const rightWing = fightWing(right);
+    const attackerIsLeft = attacker === left;
+    const defenderDelay = 45 + Math.random() * 55;
+    const swing = Math.max(250, Math.round(durationMs * .58));
+
+    // v0.130: all bat positions stay anchored close to the holding wing. The
+    // opposing parent stacks mirror the same local geometry automatically.
+    const attackFrames = [
+      { transform: "translate(-4px, 40px) rotate(70deg) scale(1.18)" },
+      { transform: "translate(-4px, 40px) rotate(104deg) scale(1.18)", offset: .60 },
+      { transform: "translate(-4px, 40px) rotate(76deg) scale(1.18)" }
+    ];
+    const defendFrames = [
+      { transform: "translate(-4px, 40px) rotate(82deg) scale(1.18)" },
+      { transform: "translate(-4px, 40px) rotate(56deg) scale(1.18)", offset: .60 },
+      { transform: "translate(-4px, 40px) rotate(76deg) scale(1.18)" }
+    ];
+    const wingAttack = [
+      { transform: "scaleX(-1) rotate(-66deg) translate(-3px,-3px)" },
+      { transform: "scaleX(-1) rotate(-88deg) translate(-5px,-6px)", offset: .60 },
+      { transform: "scaleX(-1) rotate(-70deg) translate(-3px,-4px)" }
+    ];
+    const wingDefend = [
+      { transform: "scaleX(-1) rotate(-70deg) translate(-3px,-3px)" },
+      { transform: "scaleX(-1) rotate(-58deg) translate(-3px,-4px)", offset: .60 },
+      { transform: "scaleX(-1) rotate(-70deg) translate(-3px,-3px)" }
+    ];
+
+    const tasks = [];
+    if (attackerIsLeft) {
+      tasks.push(fightAnimation(leftBat, attackFrames, { duration: swing, easing: "ease-in-out" }));
+      tasks.push(fightAnimation(leftWing, wingAttack, { duration: swing, easing: "ease-in-out" }));
+      await sleep(defenderDelay);
+      tasks.push(fightAnimation(rightBat, defendFrames, { duration: swing - defenderDelay, easing: "ease-in-out" }));
+      tasks.push(fightAnimation(rightWing, wingDefend, { duration: swing - defenderDelay, easing: "ease-in-out" }));
+    } else {
+      tasks.push(fightAnimation(rightBat, attackFrames, { duration: swing, easing: "ease-in-out" }));
+      tasks.push(fightAnimation(rightWing, wingAttack, { duration: swing, easing: "ease-in-out" }));
+      await sleep(defenderDelay);
+      tasks.push(fightAnimation(leftBat, defendFrames, { duration: swing - defenderDelay, easing: "ease-in-out" }));
+      tasks.push(fightAnimation(leftWing, wingDefend, { duration: swing - defenderDelay, easing: "ease-in-out" }));
+    }
+
+    const sparkDelay = Math.max(80, Math.round(swing * .58) - defenderDelay);
+    const sparkTimer = setTimeout(() => spawnFightSpark(left, right), sparkDelay);
+    await Promise.all(tasks);
+    clearTimeout(sparkTimer);
+    await sleep(Math.max(90, durationMs - swing));
+  }
+
+  async function fightLoserScoot(loser, winner) {
+    if (!loser?.isConnected) return;
+    const bat = fightBat(loser);
+    if (bat) {
+      await fightAnimation(bat, [
+        { transform: "translate(-4px, 40px) rotate(76deg) scale(1.18)", opacity: 1 },
+        { transform: "translate(-4px, 132px) rotate(64deg) scale(1.08)", opacity: 0 }
+      ], { duration: 280, easing: "ease-in" });
+    }
+    const from = currentPosition(loser);
+    const away = collisionEscapePoint(loser, winner);
+    loser.dataset.motionState = "swimming";
+    loser.classList.remove("floating");
+    loser.classList.add("fight-loser-scoot");
+    await animateFightMove(loser, from, away, 720);
+    loser.classList.remove("fight-loser-scoot");
+    loser.dataset.motionState = "floating";
+    loser.classList.add("floating");
+  }
+
+  async function winnerVictory(winner) {
+    if (!winner?.isConnected) return;
+    winner.classList.add("fight-victory");
+    const bat = fightBat(winner);
+    const wing = fightWing(winner);
+    const rear = fightRearWing(winner);
+    const tasks = [
+      fightAnimation(bat, [
+        { transform: "translate(-4px, 40px) rotate(76deg) scale(1.18)" },
+        { transform: "translate(0px, 20px) rotate(178deg) scale(1.20)" }
+      ], { duration: 520, easing: "ease-out", fill: "forwards" }),
+      fightAnimation(wing, [
+        { transform: "scaleX(-1) rotate(-70deg) translate(-3px,-4px)" },
+        { transform: "scaleX(-1) rotate(-136deg) translate(-6px,-9px)" }
+      ], { duration: 520, easing: "ease-out", fill: "forwards" }),
+      fightAnimation(rear, [
+        { opacity: .4, transform: "rotate(20deg)" },
+        { opacity: 1, transform: "rotate(115deg) translateY(-5px)" }
+      ], { duration: 520, easing: "ease-out", fill: "forwards" })
+    ];
+    await Promise.all(tasks);
+    await sleep(1150);
+    if (bat) {
+      await fightAnimation(bat, [
+        { transform: "translate(0px, 20px) rotate(178deg) scale(1.20)", opacity: 1 },
+        { transform: "translate(-4px, 132px) rotate(82deg) scale(1.06)", opacity: 0 }
+      ], { duration: 300, easing: "ease-in", fill: "forwards" });
+    }
+    if (bat) bat.getAnimations().forEach(a => a.cancel());
+    if (wing) wing.getAnimations().forEach(a => a.cancel());
+    if (rear) rear.getAnimations().forEach(a => a.cancel());
+    winner.classList.remove("fight-victory");
+  }
+
+  async function runDuckFight(a, b) {
+    if (fightBusy || !fightEligibleDuck(a) || !fightEligibleDuck(b)) return false;
+    fightBusy = true;
+    const actors = [a, b];
+    const winner = Math.random() < .5 ? a : b;
+    const loser = winner === a ? b : a;
+    const alignment = fightAlignmentFor(a, b);
+    const leftActor = currentPosition(a).x <= currentPosition(b).x ? a : b;
+    const rightActor = leftActor === a ? b : a;
+
+    try {
+      await Promise.all(FIGHT_ASSETS ? [preloadAndDecodeImage(FIGHT_ASSETS.bat), preloadAndDecodeImage(FIGHT_ASSETS.maniacal)] : []);
+      for (const duck of actors) {
+        clearTimeout(duck._roamTimer);
+        duck.dataset.fightActive = "true";
+        duck.dataset.reacting = "true";
+        duck.dataset.motionState = "fighting";
+        duck.dataset.routeKind = "fight";
+        duck.classList.remove("floating");
+        duck.classList.add("fight-active");
+      }
+
+      // Both fighters stay angry through the setup and main duel. The final
+      // two clashes tell the winner/loser story with maniacal/surprised faces.
+      for (const duck of actors) setDuckFace(duck, "angry");
+
+      const leftFrom = currentPosition(leftActor);
+      const rightFrom = currentPosition(rightActor);
+      setFacingForMovement(leftActor, 1);
+      setFacingForMovement(rightActor, -1);
+      await Promise.all([
+        animateFightMove(leftActor, leftFrom, alignment.left, 950),
+        animateFightMove(rightActor, rightFrom, alignment.right, 950)
+      ]);
+      setFacingForMovement(leftActor, 1);
+      setFacingForMovement(rightActor, -1);
+
+      // Rear wing visibly retrieves the bat from below the water, then the
+      // flipped front wing takes the sword-like holding pose.
+      for (const duck of actors) duck.classList.add("fight-drawing");
+      await sleep(900);
+      for (const duck of actors) {
+        duck.classList.remove("fight-drawing");
+        duck.classList.add("fight-ready");
+      }
+      await sleep(450);
+
+      const clashRhythm = [680, 520, 760, 470, 710, 560, 620];
+      const attackerPattern = [leftActor, rightActor, leftActor, leftActor, rightActor, winner, winner];
+      for (let hit = 0; hit < clashRhythm.length; hit++) {
+        if (hit === 5) {
+          setDuckFace(winner, "maniacal");
+          setDuckFace(loser, "surprised");
+        }
+        await animateFightClash(leftActor, rightActor, attackerPattern[hit], clashRhythm[hit]);
+      }
+
+      setDuckFace(loser, "surprised");
+      setDuckFace(winner, "maniacal");
+      await Promise.all([
+        fightLoserScoot(loser, winner),
+        winnerVictory(winner)
+      ]);
+    } finally {
+      for (const duck of actors) {
+        if (!duck?.isConnected) continue;
+        const bat = fightBat(duck);
+        const wing = fightWing(duck);
+        const rear = fightRearWing(duck);
+        for (const el of [bat, wing, rear]) el?.getAnimations?.().forEach(anim => anim.cancel());
+        duck.classList.remove("fight-active", "fight-drawing", "fight-ready", "fight-victory", "fight-loser-scoot");
+        duck.dataset.fightActive = "false";
+        duck.dataset.reacting = "false";
+        duck.dataset.routeKind = "";
+        duck.dataset.motionState = "floating";
+        duck.classList.add("floating");
+        restoreIdleFace(duck);
+        scheduleRoam(duck, 1800 + Math.random() * 2600);
+      }
+      fightBusy = false;
+    }
+    return true;
+  }
+
+  async function triggerFightTest() {
+    if (!fightTestButton || fightBusy) return;
+    const pair = chooseFightPair();
+    if (!pair) {
+      const original = fightTestButton.textContent;
+      fightTestButton.textContent = "Need 2 settled ducks";
+      setTimeout(() => { if (fightTestButton) fightTestButton.textContent = original; }, 1400);
+      return;
+    }
+    fightTestButton.disabled = true;
+    fightTestButton.textContent = "Fight running…";
+    try {
+      await runDuckFight(pair[0], pair[1]);
+    } finally {
+      fightTestButton.disabled = false;
+      fightTestButton.textContent = "Trigger Fight";
+    }
+  }
+
   function triggerCollisionReaction(a, b) {
+    if (a.dataset.fightActive === "true" || b.dataset.fightActive === "true") return;
     const aPlayerId = String(a.dataset.playerId || "");
     const bPlayerId = String(b.dataset.playerId || "");
     if (aPlayerId && aPlayerId === bPlayerId) {
@@ -3097,6 +3428,11 @@
     wingFront.src = swimWingSrc("front", duck.dataset.featherTone, presentation);
     wingFront.alt = "";
 
+    const fightBat = document.createElement("img");
+    fightBat.className = "swim-layer swim-fight-bat";
+    fightBat.src = FIGHT_ASSETS.bat;
+    fightBat.alt = "";
+
     const headwearPath = headwearSrc(duck, "swim", duck.dataset.facing);
     let headwear = null;
     if (headwearPath) {
@@ -3113,6 +3449,7 @@
     if (duckHasRole(duck, "captain")) stack.appendChild(captainLayer);
     if (duckHasRole(duck, "coach")) stack.appendChild(whistle);
     stack.appendChild(wingFront);
+    stack.appendChild(fightBat);
     if (headwear) stack.appendChild(headwear);
     visual.appendChild(stack);
 
@@ -4178,6 +4515,7 @@
   testCaptainButton.addEventListener("click", () => replayRoleEntry("captain"));
   testCoachButton.addEventListener("click", () => replayRoleEntry("coach"));
   resetButton.addEventListener("click", resetPond);
+  if (fightTestButton) fightTestButton.addEventListener("click", triggerFightTest);
 
   liveScoreboard.addEventListener("click", () => {
     scoreboardPanel.hidden = false;
