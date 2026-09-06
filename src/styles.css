@@ -566,7 +566,31 @@ body {
 .swim-flamingo { z-index: 6; }
 .swim-role-layer { z-index: 6; }
 .swim-wing-front { z-index: 7; }
-.swim-fight-bat { z-index: 8; opacity: 0; transform-origin: 50% 20%; will-change: transform, opacity; }
+.swim-fight-arm {
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  transform-origin: 40% 58%;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+.fight-arm-bat {
+  z-index: 1;
+  opacity: 0;
+  transform-origin: 50% 20%;
+  will-change: transform, opacity;
+}
+.fight-arm-wing {
+  z-index: 2;
+  opacity: 0;
+  transform-origin: 40% 58%;
+  transform: scaleX(-1) rotate(-4deg);
+  will-change: transform, opacity;
+}
 .swim-captain-layer { z-index: 6; }
 .swim-hat {
   z-index: 9;
@@ -1710,13 +1734,11 @@ footer {
 .fight-test-rig button:disabled { opacity: .58; }
 body.pond-focus-mode .fight-test-rig { display: none !important; }
 
-/* Cricket-fight presentation. The front wing uses a deliberate local horizontal
-   flip because that supplied pose reads much better as a gripping/holding wing. */
-.duck.fight-active .swim-wing-front {
-  transform-origin: 40% 58%;
-  transform: scaleX(-1) rotate(-70deg) translate(-3px,-4px);
-}
-
+/* v0.131 cricket-fight arm: the fight-specific front wing is projected out
+   in front of the body and the bat is held behind that wing. The complete arm
+   sits above face/hair/headwear/crown so the bat can legitimately cross them
+   during a swing. Broad motion pivots from the shoulder; the bat adds only a
+   smaller snap around its handle. */
 .duck.fight-active .swim-wing-back {
   transform-origin: 45% 58%;
 }
@@ -1726,19 +1748,34 @@ body.pond-focus-mode .fight-test-rig { display: none !important; }
   animation: fight-rear-draw .9s ease-in-out 1 both;
 }
 
-.duck.fight-drawing .swim-fight-bat {
+.duck.fight-drawing .swim-fight-arm,
+.duck.fight-ready .swim-fight-arm,
+.duck.fight-victory .swim-fight-arm {
+  opacity: 1;
+}
+
+.duck.fight-drawing .fight-arm-bat {
   opacity: 1;
   animation: fight-bat-draw .9s ease-out 1 both;
 }
 
-.duck.fight-ready .swim-fight-bat,
-.duck.fight-active:not(.fight-drawing) .swim-fight-bat {
+.duck.fight-ready .fight-arm-bat,
+.duck.fight-victory .fight-arm-bat {
   opacity: 1;
-  transform: translate(-4px, 40px) rotate(76deg) scale(1.18);
+  transform: translate(-82px, 218px) rotate(136deg) scale(.82);
 }
 
-.duck.fight-ready .swim-wing-front {
-  transform: scaleX(-1) rotate(-70deg) translate(-3px,-4px);
+.duck.fight-ready .fight-arm-wing,
+.duck.fight-victory .fight-arm-wing {
+  opacity: 1;
+  transform: scaleX(-1) rotate(-4deg);
+}
+
+/* Hide the normal tucked front wing only once the gripping fight wing has
+   taken over. */
+.duck.fight-ready .swim-wing-front,
+.duck.fight-victory .swim-wing-front {
+  opacity: 0;
 }
 
 .duck.fight-loser-scoot .swim-wing-front,
@@ -1755,9 +1792,9 @@ body.pond-focus-mode .fight-test-rig { display: none !important; }
 }
 
 @keyframes fight-bat-draw {
-  0%   { opacity: 0; transform: translate(-4px, 138px) rotate(14deg) scale(1.02); }
-  55%  { opacity: 1; transform: translate(-4px, 76px) rotate(48deg) scale(1.12); }
-  100% { opacity: 1; transform: translate(-4px, 40px) rotate(76deg) scale(1.18); }
+  0%   { opacity: 0; transform: translate(-82px, 310px) rotate(90deg) scale(.72); }
+  55%  { opacity: 1; transform: translate(-82px, 255px) rotate(112deg) scale(.78); }
+  100% { opacity: 1; transform: translate(-82px, 218px) rotate(136deg) scale(.82); }
 }
 
 

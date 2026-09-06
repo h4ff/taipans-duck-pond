@@ -2904,11 +2904,12 @@
   }
 
   function fightBat(duck) {
-    return duck?.querySelector(".swim-fight-bat") || null;
+    return duck?.querySelector(".fight-arm-bat") || null;
   }
 
   function fightWing(duck) {
-    return duck?.querySelector(".swim-wing-front") || null;
+    // Broad fight motion pivots the wing + bat together from the shoulder.
+    return duck?.querySelector(".swim-fight-arm") || null;
   }
 
   function fightRearWing(duck) {
@@ -2950,27 +2951,30 @@
     const defenderDelay = 45 + Math.random() * 55;
     const swing = Math.max(250, Math.round(durationMs * .58));
 
-    // v0.130: all bat positions stay anchored close to the holding wing. The
-    // opposing parent stacks mirror the same local geometry automatically.
+    // v0.131: the fight arm is one articulated shoulder unit. The visible
+    // front wing stays projected out in front of the body while the whole
+    // arm swings up/down; the bat then gets a smaller extra snap around its
+    // handle. This keeps the grip visually locked instead of letting the bat
+    // float independently around the pond.
     const attackFrames = [
-      { transform: "translate(-4px, 40px) rotate(70deg) scale(1.18)" },
-      { transform: "translate(-4px, 40px) rotate(104deg) scale(1.18)", offset: .60 },
-      { transform: "translate(-4px, 40px) rotate(76deg) scale(1.18)" }
+      { transform: "translate(-82px, 218px) rotate(136deg) scale(.82)" },
+      { transform: "translate(-82px, 218px) rotate(112deg) scale(.82)", offset: .60 },
+      { transform: "translate(-82px, 218px) rotate(134deg) scale(.82)" }
     ];
     const defendFrames = [
-      { transform: "translate(-4px, 40px) rotate(82deg) scale(1.18)" },
-      { transform: "translate(-4px, 40px) rotate(56deg) scale(1.18)", offset: .60 },
-      { transform: "translate(-4px, 40px) rotate(76deg) scale(1.18)" }
+      { transform: "translate(-82px, 218px) rotate(132deg) scale(.82)" },
+      { transform: "translate(-82px, 218px) rotate(154deg) scale(.82)", offset: .60 },
+      { transform: "translate(-82px, 218px) rotate(136deg) scale(.82)" }
     ];
     const wingAttack = [
-      { transform: "scaleX(-1) rotate(-66deg) translate(-3px,-3px)" },
-      { transform: "scaleX(-1) rotate(-88deg) translate(-5px,-6px)", offset: .60 },
-      { transform: "scaleX(-1) rotate(-70deg) translate(-3px,-4px)" }
+      { transform: "rotate(-7deg)" },
+      { transform: "rotate(18deg)", offset: .60 },
+      { transform: "rotate(-4deg)" }
     ];
     const wingDefend = [
-      { transform: "scaleX(-1) rotate(-70deg) translate(-3px,-3px)" },
-      { transform: "scaleX(-1) rotate(-58deg) translate(-3px,-4px)", offset: .60 },
-      { transform: "scaleX(-1) rotate(-70deg) translate(-3px,-3px)" }
+      { transform: "rotate(6deg)" },
+      { transform: "rotate(-13deg)", offset: .60 },
+      { transform: "rotate(3deg)" }
     ];
 
     const tasks = [];
@@ -3000,10 +3004,11 @@
     const bat = fightBat(loser);
     if (bat) {
       await fightAnimation(bat, [
-        { transform: "translate(-4px, 40px) rotate(76deg) scale(1.18)", opacity: 1 },
-        { transform: "translate(-4px, 132px) rotate(64deg) scale(1.08)", opacity: 0 }
+        { transform: "translate(-82px, 218px) rotate(136deg) scale(.82)", opacity: 1 },
+        { transform: "translate(-82px, 305px) rotate(112deg) scale(.76)", opacity: 0 }
       ], { duration: 280, easing: "ease-in" });
     }
+    loser.classList.remove("fight-ready");
     const from = currentPosition(loser);
     const away = collisionEscapePoint(loser, winner);
     loser.dataset.motionState = "swimming";
@@ -3023,12 +3028,12 @@
     const rear = fightRearWing(winner);
     const tasks = [
       fightAnimation(bat, [
-        { transform: "translate(-4px, 40px) rotate(76deg) scale(1.18)" },
-        { transform: "translate(0px, 20px) rotate(178deg) scale(1.20)" }
+        { transform: "translate(-82px, 218px) rotate(136deg) scale(.82)" },
+        { transform: "translate(-82px, 218px) rotate(178deg) scale(.84)" }
       ], { duration: 520, easing: "ease-out", fill: "forwards" }),
       fightAnimation(wing, [
-        { transform: "scaleX(-1) rotate(-70deg) translate(-3px,-4px)" },
-        { transform: "scaleX(-1) rotate(-136deg) translate(-6px,-9px)" }
+        { transform: "rotate(0deg)" },
+        { transform: "rotate(-82deg)" }
       ], { duration: 520, easing: "ease-out", fill: "forwards" }),
       fightAnimation(rear, [
         { opacity: .4, transform: "rotate(20deg)" },
@@ -3039,14 +3044,14 @@
     await sleep(1150);
     if (bat) {
       await fightAnimation(bat, [
-        { transform: "translate(0px, 20px) rotate(178deg) scale(1.20)", opacity: 1 },
-        { transform: "translate(-4px, 132px) rotate(82deg) scale(1.06)", opacity: 0 }
+        { transform: "translate(-82px, 218px) rotate(178deg) scale(.84)", opacity: 1 },
+        { transform: "translate(-82px, 305px) rotate(118deg) scale(.76)", opacity: 0 }
       ], { duration: 300, easing: "ease-in", fill: "forwards" });
     }
     if (bat) bat.getAnimations().forEach(a => a.cancel());
     if (wing) wing.getAnimations().forEach(a => a.cancel());
     if (rear) rear.getAnimations().forEach(a => a.cancel());
-    winner.classList.remove("fight-victory");
+    winner.classList.remove("fight-ready", "fight-victory");
   }
 
   async function runDuckFight(a, b) {
@@ -3118,7 +3123,13 @@
         const bat = fightBat(duck);
         const wing = fightWing(duck);
         const rear = fightRearWing(duck);
-        for (const el of [bat, wing, rear]) el?.getAnimations?.().forEach(anim => anim.cancel());
+        for (const el of [bat, wing, rear]) {
+          el?.getAnimations?.().forEach(anim => anim.cancel());
+          if (el?.style) {
+            el.style.removeProperty("transform");
+            el.style.removeProperty("opacity");
+          }
+        }
         duck.classList.remove("fight-active", "fight-drawing", "fight-ready", "fight-victory", "fight-loser-scoot");
         duck.dataset.fightActive = "false";
         duck.dataset.reacting = "false";
@@ -3428,10 +3439,20 @@
     wingFront.src = swimWingSrc("front", duck.dataset.featherTone, presentation);
     wingFront.alt = "";
 
+    const fightArm = document.createElement("span");
+    fightArm.className = "swim-fight-arm";
+    fightArm.setAttribute("aria-hidden", "true");
+
     const fightBat = document.createElement("img");
-    fightBat.className = "swim-layer swim-fight-bat";
+    fightBat.className = "swim-layer fight-arm-bat";
     fightBat.src = FIGHT_ASSETS.bat;
     fightBat.alt = "";
+
+    const fightArmWing = document.createElement("img");
+    fightArmWing.className = "swim-layer fight-arm-wing";
+    fightArmWing.src = wingFront.src;
+    fightArmWing.alt = "";
+    fightArm.append(fightBat, fightArmWing);
 
     const headwearPath = headwearSrc(duck, "swim", duck.dataset.facing);
     let headwear = null;
@@ -3449,8 +3470,10 @@
     if (duckHasRole(duck, "captain")) stack.appendChild(captainLayer);
     if (duckHasRole(duck, "coach")) stack.appendChild(whistle);
     stack.appendChild(wingFront);
-    stack.appendChild(fightBat);
     if (headwear) stack.appendChild(headwear);
+    // Fight arm deliberately sits above face/hair/headwear/crown. Within the
+    // arm, the bat is behind the gripping front wing so the grip reads cleanly.
+    stack.appendChild(fightArm);
     visual.appendChild(stack);
 
     duck.dataset.face = faceName;
