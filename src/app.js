@@ -2701,7 +2701,7 @@
         if (b.dataset.motionState === "floating") void startSamePlayerSeparation(b, bSource);
         else b._samePlayerSeparateFrom = bSource;
       }
-    }, 820);
+    }, 1050);
 
     return true;
   }

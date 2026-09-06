@@ -1,15 +1,49 @@
-# Duck Pond – v0.123
+# Duck Pond – v0.124
 
 
-## v0.123 – Snake Pond Event
+## v0.124 – High-Five Motion + README Repair
 
-- Added a right-bank snake Easter egg using the supplied closed-mouth, open-mouth and strike poses.
-- The snake lives behind the foreground reeds and periodically peeks up to check the pond.
-- A harmless peek drops back out of sight when no duck is within the reed-bank engagement zone.
-- If a duck swims within range, the snake opens its mouth, strikes quickly and recoils behind the reeds.
-- The targeted duck immediately switches to the surprised face, flaps both wings rapidly and makes a fast escape away from the snake before returning to normal pond behaviour.
-- Strike events have a 30–60 second cooldown; harmless peeks can still occur between attacks.
-- Snake artwork is warmed in the background and does not increase the blocking startup asset manifest.
+- Reworked same-player high-fives so ducks keep swimming past one another while extending the front wing forward into a much larger contact pose.
+- Added a visible recoil after contact before the wing tucks back against the body.
+- Preserved the deliberate post-interaction separation so the same pair must naturally meet again before another high-five.
+- Added the corrected scoreboard-reflection background to the authoritative build package.
+- Repaired the missing/mislabeled README history for v0.119 through v0.123.
+
+## v0.123 – Same-Player High-Five Interaction
+
+- Ducks belonging to the same `playerId` trigger an interaction on every close encounter rather than relying on a random chance.
+- Both ducks face toward one another for the interaction and then deliberately separate so they do not immediately retrigger.
+- Added a short pair cooldown as a secondary guard against repeat collisions.
+- Snake panic and normal different-player collision reactions remain unchanged.
+
+## v0.122 – Snake Strike Corridor + Group Panic
+
+- Replaced the narrow snake engagement area with a broader, bank-biased horizontal strike corridor.
+- Added a secondary panic zone so multiple nearby ducks can scatter from the same strike.
+- The primary target always reacts even if it moves slightly during the warning pose.
+- Adjusted the strike motion to read more horizontally and reduced the vertical lift that made the snake body appear to leave the bank.
+
+## v0.121 – Readable Snake Peek Cycle
+
+- Snake checks use a readable 2-second rise, 2-second linger, then either attack or 2-second descent.
+- The attack decision is made at the end of the linger.
+- If a duck is in range, the existing mouth-open, strike, recoil and panic-scoot sequence runs.
+- If no duck is in range, the snake slowly drops back behind the reeds.
+
+## v0.120 – Snake Scale / Reed Placement / Peek Behaviour
+
+- Replaced the first-pass snake artwork with the normalised closed-mouth, open-mouth and strike assets.
+- Reduced the on-screen snake substantially and moved its anchor back into the far-right reed bank.
+- Moved the engagement area closer to the reeds.
+- Harmless peeks run independently of the longer strike cooldown so the snake can check the pond between attacks.
+
+## v0.119 – Snake Pond Event
+
+- Added the right-bank snake Easter egg using closed-mouth, open-mouth and strike poses.
+- The snake lives behind the foreground reeds and periodically checks the pond.
+- If a duck is in range, the snake opens its mouth, strikes and recoils behind the reeds.
+- Targeted ducks switch to a surprised face, flap their wings and make a fast panic escape.
+- Strike events use a long cooldown so the snake remains an occasional pond event.
 
 ## v0.118 – Female Swim Wing Test
 
