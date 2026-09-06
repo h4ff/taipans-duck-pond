@@ -588,7 +588,7 @@ body {
   z-index: 2;
   opacity: 0;
   transform-origin: 40% 58%;
-  transform: scaleX(-1) rotate(-4deg);
+  transform: scaleX(-1) rotate(-6deg) translate(-6px, 2px);
   will-change: transform, opacity;
 }
 .swim-captain-layer { z-index: 6; }
@@ -1762,13 +1762,13 @@ body.pond-focus-mode .fight-test-rig { display: none !important; }
 .duck.fight-ready .fight-arm-bat,
 .duck.fight-victory .fight-arm-bat {
   opacity: 1;
-  transform: translate(-82px, 218px) rotate(136deg) scale(.82);
+  transform: translate(-105px, 115px) rotate(-42deg) scale(.82);
 }
 
 .duck.fight-ready .fight-arm-wing,
 .duck.fight-victory .fight-arm-wing {
   opacity: 1;
-  transform: scaleX(-1) rotate(-4deg);
+  transform: scaleX(-1) rotate(-6deg) translate(-6px, 2px);
 }
 
 /* Hide the normal tucked front wing only once the gripping fight wing has
@@ -1792,9 +1792,9 @@ body.pond-focus-mode .fight-test-rig { display: none !important; }
 }
 
 @keyframes fight-bat-draw {
-  0%   { opacity: 0; transform: translate(-82px, 310px) rotate(90deg) scale(.72); }
-  55%  { opacity: 1; transform: translate(-82px, 255px) rotate(112deg) scale(.78); }
-  100% { opacity: 1; transform: translate(-82px, 218px) rotate(136deg) scale(.82); }
+  0%   { opacity: 0; transform: translate(-105px, 208px) rotate(8deg) scale(.76); }
+  55%  { opacity: 1; transform: translate(-105px, 162px) rotate(-18deg) scale(.79); }
+  100% { opacity: 1; transform: translate(-105px, 115px) rotate(-42deg) scale(.82); }
 }
 
 

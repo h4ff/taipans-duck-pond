@@ -706,6 +706,19 @@
   };
   let fightBusy = false;
 
+  const FIGHT_BAT_POSE = {
+    hidden: "translate(-105px, 208px) rotate(8deg) scale(.76)",
+    drawMid: "translate(-105px, 162px) rotate(-18deg) scale(.79)",
+    ready: "translate(-105px, 115px) rotate(-42deg) scale(.82)",
+    attackHigh: "translate(-105px, 112px) rotate(-66deg) scale(.82)",
+    attackRecover: "translate(-105px, 117px) rotate(-30deg) scale(.82)",
+    defendHigh: "translate(-105px, 112px) rotate(-20deg) scale(.82)",
+    defendRecover: "translate(-105px, 117px) rotate(-50deg) scale(.82)",
+    loserDrop: "translate(-105px, 214px) rotate(6deg) scale(.74)",
+    victory: "translate(-98px, 110px) rotate(-16deg) scale(.84)",
+    victoryDrop: "translate(-98px, 214px) rotate(4deg) scale(.74)"
+  };
+
   // v0.122: the snake attacks along the bank, so use an elongated leftward
   // corridor rather than a small circular target. A slightly broader panic
   // zone catches ducks that visually sit in the strike line, including those
@@ -2951,30 +2964,29 @@
     const defenderDelay = 45 + Math.random() * 55;
     const swing = Math.max(250, Math.round(durationMs * .58));
 
-    // v0.131: the fight arm is one articulated shoulder unit. The visible
-    // front wing stays projected out in front of the body while the whole
-    // arm swings up/down; the bat then gets a smaller extra snap around its
-    // handle. This keeps the grip visually locked instead of letting the bat
-    // float independently around the pond.
+    // v0.132: keep the articulated shoulder motion, but re-anchor the bat to
+    // the supplied mock-up pose. The previous local bat transforms were too far
+    // down the 512 canvas, which is why the bats appeared to float under the
+    // ducks instead of reading as gripped in the front wing.
     const attackFrames = [
-      { transform: "translate(-82px, 218px) rotate(136deg) scale(.82)" },
-      { transform: "translate(-82px, 218px) rotate(112deg) scale(.82)", offset: .60 },
-      { transform: "translate(-82px, 218px) rotate(134deg) scale(.82)" }
+      { transform: FIGHT_BAT_POSE.ready },
+      { transform: FIGHT_BAT_POSE.attackHigh, offset: .60 },
+      { transform: FIGHT_BAT_POSE.attackRecover }
     ];
     const defendFrames = [
-      { transform: "translate(-82px, 218px) rotate(132deg) scale(.82)" },
-      { transform: "translate(-82px, 218px) rotate(154deg) scale(.82)", offset: .60 },
-      { transform: "translate(-82px, 218px) rotate(136deg) scale(.82)" }
+      { transform: FIGHT_BAT_POSE.ready },
+      { transform: FIGHT_BAT_POSE.defendHigh, offset: .60 },
+      { transform: FIGHT_BAT_POSE.defendRecover }
     ];
     const wingAttack = [
-      { transform: "rotate(-7deg)" },
+      { transform: "rotate(-2deg)" },
       { transform: "rotate(18deg)", offset: .60 },
-      { transform: "rotate(-4deg)" }
+      { transform: "rotate(2deg)" }
     ];
     const wingDefend = [
-      { transform: "rotate(6deg)" },
-      { transform: "rotate(-13deg)", offset: .60 },
-      { transform: "rotate(3deg)" }
+      { transform: "rotate(4deg)" },
+      { transform: "rotate(-14deg)", offset: .60 },
+      { transform: "rotate(-2deg)" }
     ];
 
     const tasks = [];
@@ -3004,8 +3016,8 @@
     const bat = fightBat(loser);
     if (bat) {
       await fightAnimation(bat, [
-        { transform: "translate(-82px, 218px) rotate(136deg) scale(.82)", opacity: 1 },
-        { transform: "translate(-82px, 305px) rotate(112deg) scale(.76)", opacity: 0 }
+        { transform: FIGHT_BAT_POSE.ready, opacity: 1 },
+        { transform: FIGHT_BAT_POSE.loserDrop, opacity: 0 }
       ], { duration: 280, easing: "ease-in" });
     }
     loser.classList.remove("fight-ready");
@@ -3028,24 +3040,24 @@
     const rear = fightRearWing(winner);
     const tasks = [
       fightAnimation(bat, [
-        { transform: "translate(-82px, 218px) rotate(136deg) scale(.82)" },
-        { transform: "translate(-82px, 218px) rotate(178deg) scale(.84)" }
+        { transform: FIGHT_BAT_POSE.ready },
+        { transform: FIGHT_BAT_POSE.victory }
       ], { duration: 520, easing: "ease-out", fill: "forwards" }),
       fightAnimation(wing, [
         { transform: "rotate(0deg)" },
-        { transform: "rotate(-82deg)" }
+        { transform: "rotate(-72deg) translate(-2px, -6px)" }
       ], { duration: 520, easing: "ease-out", fill: "forwards" }),
       fightAnimation(rear, [
         { opacity: .4, transform: "rotate(20deg)" },
-        { opacity: 1, transform: "rotate(115deg) translateY(-5px)" }
+        { opacity: 1, transform: "rotate(88deg) translateY(-6px)" }
       ], { duration: 520, easing: "ease-out", fill: "forwards" })
     ];
     await Promise.all(tasks);
     await sleep(1150);
     if (bat) {
       await fightAnimation(bat, [
-        { transform: "translate(-82px, 218px) rotate(178deg) scale(.84)", opacity: 1 },
-        { transform: "translate(-82px, 305px) rotate(118deg) scale(.76)", opacity: 0 }
+        { transform: FIGHT_BAT_POSE.victory, opacity: 1 },
+        { transform: FIGHT_BAT_POSE.victoryDrop, opacity: 0 }
       ], { duration: 300, easing: "ease-in", fill: "forwards" });
     }
     if (bat) bat.getAnimations().forEach(a => a.cancel());
