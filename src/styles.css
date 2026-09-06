@@ -1638,20 +1638,23 @@ footer {
   animation-name: female-back-wing-flap;
 }
 
-/* v0.124: same-player ducks keep swimming through the interaction. The front
-   wing reaches forward into a clear high-five pose, recoils after contact, then
-   tucks back against the body. The pair separates afterwards to avoid an
-   immediate repeat collision. */
+/* v0.125: one moving duck aligns with one stationary duck. Timing comes
+   from the swimmer's current route pace so the wing movement belongs to the pass. */
 .duck.same-player-highfive .swim-wing-front {
   transform-origin: 40% 58%;
-  animation: same-player-highfive-wing 1.05s ease-in-out 1;
+  animation: same-player-highfive-wing var(--highfive-duration, 720ms) ease-in-out 1 both;
+}
+
+.duck.same-player-highfive-contact .swim-wing-front {
+  filter: brightness(1.03);
 }
 
 @keyframes same-player-highfive-wing {
   0%   { transform: rotate(0deg) translate(0, 0); }
-  22%  { transform: rotate(-92deg) translate(-2px, -4px); }
-  42%  { transform: rotate(-108deg) translate(-3px, -6px); }
-  54%  { transform: rotate(-78deg) translate(-1px, -3px); }
-  68%  { transform: rotate(-90deg) translate(-2px, -4px); }
+  28%  { transform: rotate(-72deg) translate(-1px, -3px); }
+  46%  { transform: rotate(-112deg) translate(-4px, -7px); }
+  56%  { transform: rotate(-118deg) translate(-5px, -7px); }
+  68%  { transform: rotate(-88deg) translate(-2px, -4px); }
+  78%  { transform: rotate(-98deg) translate(-3px, -4px); }
   100% { transform: rotate(0deg) translate(0, 0); }
 }

@@ -1738,7 +1738,8 @@
         500,
         duration * (leg.distance / totalDistance)
       );
-      await animateMove(duck, leg.from, leg.to, legDuration);
+      const result = await animateMove(duck, leg.from, leg.to, legDuration);
+      if (result?.highFive) break;
     }
   }
 
@@ -2001,6 +2002,20 @@
         duck.dataset.x = point.x.toFixed(3);
         duck.dataset.y = point.y.toFixed(3);
         setDepth(duck, point.y);
+
+        if (duck.dataset.routeKind === "normal" && duck.dataset.highFiveActive !== "true") {
+          const candidate = samePlayerHighFiveCandidate(duck, point, tangent.x);
+          if (candidate) {
+            const remainingDistance = Math.max(.01, distance(point, safeTo));
+            const remainingMs = Math.max(1, duration * (1 - raw));
+            const msPerUnit = remainingMs / remainingDistance;
+            if (stack) stack.style.setProperty("--swim-tilt", "0deg");
+            void runSamePlayerPassHighFive(duck, candidate, point, tangent.x, msPerUnit)
+              .finally(() => resolve({ highFive: true }));
+            return;
+          }
+        }
+
         checkDuckCollisions(duck);
 
         if (raw < 1) {
@@ -2036,20 +2051,18 @@
 
       activeSwimmers++;
       duck.dataset.motionState = "swimming";
+      duck.dataset.routeKind = "normal";
       duck.classList.remove("floating");
 
       await animateRoute(duck, from, to, duration);
 
+      duck.dataset.routeKind = "";
       activeSwimmers = Math.max(0, activeSwimmers - 1);
       if (!duck.isConnected) return;
 
       duck.dataset.motionState = "floating";
       duck.classList.add("floating");
-      if (duck._samePlayerSeparateFrom) {
-        const sourcePoint = duck._samePlayerSeparateFrom;
-        duck._samePlayerSeparateFrom = null;
-        void startSamePlayerSeparation(duck, sourcePoint);
-      } else if (!runPendingClickScoot(duck)) {
+      if (!runPendingClickScoot(duck)) {
         scheduleRoam(duck, 3200 + Math.random() * 9000);
       }
     }, delay);
@@ -2633,76 +2646,151 @@
     return nearbyPoint(from);
   }
 
-  async function startSamePlayerSeparation(duck, sourcePoint) {
-    if (!duck?.isConnected || duck.dataset.motionState !== "floating") return false;
-    if (duck.dataset.samePlayerSeparating === "true") return false;
-
-    duck.dataset.samePlayerSeparating = "true";
-    clearTimeout(duck._roamTimer);
-
-    const from = currentPosition(duck);
-    const to = samePlayerEscapePoint(duck, sourcePoint);
-    const distanceAway = distance(from, to);
-    if (distanceAway < .5) {
-      duck.dataset.samePlayerSeparating = "false";
-      scheduleRoam(duck, 1800 + Math.random() * 2200);
-      return false;
-    }
-
-    activeSwimmers++;
-    duck.dataset.motionState = "swimming";
-    duck.classList.remove("floating");
-    await animateRoute(duck, from, to, Math.max(1350, Math.min(2200, 800 + distanceAway * 95)));
-    activeSwimmers = Math.max(0, activeSwimmers - 1);
-    if (!duck.isConnected) return true;
-
-    duck.dataset.motionState = "floating";
-    duck.dataset.samePlayerSeparating = "false";
-    duck.classList.add("floating");
-    scheduleRoam(duck, 3200 + Math.random() * 4500);
-    return true;
+  function samePlayerPairReady(a, b, now = performance.now()) {
+    if (!a?.isConnected || !b?.isConnected) return false;
+    if (a.dataset.reacting === "true" || b.dataset.reacting === "true") return false;
+    if (a.dataset.highFiveActive === "true" || b.dataset.highFiveActive === "true") return false;
+    if (a.classList.contains("snake-panic") || b.classList.contains("snake-panic")) return false;
+    const key = collisionPairKey(a, b);
+    return now - Number(collisionPairs.get(key) || 0) >= 9000;
   }
 
-  function triggerSamePlayerHighFive(a, b) {
-    const now = performance.now();
-    const key = collisionPairKey(a, b);
-    const lastPair = collisionPairs.get(key) || 0;
-    if (now - lastPair < 12000) return true;
-    if (a.dataset.reacting === "true" || b.dataset.reacting === "true") return true;
-    if (a.classList.contains("snake-panic") || b.classList.contains("snake-panic")) return true;
+  function samePlayerHighFiveCandidate(mover, point, tangentX) {
+    if (mover.dataset.routeKind !== "normal") return null;
+    if (mover.dataset.highFiveActive === "true" || mover.classList.contains("snake-panic")) return null;
 
-    collisionPairs.set(key, now);
-    a.dataset.reacting = "true";
-    b.dataset.reacting = "true";
-    a.classList.add("same-player-highfive");
-    b.classList.add("same-player-highfive");
+    const playerId = String(mover.dataset.playerId || "");
+    if (!playerId) return null;
 
-    const ap = currentPosition(a);
-    const bp = currentPosition(b);
-    setFacingForMovement(a, bp.x - ap.x);
-    setFacingForMovement(b, ap.x - bp.x);
+    const direction = Math.sign(tangentX) || (mover.dataset.facing === "right" ? 1 : -1);
+    let best = null;
+    let bestScore = Infinity;
 
-    const aSource = { ...bp };
-    const bSource = { ...ap };
+    for (const other of ducks.values()) {
+      if (other === mover || !other?.isConnected) continue;
+      if (other.dataset.motionState !== "floating") continue;
+      if (String(other.dataset.playerId || "") !== playerId) continue;
+      if (!samePlayerPairReady(mover, other)) continue;
 
-    setTimeout(() => {
-      for (const duck of [a, b]) {
+      const op = currentPosition(other);
+      const dx = op.x - point.x;
+      const dy = op.y - point.y;
+      if (dx * direction <= 0) continue;
+      if (Math.abs(dx) > 9.0 || Math.abs(dy) > 5.5) continue;
+
+      const score = Math.abs(dx) + Math.abs(dy) * 1.4;
+      if (score < bestScore) {
+        best = other;
+        bestScore = score;
+      }
+    }
+    return best;
+  }
+
+  function animateHighFiveMove(duck, from, to, duration, facingX = null) {
+    return new Promise(resolve => {
+      const started = performance.now();
+      const dx = to.x - from.x;
+      const dy = to.y - from.y;
+      if (facingX != null) setFacingForMovement(duck, facingX);
+
+      function frame(now) {
+        if (!duck?.isConnected) { resolve(); return; }
+        const raw = Math.min(1, (now - started) / Math.max(1, duration));
+        const eased = raw * raw * (3 - 2 * raw);
+        const point = { x: from.x + dx * eased, y: from.y + dy * eased };
+        setWorldPosition(duck, point.x, point.y);
+        duck.dataset.x = point.x.toFixed(3);
+        duck.dataset.y = point.y.toFixed(3);
+        setDepth(duck, point.y);
+        if (raw < 1) duck._moveFrame = requestAnimationFrame(frame);
+        else resolve();
+      }
+      duck._moveFrame = requestAnimationFrame(frame);
+    });
+  }
+
+  async function runSamePlayerPassHighFive(mover, stationary, fromPoint, tangentX, msPerUnit) {
+    if (!samePlayerPairReady(mover, stationary)) return false;
+
+    const key = collisionPairKey(mover, stationary);
+    collisionPairs.set(key, performance.now());
+    mover.dataset.highFiveActive = "true";
+    stationary.dataset.highFiveActive = "true";
+    mover.dataset.reacting = "true";
+    stationary.dataset.reacting = "true";
+    clearTimeout(stationary._roamTimer);
+
+    const sp = currentPosition(stationary);
+    let direction = Math.sign(sp.x - fromPoint.x);
+    if (!direction) direction = Math.sign(tangentX) || 1;
+
+    const contactSpacing = 5.15;
+    const approachGap = 2.2;
+    const passGap = 3.6;
+
+    const approach = nearestValidStoppingPoint({
+      x: sp.x - direction * (contactSpacing + approachGap),
+      y: sp.y
+    });
+    const contact = nearestValidStoppingPoint({
+      x: sp.x - direction * contactSpacing,
+      y: sp.y
+    });
+    const pass = nearestValidStoppingPoint({
+      x: sp.x + direction * (contactSpacing + passGap),
+      y: sp.y
+    });
+
+    const paceMs = Math.max(85, Math.min(420, Number(msPerUnit) || 180));
+    const approachDuration = Math.max(280, Math.min(1050, distance(fromPoint, approach) * paceMs));
+    const highFiveDuration = Math.round(Math.max(520, Math.min(980, paceMs * 3.4)));
+    const recoilDuration = Math.round(Math.max(180, Math.min(360, paceMs * 1.1)));
+    const passDuration = Math.max(420, Math.min(1200, distance(contact, pass) * paceMs));
+
+    try {
+      await animateHighFiveMove(mover, fromPoint, approach, approachDuration, direction);
+      if (!mover.isConnected || !stationary.isConnected) return true;
+
+      setFacingForMovement(mover, direction);
+      setFacingForMovement(stationary, -direction);
+      mover.style.setProperty("--highfive-duration", `${highFiveDuration}ms`);
+      stationary.style.setProperty("--highfive-duration", `${highFiveDuration}ms`);
+      mover.classList.add("same-player-highfive", "same-player-highfive-mover");
+      stationary.classList.add("same-player-highfive", "same-player-highfive-stationary");
+
+      await animateHighFiveMove(
+        mover, approach, contact,
+        Math.max(260, Math.round(highFiveDuration * .46)),
+        direction
+      );
+
+      mover.classList.add("same-player-highfive-contact");
+      stationary.classList.add("same-player-highfive-contact");
+      await sleep(Math.max(90, Math.round(highFiveDuration * .14)));
+      mover.classList.remove("same-player-highfive-contact");
+      stationary.classList.remove("same-player-highfive-contact");
+
+      await animateHighFiveMove(mover, contact, pass, passDuration, direction);
+      await sleep(recoilDuration);
+    } finally {
+      for (const duck of [mover, stationary]) {
         if (!duck?.isConnected) continue;
-        duck.classList.remove("same-player-highfive");
+        duck.classList.remove(
+          "same-player-highfive",
+          "same-player-highfive-mover",
+          "same-player-highfive-stationary",
+          "same-player-highfive-contact"
+        );
+        duck.style.removeProperty("--highfive-duration");
+        duck.dataset.highFiveActive = "false";
         duck.dataset.reacting = "false";
         restoreIdleFace(duck);
       }
-
-      if (a?.isConnected) {
-        if (a.dataset.motionState === "floating") void startSamePlayerSeparation(a, aSource);
-        else a._samePlayerSeparateFrom = aSource;
+      if (stationary?.isConnected && stationary.dataset.motionState === "floating") {
+        scheduleRoam(stationary, 1800 + Math.random() * 2200);
       }
-      if (b?.isConnected) {
-        if (b.dataset.motionState === "floating") void startSamePlayerSeparation(b, bSource);
-        else b._samePlayerSeparateFrom = bSource;
-      }
-    }, 1050);
-
+    }
     return true;
   }
 
@@ -2710,7 +2798,8 @@
     const aPlayerId = String(a.dataset.playerId || "");
     const bPlayerId = String(b.dataset.playerId || "");
     if (aPlayerId && aPlayerId === bPlayerId) {
-      triggerSamePlayerHighFive(a, b);
+      // v0.125: same-player high-fives are choreography on normal roaming,
+      // not collision reactions.
       return;
     }
 

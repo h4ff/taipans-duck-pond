@@ -1,7 +1,7 @@
-# Duck Pond – v0.124
+# Duck Pond – v0.125
 
 
-## v0.124 – High-Five Motion + README Repair
+## v0.125 – High-Five Motion + README Repair
 
 - Reworked same-player high-fives so ducks keep swimming past one another while extending the front wing forward into a much larger contact pose.
 - Added a visible recoil after contact before the wing tucks back against the body.
