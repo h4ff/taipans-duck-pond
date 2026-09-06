@@ -699,11 +699,16 @@
     strike: "assets/events/snake/snake-strike.png"
   };
 
-  // The strike zone sits immediately in front of the right-hand reeds. Ducks
-  // are evaluated in the same percentage coordinate system used by pond motion.
-  const SNAKE_THREAT_POINT = { x: 82.0, y: 69.5 };
-  const SNAKE_ENGAGE_RADIUS_X = 8.5;
-  const SNAKE_ENGAGE_RADIUS_Y = 6.5;
+  // v0.122: the snake attacks along the bank, so use an elongated leftward
+  // corridor rather than a small circular target. A slightly broader panic
+  // zone catches ducks that visually sit in the strike line, including those
+  // close to the reeds. Coordinates use the pond percentage motion system.
+  const SNAKE_THREAT_POINT = { x: 75.5, y: 69.0 };
+  const SNAKE_ENGAGE_RADIUS_X = 11.5;
+  const SNAKE_ENGAGE_RADIUS_Y = 7.5;
+  const SNAKE_PANIC_POINT = { x: 74.0, y: 69.0 };
+  const SNAKE_PANIC_RADIUS_X = 14.5;
+  const SNAKE_PANIC_RADIUS_Y = 9.0;
 
   function duckHasFlamingo(duck) {
     return duck?.dataset?.presentation === "male" && duck?.dataset?.swimAccessory === "flamingo";
@@ -2290,6 +2295,27 @@
     return target;
   }
 
+  function snakePanicScore(duck) {
+    if (!duck?.isConnected || duck.dataset.motionState !== "floating") return Infinity;
+    const point = currentPosition(duck);
+    if (![point.x, point.y].every(Number.isFinite)) return Infinity;
+    const nx = (point.x - SNAKE_PANIC_POINT.x) / SNAKE_PANIC_RADIUS_X;
+    const ny = (point.y - SNAKE_PANIC_POINT.y) / SNAKE_PANIC_RADIUS_Y;
+    const score = nx * nx + ny * ny;
+    return score <= 1 ? score : Infinity;
+  }
+
+  function snakePanicDucks(primaryTarget = null) {
+    const victims = [];
+    for (const duck of ducks.values()) {
+      if (snakePanicScore(duck) < Infinity) victims.push(duck);
+    }
+    // The locked strike target must always react even if it drifted a fraction
+    // outside the broader zone during the mouth-open anticipation.
+    if (primaryTarget?.isConnected && !victims.includes(primaryTarget)) victims.push(primaryTarget);
+    return victims;
+  }
+
   function setSnakePose(pose) {
     if (!snakeEvent || !snakeSprite) return;
     snakeEvent.className = `snake-event ${pose}`;
@@ -2408,8 +2434,9 @@
       await sleep(210);
       if (!snakeEventEnabled || token !== snakeRunToken) return;
 
-      // The target panics as the strike launches.
-      const panicPromise = startSnakePanic(target);
+      // Everyone visually in the bank-biased strike/panic corridor scatters as
+      // the snake launches, rather than only one arbitrarily chosen duck.
+      const panicPromises = snakePanicDucks(target).map(duck => startSnakePanic(duck));
       setSnakePose("is-striking");
       await sleep(360);
       if (!snakeEventEnabled || token !== snakeRunToken) return;
@@ -2426,7 +2453,7 @@
 
       snakeNextEligibleAt = performance.now() + 30000 + Math.random() * 30000;
       snakeNextPeekAt = performance.now() + 8500 + Math.random() * 13000;
-      void panicPromise;
+      void Promise.allSettled(panicPromises);
     } finally {
       snakeBusy = false;
     }

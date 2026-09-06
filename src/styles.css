@@ -1609,10 +1609,13 @@ footer {
 }
 
 @keyframes snake-strike-lunge {
-  0%   { transform: translate(22px, 15px) scale(.84); }
-  42%  { transform: translate(-12px, -5px) scale(1.02); }
-  68%  { transform: translate(-16px, -6px) scale(1.03); }
-  100% { transform: translate(14px, 10px) scale(.91); }
+  /* Keep the rear/bottom of the strike sprite visually planted in the reeds.
+     The lunge is now mostly horizontal; the previous negative Y translation
+     made the whole snake appear to lift off the bank. */
+  0%   { transform: translate(22px, 20px) scale(.84); }
+  42%  { transform: translate(-16px, 16px) scale(1.02); }
+  68%  { transform: translate(-20px, 15px) scale(1.03); }
+  100% { transform: translate(14px, 18px) scale(.91); }
 }
 
 .duck.snake-panic .swim-stack {
