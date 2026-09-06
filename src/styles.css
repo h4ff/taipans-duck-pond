@@ -1637,3 +1637,26 @@ footer {
   transform-origin: 49% 66%;
   animation-name: female-back-wing-flap;
 }
+
+/* v0.123: same-player ducks acknowledge each other on every close encounter.
+   The synchronized front-wing lift and small bounce sell the high-five; the
+   movement logic then separates the pair so they do not immediately retrigger. */
+.duck.same-player-highfive .swim-stack {
+  animation: same-player-highfive-bounce .82s ease-in-out 1;
+}
+
+.duck.same-player-highfive .swim-wing-front {
+  transform-origin: 40% 58%;
+  animation: same-player-highfive-wing .82s ease-in-out 1;
+}
+
+@keyframes same-player-highfive-bounce {
+  0%, 100% { transform: translateY(-27%) rotate(var(--swim-tilt)) scaleX(var(--facing-scale)); }
+  45% { transform: translateY(-31%) rotate(var(--swim-tilt)) scaleX(var(--facing-scale)); }
+  65% { transform: translateY(-29%) rotate(var(--swim-tilt)) scaleX(var(--facing-scale)); }
+}
+
+@keyframes same-player-highfive-wing {
+  0%, 100% { transform: rotate(0deg); }
+  42%, 62% { transform: rotate(-42deg) translateY(-3px); }
+}

@@ -2045,7 +2045,11 @@
 
       duck.dataset.motionState = "floating";
       duck.classList.add("floating");
-      if (!runPendingClickScoot(duck)) {
+      if (duck._samePlayerSeparateFrom) {
+        const sourcePoint = duck._samePlayerSeparateFrom;
+        duck._samePlayerSeparateFrom = null;
+        void startSamePlayerSeparation(duck, sourcePoint);
+      } else if (!runPendingClickScoot(duck)) {
         scheduleRoam(duck, 3200 + Math.random() * 9000);
       }
     }, delay);
@@ -2593,7 +2597,123 @@
     }
   }
 
+
+  function samePlayerEscapePoint(duck, sourcePoint) {
+    const from = currentPosition(duck);
+    let dx = from.x - sourcePoint.x;
+    let dy = from.y - sourcePoint.y;
+    let length = Math.hypot(dx, dy);
+
+    if (length < .1) {
+      const angle = Math.random() * Math.PI * 2;
+      dx = Math.cos(angle);
+      dy = Math.sin(angle);
+      length = 1;
+    }
+
+    dx /= length;
+    dy /= length;
+
+    for (const distanceAway of [12, 10, 8]) {
+      for (const angleOffset of [0, .22, -.22, .42, -.42]) {
+        const c = Math.cos(angleOffset);
+        const s = Math.sin(angleOffset);
+        const rx = dx * c - dy * s;
+        const ry = dx * s + dy * c;
+        const candidate = {
+          x: from.x + rx * distanceAway,
+          y: from.y + ry * distanceAway * .60
+        };
+        if (canDuckStopAt(candidate.x, candidate.y) && segmentClear(from, candidate)) {
+          return candidate;
+        }
+      }
+    }
+
+    return nearbyPoint(from);
+  }
+
+  async function startSamePlayerSeparation(duck, sourcePoint) {
+    if (!duck?.isConnected || duck.dataset.motionState !== "floating") return false;
+    if (duck.dataset.samePlayerSeparating === "true") return false;
+
+    duck.dataset.samePlayerSeparating = "true";
+    clearTimeout(duck._roamTimer);
+
+    const from = currentPosition(duck);
+    const to = samePlayerEscapePoint(duck, sourcePoint);
+    const distanceAway = distance(from, to);
+    if (distanceAway < .5) {
+      duck.dataset.samePlayerSeparating = "false";
+      scheduleRoam(duck, 1800 + Math.random() * 2200);
+      return false;
+    }
+
+    activeSwimmers++;
+    duck.dataset.motionState = "swimming";
+    duck.classList.remove("floating");
+    await animateRoute(duck, from, to, Math.max(1350, Math.min(2200, 800 + distanceAway * 95)));
+    activeSwimmers = Math.max(0, activeSwimmers - 1);
+    if (!duck.isConnected) return true;
+
+    duck.dataset.motionState = "floating";
+    duck.dataset.samePlayerSeparating = "false";
+    duck.classList.add("floating");
+    scheduleRoam(duck, 3200 + Math.random() * 4500);
+    return true;
+  }
+
+  function triggerSamePlayerHighFive(a, b) {
+    const now = performance.now();
+    const key = collisionPairKey(a, b);
+    const lastPair = collisionPairs.get(key) || 0;
+    if (now - lastPair < 12000) return true;
+    if (a.dataset.reacting === "true" || b.dataset.reacting === "true") return true;
+    if (a.classList.contains("snake-panic") || b.classList.contains("snake-panic")) return true;
+
+    collisionPairs.set(key, now);
+    a.dataset.reacting = "true";
+    b.dataset.reacting = "true";
+    a.classList.add("same-player-highfive");
+    b.classList.add("same-player-highfive");
+
+    const ap = currentPosition(a);
+    const bp = currentPosition(b);
+    setFacingForMovement(a, bp.x - ap.x);
+    setFacingForMovement(b, ap.x - bp.x);
+
+    const aSource = { ...bp };
+    const bSource = { ...ap };
+
+    setTimeout(() => {
+      for (const duck of [a, b]) {
+        if (!duck?.isConnected) continue;
+        duck.classList.remove("same-player-highfive");
+        duck.dataset.reacting = "false";
+        restoreIdleFace(duck);
+      }
+
+      if (a?.isConnected) {
+        if (a.dataset.motionState === "floating") void startSamePlayerSeparation(a, aSource);
+        else a._samePlayerSeparateFrom = aSource;
+      }
+      if (b?.isConnected) {
+        if (b.dataset.motionState === "floating") void startSamePlayerSeparation(b, bSource);
+        else b._samePlayerSeparateFrom = bSource;
+      }
+    }, 820);
+
+    return true;
+  }
+
   function triggerCollisionReaction(a, b) {
+    const aPlayerId = String(a.dataset.playerId || "");
+    const bPlayerId = String(b.dataset.playerId || "");
+    if (aPlayerId && aPlayerId === bPlayerId) {
+      triggerSamePlayerHighFive(a, b);
+      return;
+    }
+
     const now = performance.now();
     const key = collisionPairKey(a, b);
     const lastPair = collisionPairs.get(key) || 0;
