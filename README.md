@@ -1,5 +1,14 @@
-# Duck Pond – v0.135
+# Duck Pond – v0.136
 
+
+## v0.136 – Tap-to-Fight + Rare Random Fights
+
+- Removed the temporary `Trigger Fight` test button from the production UI.
+- Added a user-triggered fight gesture: tap one settled duck, then tap a second nearby settled duck within two seconds to start the existing fight sequence.
+- The first tap still shows the normal stats/reaction, but its clearing scoot is deferred during the short fighter-selection window. If no nearby second duck is chosen, the normal scoot resumes automatically.
+- Added a subtle one-beat visual cue to the first selected fighter without introducing new artwork or a persistent selection ring.
+- Added rare automatic fights for ponds with at least six eligible ducks. Random fights only use already-nearby pairs, wait roughly 18–28 seconds after load before becoming eligible, use low-probability checks thereafter, and impose a 75-second cooldown after any fight.
+- Preserved the approved v0.135 fight choreography, bat ignition-style entrance, clash movement, sparks, expressions, loser escape and winner celebration.
 
 ## v0.135 – Waterline Bat Draw
 
