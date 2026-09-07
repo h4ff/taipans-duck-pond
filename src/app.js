@@ -1395,6 +1395,306 @@
   let snakeNextEligibleAt = Infinity;
   let snakeRunToken = 0;
 
+  // v0.140: central, code-only pond sound system. AudioContext is created only
+  // after a genuine user gesture so Safari/iOS and other autoplay-restricted
+  // browsers can unlock it without adding a persistent sound control to the UI.
+  let pondAudioContext = null;
+  let pondAudioMaster = null;
+  let pondNoiseBuffer = null;
+  let randomQuackTimer = null;
+  let randomQuackScheduled = false;
+  const POND_SOUND_MASTER_LEVEL = 0.48;
+
+  function soundPanFromX(xPct) {
+    const x = Number(xPct);
+    if (!Number.isFinite(x)) return 0;
+    return Math.max(-0.82, Math.min(0.82, (x - 50) / 52));
+  }
+
+  function soundPanForDuck(duck) {
+    return soundPanFromX(duck?.dataset?.x);
+  }
+
+  function ensureNoiseBuffer() {
+    if (!pondAudioContext) return null;
+    if (pondNoiseBuffer) return pondNoiseBuffer;
+    const length = Math.ceil(pondAudioContext.sampleRate * 2.0);
+    pondNoiseBuffer = pondAudioContext.createBuffer(1, length, pondAudioContext.sampleRate);
+    const data = pondNoiseBuffer.getChannelData(0);
+    let last = 0;
+    for (let i = 0; i < data.length; i++) {
+      // Slightly correlated noise is less brittle than raw white noise and
+      // works well for water, feathers and the snake hiss after filtering.
+      const white = Math.random() * 2 - 1;
+      last = last * 0.18 + white * 0.82;
+      data[i] = last;
+    }
+    return pondNoiseBuffer;
+  }
+
+  function pondAudioReady() {
+    return !!pondAudioContext && pondAudioContext.state === "running" && !!pondAudioMaster;
+  }
+
+  function soundBus(pan = 0, level = 1) {
+    if (!pondAudioReady()) return null;
+    const bus = pondAudioContext.createGain();
+    bus.gain.value = Math.max(0, level);
+    if (typeof pondAudioContext.createStereoPanner === "function") {
+      const panner = pondAudioContext.createStereoPanner();
+      panner.pan.value = Math.max(-1, Math.min(1, pan));
+      bus.connect(panner);
+      panner.connect(pondAudioMaster);
+      bus._pondPanner = panner;
+    } else {
+      bus.connect(pondAudioMaster);
+    }
+    return bus;
+  }
+
+  function releaseSoundBus(bus, delayMs = 1400) {
+    if (!bus) return;
+    setTimeout(() => {
+      try { bus.disconnect(); } catch {}
+      try { bus._pondPanner?.disconnect(); } catch {}
+    }, Math.max(250, delayMs));
+  }
+
+  function noiseBurst(bus, {
+    start = 0,
+    duration = 0.18,
+    gain = 0.12,
+    filterType = "bandpass",
+    frequency = 900,
+    endFrequency = null,
+    q = 0.7,
+    attack = 0.012
+  } = {}) {
+    if (!bus || !pondAudioReady()) return;
+    const now = pondAudioContext.currentTime + Math.max(0, start);
+    const source = pondAudioContext.createBufferSource();
+    source.buffer = ensureNoiseBuffer();
+    source.loop = true;
+
+    const filter = pondAudioContext.createBiquadFilter();
+    filter.type = filterType;
+    filter.frequency.setValueAtTime(Math.max(30, frequency), now);
+    if (Number.isFinite(endFrequency)) {
+      filter.frequency.exponentialRampToValueAtTime(Math.max(30, endFrequency), now + duration);
+    }
+    filter.Q.value = q;
+
+    const envelope = pondAudioContext.createGain();
+    envelope.gain.setValueAtTime(0.0001, now);
+    envelope.gain.exponentialRampToValueAtTime(Math.max(0.0002, gain), now + Math.max(0.004, attack));
+    envelope.gain.exponentialRampToValueAtTime(0.0001, now + Math.max(attack + 0.01, duration));
+
+    source.connect(filter);
+    filter.connect(envelope);
+    envelope.connect(bus);
+    source.start(now, Math.random() * 0.8);
+    source.stop(now + duration + 0.03);
+  }
+
+  function toneBurst(bus, {
+    start = 0,
+    duration = 0.16,
+    gain = 0.05,
+    type = "sine",
+    frequency = 220,
+    endFrequency = null,
+    attack = 0.008
+  } = {}) {
+    if (!bus || !pondAudioReady()) return;
+    const now = pondAudioContext.currentTime + Math.max(0, start);
+    const oscillator = pondAudioContext.createOscillator();
+    oscillator.type = type;
+    oscillator.frequency.setValueAtTime(Math.max(20, frequency), now);
+    if (Number.isFinite(endFrequency)) {
+      oscillator.frequency.exponentialRampToValueAtTime(Math.max(20, endFrequency), now + duration);
+    }
+    const envelope = pondAudioContext.createGain();
+    envelope.gain.setValueAtTime(0.0001, now);
+    envelope.gain.exponentialRampToValueAtTime(Math.max(0.0002, gain), now + Math.max(0.004, attack));
+    envelope.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+    oscillator.connect(envelope);
+    envelope.connect(bus);
+    oscillator.start(now);
+    oscillator.stop(now + duration + 0.02);
+  }
+
+  function playSplashSound(xPct, duckType = "standard") {
+    if (!pondAudioReady()) return;
+    const typeBoost = duckType === "diamond" ? 1.08 : duckType === "golden" ? 1.04 : 1;
+    const bus = soundBus(soundPanFromX(xPct), 0.78 * typeBoost);
+    noiseBurst(bus, { duration: 0.34, gain: 0.26, filterType: "lowpass", frequency: 1550, endFrequency: 520, q: 0.35, attack: 0.01 });
+    noiseBurst(bus, { start: 0.018, duration: 0.22, gain: 0.12, filterType: "bandpass", frequency: 760, endFrequency: 430, q: 0.75, attack: 0.006 });
+    toneBurst(bus, { duration: 0.22, gain: 0.035, type: "sine", frequency: 145, endFrequency: 92 });
+    for (let i = 0; i < 3; i++) {
+      toneBurst(bus, {
+        start: 0.055 + i * 0.045 + Math.random() * 0.025,
+        duration: 0.07 + Math.random() * 0.035,
+        gain: 0.014 + Math.random() * 0.01,
+        type: "sine",
+        frequency: 900 + Math.random() * 760,
+        endFrequency: 620 + Math.random() * 430
+      });
+    }
+    releaseSoundBus(bus, 850);
+  }
+
+  function playWingFlapSound(duck, { strength = 1, delay = 0 } = {}) {
+    if (!pondAudioReady()) return;
+    const bus = soundBus(soundPanForDuck(duck), 0.52 * strength);
+    for (let i = 0; i < 3; i++) {
+      noiseBurst(bus, {
+        start: delay + i * 0.085,
+        duration: 0.075,
+        gain: 0.07,
+        filterType: "bandpass",
+        frequency: 680 + i * 110,
+        endFrequency: 470 + i * 80,
+        q: 0.8,
+        attack: 0.008
+      });
+    }
+    releaseSoundBus(bus, Math.round((delay + 0.55) * 1000));
+  }
+
+  function playScootSound(duck, { panic = false, fight = false } = {}) {
+    if (!pondAudioReady()) return;
+    const bus = soundBus(soundPanForDuck(duck), panic ? 0.66 : fight ? 0.62 : 0.58);
+    noiseBurst(bus, {
+      duration: panic ? 0.42 : 0.34,
+      gain: panic ? 0.21 : 0.16,
+      filterType: "bandpass",
+      frequency: 520,
+      endFrequency: panic ? 1650 : 1250,
+      q: 0.55,
+      attack: 0.008
+    });
+    noiseBurst(bus, { start: 0.04, duration: 0.3, gain: 0.075, filterType: "highpass", frequency: 720, endFrequency: 1500, q: 0.25, attack: 0.01 });
+    playWingFlapSound(duck, { strength: panic ? 1.12 : fight ? 1.02 : 0.9, delay: 0.02 });
+    releaseSoundBus(bus, 900);
+  }
+
+  function playQuackSound(duck) {
+    if (!pondAudioReady() || !duck?.isConnected) return;
+    const bus = soundBus(soundPanForDuck(duck), 0.62);
+    const base = 185 + Math.random() * 42;
+    const syllables = Math.random() < 0.22 ? 2 : 1;
+    for (let i = 0; i < syllables; i++) {
+      const at = i * 0.145;
+      toneBurst(bus, { start: at, duration: 0.13, gain: 0.07, type: "sawtooth", frequency: base * (1 + Math.random() * 0.05), endFrequency: base * 0.72, attack: 0.012 });
+      toneBurst(bus, { start: at + 0.008, duration: 0.11, gain: 0.028, type: "square", frequency: base * 2.15, endFrequency: base * 1.55, attack: 0.014 });
+      noiseBurst(bus, { start: at, duration: 0.12, gain: 0.035, filterType: "bandpass", frequency: 1150, endFrequency: 820, q: 1.8, attack: 0.01 });
+    }
+    releaseSoundBus(bus, 850);
+  }
+
+  function playSnakeHissSound() {
+    if (!pondAudioReady()) return;
+    const bus = soundBus(0.58, 0.92);
+    noiseBurst(bus, { duration: 1.02, gain: 0.34, filterType: "highpass", frequency: 2100, endFrequency: 3500, q: 0.2, attack: 0.035 });
+    noiseBurst(bus, { start: 0.03, duration: 0.88, gain: 0.16, filterType: "bandpass", frequency: 5100, endFrequency: 3900, q: 1.3, attack: 0.025 });
+    releaseSoundBus(bus, 1500);
+  }
+
+  function playFightIgnitionSound(duck, delay = 0) {
+    if (!pondAudioReady()) return;
+    const bus = soundBus(soundPanForDuck(duck), 0.72);
+    toneBurst(bus, { start: delay, duration: 0.58, gain: 0.075, type: "sawtooth", frequency: 78, endFrequency: 196, attack: 0.018 });
+    toneBurst(bus, { start: delay + 0.035, duration: 0.52, gain: 0.04, type: "square", frequency: 156, endFrequency: 392, attack: 0.02 });
+    noiseBurst(bus, { start: delay, duration: 0.48, gain: 0.055, filterType: "bandpass", frequency: 430, endFrequency: 1500, q: 1.0, attack: 0.014 });
+    releaseSoundBus(bus, Math.round((delay + 1.0) * 1000));
+  }
+
+  function fightSoundPan(left, right) {
+    const lx = Number(left?.dataset?.x);
+    const rx = Number(right?.dataset?.x);
+    return soundPanFromX(Number.isFinite(lx) && Number.isFinite(rx) ? (lx + rx) / 2 : 50);
+  }
+
+  function playFightClashSound(left, right, finalBlow = false) {
+    if (!pondAudioReady()) return;
+    const bus = soundBus(fightSoundPan(left, right), finalBlow ? 0.96 : 0.74);
+    const wobble = 0.93 + Math.random() * 0.14;
+    noiseBurst(bus, { duration: finalBlow ? 0.2 : 0.13, gain: finalBlow ? 0.18 : 0.11, filterType: "highpass", frequency: finalBlow ? 1050 : 1450, q: 0.25, attack: 0.003 });
+    [610, 920, 1370].forEach((freq, index) => {
+      toneBurst(bus, {
+        duration: (finalBlow ? 0.5 : 0.34) - index * 0.055,
+        gain: (finalBlow ? 0.07 : 0.048) / (1 + index * 0.22),
+        type: index === 0 ? "square" : "sine",
+        frequency: freq * wobble,
+        endFrequency: freq * wobble * (0.78 + index * 0.035),
+        attack: 0.002
+      });
+    });
+    if (finalBlow) toneBurst(bus, { duration: 0.28, gain: 0.07, type: "sine", frequency: 155, endFrequency: 82, attack: 0.004 });
+    releaseSoundBus(bus, finalBlow ? 1300 : 900);
+  }
+
+  function playFightPowerDownSound(duck) {
+    if (!pondAudioReady()) return;
+    const bus = soundBus(soundPanForDuck(duck), 0.68);
+    toneBurst(bus, { duration: 0.5, gain: 0.065, type: "sawtooth", frequency: 205, endFrequency: 72, attack: 0.008 });
+    toneBurst(bus, { start: 0.025, duration: 0.44, gain: 0.03, type: "square", frequency: 410, endFrequency: 145, attack: 0.008 });
+    noiseBurst(bus, { duration: 0.4, gain: 0.04, filterType: "bandpass", frequency: 1400, endFrequency: 360, q: 0.8, attack: 0.008 });
+    releaseSoundBus(bus, 1100);
+  }
+
+  function scheduleRandomQuack(initial = false) {
+    if (!pondAudioReady()) return;
+    if (randomQuackTimer) clearTimeout(randomQuackTimer);
+    randomQuackScheduled = true;
+    const delay = initial
+      ? 5000 + Math.random() * 6500
+      : 8500 + Math.random() * 11500;
+    randomQuackTimer = setTimeout(() => {
+      randomQuackTimer = null;
+      randomQuackScheduled = false;
+      if (!document.hidden && !fightBusy && !snakeBusy) {
+        const eligible = [...ducks.values()].filter(duck =>
+          duck?.isConnected &&
+          duck.dataset.motionState === "floating" &&
+          duck.dataset.reacting !== "true" &&
+          duck.dataset.fightActive !== "true" &&
+          duck.dataset.highFiveActive !== "true"
+        );
+        if (eligible.length) playQuackSound(eligible[Math.floor(Math.random() * eligible.length)]);
+      }
+      scheduleRandomQuack(false);
+    }, delay);
+  }
+
+  function unlockDuckPondAudio() {
+    const AudioCtor = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtor) return;
+    try {
+      if (!pondAudioContext) {
+        pondAudioContext = new AudioCtor();
+        pondAudioMaster = pondAudioContext.createGain();
+        pondAudioMaster.gain.value = POND_SOUND_MASTER_LEVEL;
+        pondAudioMaster.connect(pondAudioContext.destination);
+        ensureNoiseBuffer();
+      }
+      const ready = () => {
+        if (!randomQuackScheduled && !randomQuackTimer) scheduleRandomQuack(true);
+      };
+      if (pondAudioContext.state === "suspended") {
+        pondAudioContext.resume().then(ready).catch(() => {});
+      } else {
+        ready();
+      }
+    } catch (error) {
+      console.warn("Duck Pond audio unavailable", error);
+    }
+  }
+
+  document.addEventListener("pointerdown", unlockDuckPondAudio, { passive: true });
+  document.addEventListener("touchend", unlockDuckPondAudio, { passive: true });
+  document.addEventListener("keydown", unlockDuckPondAudio);
+
   function randomCollisionGap() {
     return 8000 + Math.random() * 7000;
   }
@@ -1849,6 +2149,7 @@
   }
 
   async function createSplashAnimation(xPct, yPct, duckType = "standard") {
+    playSplashSound(xPct, duckType);
     const splash = document.createElement("div");
     splash.className = "splash-sprite";
 
@@ -2608,6 +2909,7 @@
     const from = currentPosition(duck);
     const to = snakeEscapePoint(duck);
     const distanceAway = distance(from, to);
+    playScootSound(duck, { panic: true });
     activeSwimmers++;
     try {
       await animateMove(duck, from, to, Math.max(620, Math.min(980, 440 + distanceAway * 34)));
@@ -2664,6 +2966,7 @@
       // the snake launches, rather than only one arbitrarily chosen duck.
       const panicPromises = snakePanicDucks(target).map(duck => startSnakePanic(duck));
       setSnakePose("is-striking");
+      playSnakeHissSound();
       await sleep(360);
       if (!snakeEventEnabled || token !== snakeRunToken) return;
 
@@ -2803,6 +3106,7 @@
 
     duck.dataset.motionState = "swimming";
     duck.classList.remove("floating");
+    playScootSound(duck);
     activeSwimmers++;
 
     await animateRoute(duck, from, to, Math.max(1900, Math.min(3200, 1250 + distanceAway * 160)));
@@ -3084,7 +3388,10 @@
     }
 
     const sparkDelay = Math.max(80, Math.round(swing * .58) - defenderDelay);
-    const sparkTimer = setTimeout(() => spawnFightSpark(left, right), sparkDelay);
+    const sparkTimer = setTimeout(() => {
+      spawnFightSpark(left, right);
+      playFightClashSound(left, right, false);
+    }, sparkDelay);
     await Promise.all(tasks);
     clearTimeout(sparkTimer);
     await sleep(Math.max(90, durationMs - swing));
@@ -3120,7 +3427,10 @@
     loserBat?.getAnimations?.().forEach(animation => animation.cancel());
     loserWing?.getAnimations?.().forEach(animation => animation.cancel());
 
-    const sparkTimer = setTimeout(() => spawnFightSpark(left, right), Math.round(swing * .64));
+    const sparkTimer = setTimeout(() => {
+      spawnFightSpark(left, right);
+      playFightClashSound(left, right, true);
+    }, Math.round(swing * .64));
     await Promise.all([
       fightAnimation(winnerBat, winnerBatFrames, { duration: swing, easing: "cubic-bezier(.18,.82,.22,1)" }),
       fightAnimation(winnerWing, winnerWingFrames, { duration: swing, easing: "cubic-bezier(.18,.82,.22,1)" })
@@ -3155,6 +3465,7 @@
     loser.dataset.motionState = "swimming";
     loser.classList.remove("floating");
     loser.classList.add("fight-loser-scoot");
+    playScootSound(loser, { fight: true });
     const distanceAway = distance(from, away);
     await animateRoute(
       loser,
@@ -3192,6 +3503,7 @@
     if (bat) {
       // Reverse the ignition gag: retract the visible bat from blade toward
       // handle while it remains raised, then let the handle vanish.
+      playFightPowerDownSound(winner);
       await fightAnimation(bat, [
         { transform: FIGHT_BAT_POSE.victory, opacity: 1, clipPath: "inset(0 0 0 0)" },
         { transform: FIGHT_BAT_POSE.victory, opacity: 1, clipPath: "inset(0 0 69% 0)", offset: .82 },
@@ -3248,6 +3560,8 @@
       // the handle downward while the arm lifts, so it reads as coming out of
       // the pond instead of floating through open air.
       for (const duck of actors) duck.classList.add("fight-drawing");
+      playFightIgnitionSound(leftActor, 0);
+      playFightIgnitionSound(rightActor, 0.065);
       await sleep(650);
       for (const duck of actors) {
         duck.classList.remove("fight-drawing");
@@ -3872,6 +4186,7 @@
     const wasSwimming = duck.dataset.motionState === "swimming";
     duck.dataset.motionState = "swimming";
     duck.classList.remove("floating");
+    playScootSound(duck);
     if (!wasSwimming) activeSwimmers++;
     await animateRoute(duck, from, to, Math.max(1450, Math.min(2450, 950 + distanceAway * 95)));
     if (!wasSwimming) activeSwimmers = Math.max(0, activeSwimmers - 1);
