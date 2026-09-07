@@ -1878,9 +1878,9 @@ body.pond-focus-mode .fight-test-rig { display: none !important; }
   .fight-test-rig { display: none !important; }
 }
 
-/* v0.136: tiny one-beat cue when a settled duck is armed as fighter one. */
+/* v0.137: subtle challenge cue while the long-pressed fighter is armed. */
 .duck.fight-armed .swim-stack {
-  animation: fight-armed-nudge .34s ease-out 1;
+  animation: fight-armed-nudge .6s ease-in-out infinite;
 }
 @keyframes fight-armed-nudge {
   0%, 100% { filter: none; }

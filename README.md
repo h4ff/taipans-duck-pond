@@ -1,5 +1,16 @@
-# Duck Pond – v0.136
+# Duck Pond – v0.137
 
+
+## v0.137 – Long-Press Challenge + Immediate Scoot
+
+- Replaced the two-normal-taps fight trigger with a long-press challenge: hold one eligible duck for about half a second, then tap a nearby eligible duck within 2.5 seconds to fight.
+- Normal taps once again keep the standard stats/reaction behaviour and start the clearing scoot immediately.
+- Clicking a duck that is already swimming now cancels its current roam path at its exact current position and starts the click scoot immediately instead of waiting for the old route to finish.
+- If challenge mode expires without a second fighter, the armed duck performs the normal scoot.
+- Removed the leftover “Temporary duel test” text from the production frame.
+- Winner victory bat now powers down by retracting from blade toward handle, reversing the existing lightsabre-style ignition gag.
+- Tightened the final duel alignment slightly so bat contact is more reliable while preserving the approved v0.135 swing choreography.
+- Preserved rare random fights and the approved v0.135 fight choreography.
 
 ## v0.136 – Tap-to-Fight + Rare Random Fights
 

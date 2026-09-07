@@ -708,7 +708,8 @@
   let armedFightTimer = null;
   let randomFightTimer = null;
   let randomFightNextEligibleAt = Infinity;
-  const FIGHT_TAP_WINDOW_MS = 2000;
+  const FIGHT_CHALLENGE_WINDOW_MS = 2500;
+  const FIGHT_LONG_PRESS_MS = 560;
   const FIGHT_TAP_MAX_DISTANCE = 15.5;
   const RANDOM_FIGHT_MIN_DUCKS = 6;
   const RANDOM_FIGHT_COOLDOWN_MS = 75000;
@@ -1773,7 +1774,7 @@
         duration * (leg.distance / totalDistance)
       );
       const result = await animateMove(duck, leg.from, leg.to, legDuration);
-      if (result?.highFive) break;
+      if (result?.cancelled || result?.highFive) break;
     }
   }
 
@@ -2001,6 +2002,7 @@
   }
 
   function animateMove(duck, from, to, duration, options = {}) {
+    const moveToken = Number(duck.dataset.moveToken || 0);
     const safeTo = nearestValidStoppingPoint(to);
     const control = options.control || curvedControlPoint(from, safeTo);
     const highFive = options.highFive || null;
@@ -2081,7 +2083,13 @@
       function frame(now) {
         if (!duck.isConnected) {
           endHighFive();
-          resolve();
+          resolve({ cancelled: true });
+          return;
+        }
+        if (Number(duck.dataset.moveToken || 0) !== moveToken) {
+          if (stack) stack.style.setProperty("--swim-tilt", "0deg");
+          endHighFive();
+          resolve({ cancelled: true });
           return;
         }
 
@@ -2132,7 +2140,7 @@
         } else {
           if (stack) stack.style.setProperty("--swim-tilt", "0deg");
           endHighFive();
-          resolve();
+          resolve({ cancelled: false });
         }
       }
 
@@ -2255,10 +2263,11 @@
         await animateRoute(duck, from, to, duration);
       }
 
-      duck.dataset.routeKind = "";
       activeSwimmers = Math.max(0, activeSwimmers - 1);
       if (!duck.isConnected) return;
+      if (duck.dataset.routeKind !== "normal") return;
 
+      duck.dataset.routeKind = "";
       duck.dataset.motionState = "floating";
       duck.classList.add("floating");
       if (!runPendingClickScoot(duck)) {
@@ -2889,6 +2898,8 @@
     armedFightDuck = null;
     if (!duck?.isConnected) return;
     duck.classList.remove("fight-armed");
+    duck.dataset.reacting = "false";
+    restoreIdleFace(duck);
     if (resumeScoot) {
       duck.dataset.clickScootPending = "true";
       setTimeout(() => runPendingClickScoot(duck), 20);
@@ -2900,10 +2911,12 @@
     armedFightDuck = duck;
     duck.classList.add("fight-armed");
     duck.dataset.clickScootPending = "false";
+    duck.dataset.reacting = "true";
+    setDuckFace(duck, "angry");
     armedFightTimer = setTimeout(() => {
       if (armedFightDuck !== duck) return;
       cancelArmedFight({ resumeScoot: true });
-    }, FIGHT_TAP_WINDOW_MS);
+    }, FIGHT_CHALLENGE_WINDOW_MS);
   }
 
   function nearbyFightPairs(maxDistance = FIGHT_TAP_MAX_DISTANCE) {
@@ -2947,7 +2960,7 @@
     const ap = currentPosition(a);
     const bp = currentPosition(b);
     const mid = { x: (ap.x + bp.x) / 2, y: (ap.y + bp.y) / 2 };
-    const spacing = 6.1;
+    const spacing = 5.8;
     const candidates = [0, -2.5, 2.5, -5, 5];
     for (const yOffset of candidates) {
       const y = mid.y + yOffset;
@@ -3138,10 +3151,13 @@
     await Promise.all(tasks);
     await sleep(1150);
     if (bat) {
+      // Reverse the ignition gag: retract the visible bat from blade toward
+      // handle while it remains raised, then let the handle vanish.
       await fightAnimation(bat, [
-        { transform: FIGHT_BAT_POSE.victory, opacity: 1 },
-        { transform: FIGHT_BAT_POSE.victoryDrop, opacity: 0 }
-      ], { duration: 300, easing: "ease-in", fill: "forwards" });
+        { transform: FIGHT_BAT_POSE.victory, opacity: 1, clipPath: "inset(0 0 0 0)" },
+        { transform: FIGHT_BAT_POSE.victory, opacity: 1, clipPath: "inset(0 0 69% 0)", offset: .82 },
+        { transform: FIGHT_BAT_POSE.victory, opacity: 0, clipPath: "inset(0 0 69% 0)" }
+      ], { duration: 520, easing: "ease-in", fill: "forwards" });
     }
     if (bat) bat.getAnimations().forEach(a => a.cancel());
     if (wing) wing.getAnimations().forEach(a => a.cancel());
@@ -3759,12 +3775,17 @@
   }
 
   async function startClickScoot(duck) {
-    if (!duck?.isConnected || duck.dataset.motionState !== "floating") return false;
+    if (!duck?.isConnected || !["floating", "swimming"].includes(duck.dataset.motionState)) return false;
     if (duck.dataset.clickScooting === "true") return false;
 
     duck.dataset.clickScootPending = "false";
     duck.dataset.clickScooting = "true";
     clearTimeout(duck._roamTimer);
+    // Cancel any in-progress normal route immediately. The current rendered
+    // position becomes the start of the click scoot instead of waiting for the
+    // old swim path to finish.
+    duck.dataset.moveToken = String(Number(duck.dataset.moveToken || 0) + 1);
+    duck.dataset.routeKind = "click-scoot";
 
     const from = currentPosition(duck);
     const to = clickScootPoint(duck);
@@ -3775,13 +3796,15 @@
       return false;
     }
 
+    const wasSwimming = duck.dataset.motionState === "swimming";
     duck.dataset.motionState = "swimming";
     duck.classList.remove("floating");
-    activeSwimmers++;
+    if (!wasSwimming) activeSwimmers++;
     await animateRoute(duck, from, to, Math.max(1450, Math.min(2450, 950 + distanceAway * 95)));
-    activeSwimmers = Math.max(0, activeSwimmers - 1);
+    if (!wasSwimming) activeSwimmers = Math.max(0, activeSwimmers - 1);
     if (!duck.isConnected) return true;
 
+    duck.dataset.routeKind = "";
     duck.dataset.motionState = "floating";
     duck.dataset.clickScooting = "false";
     duck.classList.add("floating");
@@ -3792,7 +3815,7 @@
 
   function runPendingClickScoot(duck) {
     if (!duck?.isConnected || duck.dataset.clickScootPending !== "true") return false;
-    if (duck.dataset.motionState !== "floating") return false;
+    if (!["floating", "swimming"].includes(duck.dataset.motionState)) return false;
     startClickScoot(duck);
     return true;
   }
@@ -3800,38 +3823,26 @@
   function reactToClick(duck) {
     if (!["floating", "swimming"].includes(duck.dataset.motionState)) return;
 
-    // v0.136: tapping one settled duck arms it briefly as fighter one. Tapping
-    // a second nearby settled duck within two seconds starts the fight. The
-    // first tap still shows the normal stats/reaction, but its clearing scoot
-    // is deferred until the fight-selection window expires.
-    if (duck.dataset.motionState === "floating" && fightTapEligibleDuck(duck) && !fightBusy) {
-      if (armedFightDuck && armedFightDuck !== duck && armedFightDuck.isConnected) {
-        const first = armedFightDuck;
-        const closeEnough = distance(currentPosition(first), currentPosition(duck)) <= FIGHT_TAP_MAX_DISTANCE;
-        if (closeEnough && fightTapEligibleDuck(first)) {
-          cancelArmedFight({ resumeScoot: false });
-          clearDuckClickReaction(first);
-          clearDuckClickReaction(duck);
-          hidePlayerStats();
-          void runDuckFight(first, duck);
-          return;
-        }
-        cancelArmedFight({ resumeScoot: true });
+    // Long-press is the challenge gesture. A normal tap retains the original
+    // click behaviour and scoots immediately. If a fighter is already armed,
+    // tapping a nearby eligible duck accepts the challenge instead.
+    if (armedFightDuck && armedFightDuck !== duck && armedFightDuck.isConnected && !fightBusy) {
+      const first = armedFightDuck;
+      const closeEnough = distance(currentPosition(first), currentPosition(duck)) <= FIGHT_TAP_MAX_DISTANCE;
+      if (closeEnough && fightTapEligibleDuck(first) && fightTapEligibleDuck(duck)) {
+        cancelArmedFight({ resumeScoot: false });
+        clearDuckClickReaction(first);
+        clearDuckClickReaction(duck);
+        hidePlayerStats();
+        void runDuckFight(first, duck);
+        return;
       }
-      armDuckForFight(duck);
+      cancelArmedFight({ resumeScoot: true });
     }
 
     showPlayerStatsForDuck(duck);
-
-    const deferScoot = armedFightDuck === duck && duck.dataset.motionState === "floating";
-    duck.dataset.clickScootPending = deferScoot ? "false" : "true";
-    if (!deferScoot) {
-      setTimeout(() => {
-        if (!runPendingClickScoot(duck) && duck?.isConnected) {
-          duck.dataset.clickScootPending = "true";
-        }
-      }, 150);
-    }
+    duck.dataset.clickScootPending = "true";
+    setTimeout(() => runPendingClickScoot(duck), 30);
 
     if (duck.dataset.reacting === "true") return;
     const angry = Math.random() < 0.5;
@@ -3853,6 +3864,43 @@
         });
       });
     }, angry ? 900 : 820);
+  }
+
+  function installFightLongPress(duck) {
+    let timer = null;
+    let startX = 0;
+    let startY = 0;
+    let fired = false;
+
+    const cancel = () => {
+      if (timer) clearTimeout(timer);
+      timer = null;
+    };
+
+    duck.addEventListener("pointerdown", event => {
+      if (event.button != null && event.button !== 0) return;
+      cancel();
+      fired = false;
+      startX = event.clientX;
+      startY = event.clientY;
+      timer = setTimeout(() => {
+        timer = null;
+        if (!fightTapEligibleDuck(duck) || fightBusy) return;
+        fired = true;
+        duck._suppressFightClickUntil = performance.now() + 700;
+        armDuckForFight(duck);
+      }, FIGHT_LONG_PRESS_MS);
+    });
+
+    duck.addEventListener("pointermove", event => {
+      if (!timer) return;
+      if (Math.hypot(event.clientX - startX, event.clientY - startY) > 10) cancel();
+    });
+    duck.addEventListener("pointerup", cancel);
+    duck.addEventListener("pointercancel", cancel);
+    duck.addEventListener("pointerleave", event => {
+      if (event.pointerType === "mouse") cancel();
+    });
   }
 
   function makeDuck({
@@ -3904,6 +3952,7 @@
     duck.dataset.blinking = "false";
     duck.dataset.clickScootPending = "false";
     duck.dataset.clickScooting = "false";
+    duck.dataset.moveToken = "0";
     chooseIdleFace(duck);
     duck.dataset.swimPace = (0.88 + (id % 5) * 0.06).toFixed(2);
     const hairAria = duck.dataset.hair && duck.dataset.hair !== "none" ? `, ${hairLabel(duck.dataset.hair)}` : ", no hair";
@@ -3928,7 +3977,11 @@
       buildEntryVisual(duck, 1);
     }
 
-    duck.addEventListener("click", () => reactToClick(duck));
+    installFightLongPress(duck);
+    duck.addEventListener("click", () => {
+      if (performance.now() < Number(duck._suppressFightClickUntil || 0)) return;
+      reactToClick(duck);
+    });
     duckLayer.appendChild(duck);
     ducks.set(id, duck);
 
