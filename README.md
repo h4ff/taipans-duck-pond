@@ -1,16 +1,16 @@
-# Duck Pond – v0.140
+# Duck Pond – v0.141
 
 
-## v0.140 – Sound Pass
+## v0.141 – Sound Pass – Audible Mix Fix
 
-- Added a central code-only Web Audio sound system; no audio artwork/files or CSV changes are required.
-- Duck water entry now plays a layered splash sound timed to the existing splash animation.
-- Click scoots, collision escapes, snake panic escapes and the fight loser escape now play a short water-rush/scoot with light rapid wing-flap texture.
-- Added restrained random quacks from settled ducks using one global timer rather than per-duck chatter, so a full 60-duck pond does not become constant noise.
-- Snake attacks now fire a strong hiss exactly as the strike begins.
-- Fight bats now use sci-fi-style ignition sounds during the approved waterline draw, metallic/energy clash sounds at each existing spark/contact beat, a heavier final-blow impact, and a descending power-down during the winner pose.
-- Sounds use light stereo positioning based on pond position and small pitch/timbre variation to avoid every repeat sounding identical.
-- Browser autoplay rules are respected: audio unlocks after the first genuine tap/click/key interaction; all existing visual behaviour remains unchanged if audio is unavailable or still locked.
+- Corrected the v0.140 sound mix, which was technically playing but far too quiet/thin on phones, headphones and some laptop outputs.
+- Raised the master/effect levels substantially and added a dynamics limiter so splash, scoot, quack, hiss and fight effects can be strong without uncontrolled clipping.
+- Rebuilt the sound timbres with much more broadband mid/high-frequency energy so they reproduce properly on phone speakers rather than relying on weak low-frequency oscillator content.
+- Splash is now a much stronger water impact with bright droplets; scoot/wing sounds have a clearer water rush and feather flap.
+- Random quacks are louder and shifted into a more audible vocal range while keeping the existing restrained global timing.
+- Snake hiss is deliberately prominent; fight ignition, clashes, final blow and power-down are all substantially stronger.
+- Audio unlock now listens on the earliest capture-phase touch/pointer gesture and requested effects are retried after a suspended AudioContext resumes instead of being silently discarded.
+- No animation geometry, fight timing, snake behaviour, high-five logic, assets or CSVs changed.
 
 
 ## v0.139 – Prestige Shirt Shine + Diamond Trail
