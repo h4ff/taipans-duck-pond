@@ -25,7 +25,6 @@
   const testCaptainButton = document.getElementById("testCaptainButton");
   const testCoachButton = document.getElementById("testCoachButton");
   const resetButton = document.getElementById("resetButton");
-  const fightTestButton = document.getElementById("fightTestButton");
   const developerControls = document.getElementById("developerControls");
   const mobileControlsToggle = document.getElementById("mobileControlsToggle");
   const mobilePondToggle = document.getElementById("mobilePondToggle");
@@ -705,6 +704,14 @@
     maniacal: "assets/duck/swim/face/face-maniacal.png"
   };
   let fightBusy = false;
+  let armedFightDuck = null;
+  let armedFightTimer = null;
+  let randomFightTimer = null;
+  let randomFightNextEligibleAt = Infinity;
+  const FIGHT_TAP_WINDOW_MS = 2000;
+  const FIGHT_TAP_MAX_DISTANCE = 15.5;
+  const RANDOM_FIGHT_MIN_DUCKS = 6;
+  const RANDOM_FIGHT_COOLDOWN_MS = 75000;
 
   // v0.133: the bat image is cropped to its visible bounds. Every ready/clash
   // transform is now expressed relative to the bat's own grip point, never in
@@ -1234,7 +1241,7 @@
   const duckControlButtons = [
     duckTypeButton, featherToneButton, buildVariantButton, addMaleButton, addFemaleButton,
     load60Button, testPresidentButton, testLeaderButton, testCaptainButton,
-    testCoachButton, resetButton, addPlayerButton, loadWeekButton, fightTestButton,
+    testCoachButton, resetButton, addPlayerButton, loadWeekButton,
     playerSelect, weekSelect
   ];
 
@@ -2858,6 +2865,61 @@
     return true;
   }
 
+  function fightTapEligibleDuck(duck) {
+    if (!duck?.isConnected || duck.dataset.motionState !== "floating") return false;
+    if (duck.dataset.fightActive === "true") return false;
+    if (duck.dataset.highFiveActive === "true" || duck.dataset.highFiveReserved === "true") return false;
+    if (duck.classList.contains("snake-panic")) return false;
+    if (duckHasFlamingo(duck)) return false;
+    return true;
+  }
+
+  function clearDuckClickReaction(duck) {
+    if (!duck?.isConnected) return;
+    duck.classList.remove("reacting", "reaction-angry", "reaction-surprised", "fight-armed");
+    duck.dataset.reacting = "false";
+    duck.dataset.clickScootPending = "false";
+    restoreIdleFace(duck);
+  }
+
+  function cancelArmedFight({ resumeScoot = false } = {}) {
+    if (armedFightTimer) clearTimeout(armedFightTimer);
+    armedFightTimer = null;
+    const duck = armedFightDuck;
+    armedFightDuck = null;
+    if (!duck?.isConnected) return;
+    duck.classList.remove("fight-armed");
+    if (resumeScoot) {
+      duck.dataset.clickScootPending = "true";
+      setTimeout(() => runPendingClickScoot(duck), 20);
+    }
+  }
+
+  function armDuckForFight(duck) {
+    cancelArmedFight({ resumeScoot: true });
+    armedFightDuck = duck;
+    duck.classList.add("fight-armed");
+    duck.dataset.clickScootPending = "false";
+    armedFightTimer = setTimeout(() => {
+      if (armedFightDuck !== duck) return;
+      cancelArmedFight({ resumeScoot: true });
+    }, FIGHT_TAP_WINDOW_MS);
+  }
+
+  function nearbyFightPairs(maxDistance = FIGHT_TAP_MAX_DISTANCE) {
+    const eligible = [...ducks.values()].filter(fightEligibleDuck);
+    const pairs = [];
+    for (let i = 0; i < eligible.length - 1; i++) {
+      for (let j = i + 1; j < eligible.length; j++) {
+        const a = eligible[i];
+        const b = eligible[j];
+        const d = distance(currentPosition(a), currentPosition(b));
+        if (d <= maxDistance) pairs.push({ a, b, d });
+      }
+    }
+    return pairs;
+  }
+
   function chooseFightPair() {
     const eligible = [...ducks.values()].filter(fightEligibleDuck);
     if (eligible.length < 2) return null;
@@ -3089,7 +3151,9 @@
 
   async function runDuckFight(a, b) {
     if (fightBusy || !fightEligibleDuck(a) || !fightEligibleDuck(b)) return false;
+    cancelArmedFight({ resumeScoot: false });
     fightBusy = true;
+    randomFightNextEligibleAt = performance.now() + RANDOM_FIGHT_COOLDOWN_MS;
     const actors = [a, b];
     const winner = Math.random() < .5 ? a : b;
     const loser = winner === a ? b : a;
@@ -3179,23 +3243,38 @@
     return true;
   }
 
-  async function triggerFightTest() {
-    if (!fightTestButton || fightBusy) return;
-    const pair = chooseFightPair();
-    if (!pair) {
-      const original = fightTestButton.textContent;
-      fightTestButton.textContent = "Need 2 settled ducks";
-      setTimeout(() => { if (fightTestButton) fightTestButton.textContent = original; }, 1400);
-      return;
+  function scheduleNextRandomFightCheck(delayMs = 22000 + Math.random() * 9000) {
+    if (randomFightTimer) clearTimeout(randomFightTimer);
+    randomFightTimer = setTimeout(randomFightTick, delayMs);
+  }
+
+  function enableRandomFights() {
+    if (randomFightTimer) clearTimeout(randomFightTimer);
+    randomFightNextEligibleAt = performance.now() + 18000 + Math.random() * 10000;
+    scheduleNextRandomFightCheck(18000 + Math.random() * 10000);
+  }
+
+  function disableRandomFights() {
+    if (randomFightTimer) clearTimeout(randomFightTimer);
+    randomFightTimer = null;
+    randomFightNextEligibleAt = Infinity;
+    cancelArmedFight({ resumeScoot: false });
+  }
+
+  function randomFightTick() {
+    randomFightTimer = null;
+    const now = performance.now();
+    if (!fightBusy && !armedFightDuck && now >= randomFightNextEligibleAt) {
+      const eligibleCount = [...ducks.values()].filter(fightEligibleDuck).length;
+      const pairs = eligibleCount >= RANDOM_FIGHT_MIN_DUCKS ? nearbyFightPairs() : [];
+      if (pairs.length && Math.random() < 0.28) {
+        const weighted = pairs.sort((p, q) => p.d - q.d);
+        const pool = weighted.slice(0, Math.min(5, weighted.length));
+        const pick = pool[Math.floor(Math.random() * pool.length)];
+        void runDuckFight(pick.a, pick.b);
+      }
     }
-    fightTestButton.disabled = true;
-    fightTestButton.textContent = "Fight running…";
-    try {
-      await runDuckFight(pair[0], pair[1]);
-    } finally {
-      fightTestButton.disabled = false;
-      fightTestButton.textContent = "Trigger Fight";
-    }
+    scheduleNextRandomFightCheck();
   }
 
   function triggerCollisionReaction(a, b) {
@@ -3721,17 +3800,38 @@
   function reactToClick(duck) {
     if (!["floating", "swimming"].includes(duck.dataset.motionState)) return;
 
-    // v0.89: stats + reaction + clearing scoot are one interaction.
+    // v0.136: tapping one settled duck arms it briefly as fighter one. Tapping
+    // a second nearby settled duck within two seconds starts the fight. The
+    // first tap still shows the normal stats/reaction, but its clearing scoot
+    // is deferred until the fight-selection window expires.
+    if (duck.dataset.motionState === "floating" && fightTapEligibleDuck(duck) && !fightBusy) {
+      if (armedFightDuck && armedFightDuck !== duck && armedFightDuck.isConnected) {
+        const first = armedFightDuck;
+        const closeEnough = distance(currentPosition(first), currentPosition(duck)) <= FIGHT_TAP_MAX_DISTANCE;
+        if (closeEnough && fightTapEligibleDuck(first)) {
+          cancelArmedFight({ resumeScoot: false });
+          clearDuckClickReaction(first);
+          clearDuckClickReaction(duck);
+          hidePlayerStats();
+          void runDuckFight(first, duck);
+          return;
+        }
+        cancelArmedFight({ resumeScoot: true });
+      }
+      armDuckForFight(duck);
+    }
 
     showPlayerStatsForDuck(duck);
-    duck.dataset.clickScootPending = "true";
-    setTimeout(() => {
-      if (!runPendingClickScoot(duck) && duck?.isConnected) {
-        // A duck already swimming finishes its current route first, then takes
-        // the extra clearing scoot when that motion settles.
-        duck.dataset.clickScootPending = "true";
-      }
-    }, 150);
+
+    const deferScoot = armedFightDuck === duck && duck.dataset.motionState === "floating";
+    duck.dataset.clickScootPending = deferScoot ? "false" : "true";
+    if (!deferScoot) {
+      setTimeout(() => {
+        if (!runPendingClickScoot(duck) && duck?.isConnected) {
+          duck.dataset.clickScootPending = "true";
+        }
+      }, 150);
+    }
 
     if (duck.dataset.reacting === "true") return;
     const angry = Math.random() < 0.5;
@@ -3742,17 +3842,12 @@
     setDuckFace(duck, angry ? "angry" : "surprised");
 
     setTimeout(() => {
-      if (!duck.isConnected) return;
+      if (!duck.isConnected || duck.dataset.fightActive === "true") return;
       duck.classList.remove("reacting", "reaction-angry", "reaction-surprised");
       duck.dataset.reacting = "false";
-
-      // iOS Safari can briefly retain the composited reaction frame if the
-      // transform animation ends and the face image source is swapped in the
-      // same rendering tick. Restore the idle face on the next painted frame
-      // so the stack returns to its normal transform before the image changes.
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          if (duck.isConnected && duck.dataset.reacting !== "true") {
+          if (duck.isConnected && duck.dataset.reacting !== "true" && duck.dataset.fightActive !== "true") {
             restoreIdleFace(duck);
           }
         });
@@ -4304,6 +4399,7 @@
     showLeaderboardScoreboard();
     status.textContent = `${formatClubDate(context.start)}–${formatClubDate(context.end)} loaded. ${pondEvents.length} cumulative ducks are now represented in the pond.`;
     enableSnakeEvent();
+    enableRandomFights();
   }
 
   function addAnimatedDuck(presentation = "male") {
@@ -4397,6 +4493,7 @@
   function resetPond() {
     dateRangeLoadToken++;
     disableSnakeEvent();
+    disableRandomFights();
     for (const duck of [...ducks.values()]) disposeDuck(duck);
 
     duckLayer.replaceChildren();
@@ -4579,7 +4676,6 @@
   testCaptainButton.addEventListener("click", () => replayRoleEntry("captain"));
   testCoachButton.addEventListener("click", () => replayRoleEntry("coach"));
   resetButton.addEventListener("click", resetPond);
-  if (fightTestButton) fightTestButton.addEventListener("click", triggerFightTest);
 
   liveScoreboard.addEventListener("click", () => {
     scoreboardPanel.hidden = false;

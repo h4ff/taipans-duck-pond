@@ -1877,3 +1877,12 @@ body.pond-focus-mode .fight-test-rig { display: none !important; }
 @media (max-width: 900px) and (pointer: coarse) and (orientation: landscape) {
   .fight-test-rig { display: none !important; }
 }
+
+/* v0.136: tiny one-beat cue when a settled duck is armed as fighter one. */
+.duck.fight-armed .swim-stack {
+  animation: fight-armed-nudge .34s ease-out 1;
+}
+@keyframes fight-armed-nudge {
+  0%, 100% { filter: none; }
+  45% { filter: brightness(1.06); }
+}
