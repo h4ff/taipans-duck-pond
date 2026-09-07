@@ -3561,6 +3561,15 @@
     body.src = swimBodySrc(duck.dataset.duckType, duck.dataset.featherTone, presentation);
     body.alt = "";
 
+    let prestigeSheen = null;
+    if (["golden", "diamond"].includes(duck.dataset.duckType)) {
+      prestigeSheen = document.createElement("span");
+      prestigeSheen.className = `prestige-shirt-sheen prestige-${duck.dataset.duckType}`;
+      prestigeSheen.setAttribute("aria-hidden", "true");
+      prestigeSheen.style.setProperty("--prestige-delay", `${(-Math.random() * 4.5).toFixed(2)}s`);
+      prestigeSheen.style.setProperty("--prestige-cycle", `${duck.dataset.duckType === "diamond" ? 3.4 + Math.random() * 1.0 : 4.6 + Math.random() * 1.4}s`);
+    }
+
     const hairSrc = visualHairSrc(duck, "swim");
     const hair = document.createElement("img");
     hair.className = "swim-layer swim-hair";
@@ -3634,6 +3643,7 @@
     }
 
     stack.append(wingBack, body, wake);
+    if (prestigeSheen) stack.appendChild(prestigeSheen);
     if (showHair) stack.appendChild(hair);
     stack.appendChild(face);
     if (duckHasFlamingo(duck)) stack.appendChild(flamingo);
@@ -3647,6 +3657,35 @@
     visual.appendChild(stack);
 
     duck.dataset.face = faceName;
+  }
+
+  function spawnDiamondTrailGlint(duck) {
+    if (!duckLayer || !duck?.isConnected) return;
+    if (duck.dataset.duckType !== "diamond" || duck.dataset.motionState !== "swimming") return;
+    if (duck.dataset.fightActive === "true" || duck.classList.contains("snake-panic")) return;
+    if (duckLayer.querySelectorAll(".diamond-trail-glint").length >= 28) return;
+
+    const pos = currentPosition(duck);
+    const glint = document.createElement("span");
+    glint.className = "diamond-trail-glint";
+    glint.setAttribute("aria-hidden", "true");
+    const behind = duck.dataset.facing === "right" ? -2.2 : 2.2;
+    const spreadX = (Math.random() - .5) * 1.7;
+    const spreadY = (Math.random() - .5) * 1.2;
+    const size = 6 + Math.random() * 7;
+    glint.style.setProperty("--trail-size", `${size.toFixed(1)}px`);
+    glint.style.setProperty("--trail-rotate", `${Math.round(Math.random() * 45)}deg`);
+    setWorldPosition(glint, pos.x + behind + spreadX, pos.y + .7 + spreadY);
+    duckLayer.appendChild(glint);
+    setTimeout(() => glint.remove(), 720);
+  }
+
+  function prestigeTrailTick() {
+    for (const duck of ducks.values()) {
+      if (duck.dataset.duckType !== "diamond") continue;
+      if (duck.dataset.motionState !== "swimming") continue;
+      if (Math.random() < .72) spawnDiamondTrailGlint(duck);
+    }
   }
 
   function hidePlayerStats() {
@@ -4916,6 +4955,8 @@
     if (loadingProgress) loadingProgress.textContent = "Reload to retry";
     if (status) status.textContent = `Pond startup error: ${error?.message || error || "Unknown error"}`;
   }
+
+  const prestigeTrailTimer = setInterval(prestigeTrailTick, 170);
 
   try {
     applyWorldScale();

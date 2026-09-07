@@ -602,6 +602,112 @@ body {
   transform: scaleX(-1) rotate(-6deg) translate(-6px, 2px);
   will-change: transform, opacity;
 }
+.prestige-shirt-sheen {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+  overflow: hidden;
+  clip-path: polygon(23% 59%, 45% 49.5%, 66.8% 53%, 66.4% 66.5%, 58% 75.5%, 46% 79%, 31% 79.5%, 22.5% 71.5%);
+  opacity: 1;
+}
+
+.prestige-shirt-sheen::before {
+  content: "";
+  position: absolute;
+  top: 43%;
+  left: -42%;
+  width: 36%;
+  height: 45%;
+  border-radius: 50%;
+  background: linear-gradient(108deg,
+    rgba(255,255,255,0) 0%,
+    rgba(255,255,255,.35) 26%,
+    rgba(255,255,255,.98) 48%,
+    rgba(255,255,255,.45) 63%,
+    rgba(255,255,255,0) 100%);
+  filter: blur(.4px) drop-shadow(0 0 4px rgba(255,255,255,.95));
+  transform: skewX(-14deg);
+  animation: prestige-mirror-sweep var(--prestige-cycle, 4.8s) ease-in-out var(--prestige-delay, 0s) infinite;
+}
+
+.prestige-shirt-sheen::after {
+  content: "";
+  position: absolute;
+  width: 10%;
+  aspect-ratio: 1 / 1;
+  left: 44%;
+  top: 59%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,1) 0 13%, rgba(255,255,255,.72) 18%, rgba(255,255,255,0) 58%);
+  filter: drop-shadow(0 0 4px rgba(255,255,255,.95));
+  transform: scale(.2);
+  opacity: 0;
+  animation: prestige-hotspot var(--prestige-cycle, 4.8s) ease-out var(--prestige-delay, 0s) infinite;
+}
+
+.prestige-diamond::before {
+  width: 42%;
+  filter: blur(.25px) drop-shadow(0 0 6px rgba(255,255,255,1));
+}
+
+@keyframes prestige-mirror-sweep {
+  0%, 58% { left: -42%; opacity: 0; }
+  62% { opacity: .35; }
+  69% { opacity: 1; }
+  80% { left: 108%; opacity: .95; }
+  84%, 100% { left: 108%; opacity: 0; }
+}
+
+@keyframes prestige-hotspot {
+  0%, 66% { opacity: 0; transform: scale(.15) rotate(0deg); }
+  70% { opacity: 1; transform: scale(1.45) rotate(22deg); }
+  76% { opacity: .45; transform: scale(.75) rotate(45deg); }
+  82%, 100% { opacity: 0; transform: scale(.15) rotate(60deg); }
+}
+
+.duck.fight-active .prestige-shirt-sheen,
+.duck.snake-panic .prestige-shirt-sheen,
+.duck[data-motion-state="entering"] .prestige-shirt-sheen {
+  opacity: 0;
+}
+
+.diamond-trail-glint {
+  position: absolute;
+  width: var(--trail-size, 9px);
+  height: var(--trail-size, 9px);
+  margin-left: calc(var(--trail-size, 9px) * -.5);
+  margin-top: calc(var(--trail-size, 9px) * -.5);
+  pointer-events: none;
+  z-index: 2900;
+  transform: rotate(var(--trail-rotate, 0deg));
+  animation: diamond-trail-fade .72s ease-out 1 both;
+}
+
+.diamond-trail-glint::before,
+.diamond-trail-glint::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 1.5px;
+  height: 100%;
+  border-radius: 999px;
+  background: rgba(255,255,255,.98);
+  box-shadow: 0 0 4px rgba(255,255,255,.95);
+  transform: translateX(-50%);
+}
+
+.diamond-trail-glint::after {
+  transform: translateX(-50%) rotate(90deg);
+}
+
+@keyframes diamond-trail-fade {
+  0% { opacity: 0; transform: rotate(var(--trail-rotate, 0deg)) scale(.25); }
+  18% { opacity: 1; transform: rotate(var(--trail-rotate, 0deg)) scale(1.15); }
+  100% { opacity: 0; transform: rotate(calc(var(--trail-rotate, 0deg) + 24deg)) scale(.25) translateY(5px); }
+}
+
 .swim-captain-layer { z-index: 6; }
 .swim-hat {
   z-index: 9;
