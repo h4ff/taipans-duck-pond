@@ -1754,20 +1754,28 @@ body.pond-focus-mode .fight-test-rig { display: none !important; }
   transform-origin: 45% 58%;
 }
 
-.duck.fight-drawing .swim-wing-back {
-  opacity: 1;
-  animation: fight-rear-draw .9s ease-in-out 1 both;
-}
-
 .duck.fight-drawing .swim-fight-arm,
 .duck.fight-ready .swim-fight-arm,
 .duck.fight-victory .swim-fight-arm {
   opacity: 1;
 }
 
+/* v0.135: during the draw the whole visible fight arm lifts from the water.
+   The bat never travels independently toward the hand: it is already locked
+   to the grip and only its submerged blade is progressively revealed. */
+.duck.fight-drawing .swim-fight-arm {
+  animation: fight-front-draw .65s ease-out 1 both;
+}
+
 .duck.fight-drawing .fight-arm-bat {
   opacity: 1;
-  animation: fight-bat-draw .9s ease-out 1 both;
+  transform: translate(-50%, -29.2%) rotate(136deg);
+  animation: fight-bat-reveal .65s linear 1 both;
+}
+
+.duck.fight-drawing .fight-arm-wing {
+  opacity: 1;
+  transform: scaleX(-1) rotate(-6deg) translate(-6px, 2px);
 }
 
 .duck.fight-ready .fight-arm-bat,
@@ -1784,6 +1792,7 @@ body.pond-focus-mode .fight-test-rig { display: none !important; }
 
 /* Hide the normal tucked front wing only once the gripping fight wing has
    taken over. */
+.duck.fight-drawing .swim-wing-front,
 .duck.fight-ready .swim-wing-front,
 .duck.fight-victory .swim-wing-front {
   opacity: 0;
@@ -1807,19 +1816,20 @@ body.pond-focus-mode .fight-test-rig { display: none !important; }
 
 .duck.fight-victory .swim-wing-back { opacity: 1; }
 
-@keyframes fight-rear-draw {
-  0%   { opacity: .2; transform: rotate(8deg) translateY(8px); }
-  45%  { opacity: 1; transform: rotate(70deg) translateY(2px); }
-  100% { opacity: .65; transform: rotate(28deg); }
+@keyframes fight-front-draw {
+  0%   { transform: translateY(11%) rotate(14deg); }
+  45%  { transform: translateY(6%) rotate(8deg); }
+  100% { transform: translateY(0) rotate(0deg); }
 }
 
-@keyframes fight-bat-draw {
-  0%   { opacity: 0; transform: translate(-50%, 140%) rotate(90deg) scale(.90); }
-  22%  { opacity: 0; transform: translate(-50%, 112%) rotate(96deg) scale(.92); }
-  58%  { opacity: 1; transform: translate(-50%, 42%) rotate(112deg) scale(.96); }
-  100% { opacity: 1; transform: translate(-50%, -29.2%) rotate(136deg); }
+@keyframes fight-bat-reveal {
+  /* The cropped bat runs handle-to-blade from top to bottom. Start with only
+     the handle/grip end visible; reveal the blade as the arm lifts. */
+  0%   { clip-path: inset(0 0 69% 0); }
+  22%  { clip-path: inset(0 0 64% 0); }
+  58%  { clip-path: inset(0 0 34% 0); }
+  100% { clip-path: inset(0 0 0 0); }
 }
-
 
 /* v0.130: tiny code-drawn cartoon spark at the actual bat contact point. */
 .fight-clash-spark {

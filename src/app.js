@@ -3124,15 +3124,17 @@
       setFacingForMovement(leftActor, 1);
       setFacingForMovement(rightActor, -1);
 
-      // Rear wing visibly retrieves the bat from below the water, then the
-      // flipped front wing takes the sword-like holding pose.
+      // v0.135: the visible front fight wing now performs the draw itself.
+      // The bat is grip-locked from frame one and progressively revealed from
+      // the handle downward while the arm lifts, so it reads as coming out of
+      // the pond instead of floating through open air.
       for (const duck of actors) duck.classList.add("fight-drawing");
-      await sleep(900);
+      await sleep(650);
       for (const duck of actors) {
         duck.classList.remove("fight-drawing");
         duck.classList.add("fight-ready");
       }
-      await sleep(450);
+      await sleep(280);
 
       const clashRhythm = [680, 520, 760, 470, 710, 560, 620];
       const attackerPattern = [leftActor, rightActor, leftActor, leftActor, rightActor, winner, winner];
