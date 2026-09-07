@@ -1,4 +1,13 @@
-# Duck Pond – v0.138
+# Duck Pond – v0.139
+
+
+## v0.139 – Prestige Shirt Shine + Diamond Trail
+
+- Added code-only reflective shirt effects for Golden and Diamond ducks: a bright moving mirror-ball/torch-style sweep crosses the shirt intermittently and is deliberately noticeable at normal pond scale.
+- Diamond ducks use a stronger/brighter sweep than Golden ducks.
+- Added a short code-generated sparkle trail behind Diamond ducks while they are actively swimming; the trail fades quickly and does not run while floating.
+- Prestige effects are suppressed during fight and snake-panic states so they do not compete with interaction choreography.
+- No new artwork assets are required.
 
 
 ## v0.138 – Decisive Winning Blow
