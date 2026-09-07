@@ -1,5 +1,12 @@
-# Duck Pond – v0.134
+# Duck Pond – v0.135
 
+
+## v0.135 – Waterline Bat Draw
+
+- Replaced the floating bat entrance with a front-wing draw: the bat is attached to the grip from the first visible frame and the whole arm lifts together.
+- Added a progressive clip reveal so the handle appears first and the blade is uncovered as though it is being pulled up out of the pond.
+- Removed the rear-wing retrieval animation from the draw sequence because it was too subtle at pond scale, especially on female ducks.
+- Preserved the approved bat size, grip alignment, clash choreography, sparks, facial expressions, loser throw/scoot and female grip offset.
 
 ## v0.134 – Fight Polish: Draw, Escape + Female Grip
 
