@@ -3090,6 +3090,45 @@
     await sleep(Math.max(90, durationMs - swing));
   }
 
+  async function animateFightFinisher(left, right, winner, loser) {
+    const winnerBat = fightBat(winner);
+    const winnerWing = fightWing(winner);
+    const loserBat = fightBat(loser);
+    const loserWing = fightWing(loser);
+
+    // A short held beat makes the final blow read as a deliberate finish rather
+    // than another clash in the loop. Faces change only as the winner commits.
+    await sleep(320);
+    setDuckFace(winner, "maniacal");
+    setDuckFace(loser, "surprised");
+
+    const swing = 430;
+    const winnerBatFrames = [
+      { transform: FIGHT_BAT_POSE.ready },
+      { transform: "translate(-50%, -29.2%) rotate(96deg)", offset: .64 },
+      { transform: FIGHT_BAT_POSE.attackRecover }
+    ];
+    const winnerWingFrames = [
+      { transform: "rotate(0deg)" },
+      { transform: "rotate(29deg)", offset: .64 },
+      { transform: "rotate(5deg)" }
+    ];
+
+    // The loser does not counter-swing. Hold the ready pose so the decisive
+    // strike has a clear attacker/defender read, then the existing bat throw
+    // and escape sequence takes over immediately afterwards.
+    loserBat?.getAnimations?.().forEach(animation => animation.cancel());
+    loserWing?.getAnimations?.().forEach(animation => animation.cancel());
+
+    const sparkTimer = setTimeout(() => spawnFightSpark(left, right), Math.round(swing * .64));
+    await Promise.all([
+      fightAnimation(winnerBat, winnerBatFrames, { duration: swing, easing: "cubic-bezier(.18,.82,.22,1)" }),
+      fightAnimation(winnerWing, winnerWingFrames, { duration: swing, easing: "cubic-bezier(.18,.82,.22,1)" })
+    ]);
+    clearTimeout(sparkTimer);
+    await sleep(90);
+  }
+
   async function fightLoserScoot(loser, winner) {
     if (!loser?.isConnected) return;
     const bat = fightBat(loser);
@@ -3189,8 +3228,8 @@
         duck.classList.add("fight-active");
       }
 
-      // Both fighters stay angry through the setup and main duel. The final
-      // two clashes tell the winner/loser story with maniacal/surprised faces.
+      // Both fighters stay angry through the setup and normal duel. The faces
+      // change only when the winner commits to the decisive finishing blow.
       for (const duck of actors) setDuckFace(duck, "angry");
 
       const leftFrom = currentPosition(leftActor);
@@ -3216,18 +3255,13 @@
       }
       await sleep(280);
 
-      const clashRhythm = [680, 520, 760, 470, 710, 560, 620];
-      const attackerPattern = [leftActor, rightActor, leftActor, leftActor, rightActor, winner, winner];
+      const clashRhythm = [680, 520, 760, 470, 710, 560];
+      const attackerPattern = [leftActor, rightActor, leftActor, leftActor, rightActor, loser];
       for (let hit = 0; hit < clashRhythm.length; hit++) {
-        if (hit === 5) {
-          setDuckFace(winner, "maniacal");
-          setDuckFace(loser, "surprised");
-        }
         await animateFightClash(leftActor, rightActor, attackerPattern[hit], clashRhythm[hit]);
       }
 
-      setDuckFace(loser, "surprised");
-      setDuckFace(winner, "maniacal");
+      await animateFightFinisher(leftActor, rightActor, winner, loser);
       await Promise.all([
         fightLoserScoot(loser, winner),
         winnerVictory(winner)
