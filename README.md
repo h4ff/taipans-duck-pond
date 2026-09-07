@@ -1,5 +1,14 @@
-# Duck Pond – v0.137
+# Duck Pond – v0.138
 
+
+## v0.138 – Decisive Winning Blow
+
+- Reworked only the end of the approved fight sequence so the result now has a clear finishing blow instead of ending on another ordinary clash.
+- Both ducks stay angry throughout the normal six-clash exchange.
+- Added a short held pause before the finish; as the winner commits, the winner switches to maniacal and the loser switches to surprised.
+- The winner then makes one faster, larger committed swing while the loser does not counter-swing.
+- The existing clash spark lands on that decisive hit, after which the loser immediately follows the established bat-drop/turn/scoot sequence and the winner continues into the existing victory/power-down pose.
+- Bat draw, normal clash choreography, sparks, challenge trigger, random fights and all approved positioning remain otherwise unchanged.
 
 ## v0.137 – Long-Press Challenge + Immediate Scoot
 
