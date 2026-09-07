@@ -1,4 +1,16 @@
-# Duck Pond – v0.139
+# Duck Pond – v0.140
+
+
+## v0.140 – Sound Pass
+
+- Added a central code-only Web Audio sound system; no audio artwork/files or CSV changes are required.
+- Duck water entry now plays a layered splash sound timed to the existing splash animation.
+- Click scoots, collision escapes, snake panic escapes and the fight loser escape now play a short water-rush/scoot with light rapid wing-flap texture.
+- Added restrained random quacks from settled ducks using one global timer rather than per-duck chatter, so a full 60-duck pond does not become constant noise.
+- Snake attacks now fire a strong hiss exactly as the strike begins.
+- Fight bats now use sci-fi-style ignition sounds during the approved waterline draw, metallic/energy clash sounds at each existing spark/contact beat, a heavier final-blow impact, and a descending power-down during the winner pose.
+- Sounds use light stereo positioning based on pond position and small pitch/timbre variation to avoid every repeat sounding identical.
+- Browser autoplay rules are respected: audio unlocks after the first genuine tap/click/key interaction; all existing visual behaviour remains unchanged if audio is unavailable or still locked.
 
 
 ## v0.139 – Prestige Shirt Shine + Diamond Trail
