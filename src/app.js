@@ -709,7 +709,8 @@
   let randomFightTimer = null;
   let randomFightNextEligibleAt = Infinity;
   const FIGHT_CHALLENGE_WINDOW_MS = 2500;
-  const FIGHT_LONG_PRESS_MS = 560;
+  const FIGHT_DOUBLE_TAP_MS = 300;
+  const NORMAL_TAP_SCOOT_DELAY_MS = 280;
   const FIGHT_TAP_MAX_DISTANCE = 15.5;
   const RANDOM_FIGHT_MIN_DUCKS = 6;
   const RANDOM_FIGHT_COOLDOWN_MS = 75000;
@@ -1395,7 +1396,74 @@
   let snakeNextEligibleAt = Infinity;
   let snakeRunToken = 0;
 
-  // v0.141: louder, mobile-safe pond sound system. The original v0.140 mix
+  // v0.142: real sample-based sound pass. Natural/fight effects use the
+  // supplied MP3 assets; the existing synthesized snake hiss and subtle wing
+  // flap remain as fallbacks/texture. Samples are fetched early and decoded
+  // once the AudioContext is unlocked by a user gesture.
+  const POND_SAMPLE_ASSETS = {
+    splashLight: "assets/sounds/video_game_splash-ploor-699235037_a3tsdzd.mp3",
+    splashHeavy: "assets/sounds/heavy-water-splash.mp3",
+    splashMove: "assets/sounds/water-splashing-alpha.mp3",
+    scoot: "assets/sounds/scoot-water.mp3",
+    quackA: "assets/sounds/quack-sound-effect-gutlacky.mp3",
+    quackB: "assets/sounds/quack_3.mp3",
+    quackC: "assets/sounds/flamingoquack.mp3",
+    fightIgnite: "assets/sounds/lightsaber_02.mp3",
+    fightClashA: "assets/sounds/lightsaber-clash-02.mp3",
+    fightClashB: "assets/sounds/lightsaber-clash-04.mp3",
+    fightOff: "assets/sounds/lightsaber-off.mp3"
+  };
+  const pondSampleBytes = new Map();
+  const pondSampleBuffers = new Map();
+
+  function primePondSampleDownloads() {
+    for (const [key, url] of Object.entries(POND_SAMPLE_ASSETS)) {
+      if (pondSampleBytes.has(key)) continue;
+      pondSampleBytes.set(key, fetch(url, { cache: "force-cache" }).then(r => {
+        if (!r.ok) throw new Error(`Audio ${r.status}: ${url}`);
+        return r.arrayBuffer();
+      }).catch(() => null));
+    }
+  }
+
+  async function pondSampleBuffer(key) {
+    if (!pondAudioContext) return null;
+    if (pondSampleBuffers.has(key)) return pondSampleBuffers.get(key);
+    const bytes = await pondSampleBytes.get(key);
+    if (!bytes) return null;
+    try {
+      const buffer = await pondAudioContext.decodeAudioData(bytes.slice(0));
+      pondSampleBuffers.set(key, buffer);
+      return buffer;
+    } catch {
+      return null;
+    }
+  }
+
+  async function playPondSample(key, { pan = 0, level = 1, rate = 1, delay = 0 } = {}) {
+    if (!pondAudioContext || !pondAudioMaster) return false;
+    try {
+      if (pondAudioContext.state !== "running") await pondAudioContext.resume();
+      if (!pondAudioReady()) return false;
+      const buffer = await pondSampleBuffer(key);
+      if (!buffer || !pondAudioReady()) return false;
+      const source = pondAudioContext.createBufferSource();
+      source.buffer = buffer;
+      source.playbackRate.value = Math.max(0.72, Math.min(1.3, rate));
+      const bus = soundBus(pan, level);
+      if (!bus) return false;
+      source.connect(bus);
+      source.start(pondAudioContext.currentTime + Math.max(0, delay));
+      releaseSoundBus(bus, Math.ceil((buffer.duration / source.playbackRate.value + delay + 0.4) * 1000));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  primePondSampleDownloads();
+
+  // v0.142: sample-backed pond sound system layered over the v0.141 mobile-safe audio core. The original v0.140 mix
   // was technically playing but far too quiet/thin on phones and headphones.
   // This pass keeps the same event hooks, adds stronger broadband transients,
   // a limiter/compressor, and resumes/queues a requested sound if the context
@@ -1538,25 +1606,16 @@
   }
 
   function playSplashSound(xPct, duckType = "standard") {
-    runPondSound(() => {
-      const typeBoost = duckType === "diamond" ? 1.08 : duckType === "golden" ? 1.04 : 1;
-      const bus = soundBus(soundPanFromX(xPct), 1.02 * typeBoost);
-      noiseBurst(bus, { duration: 0.42, gain: 0.72, filterType: "lowpass", frequency: 2600, endFrequency: 650, q: 0.25, attack: 0.005 });
-      noiseBurst(bus, { start: 0.018, duration: 0.27, gain: 0.34, filterType: "bandpass", frequency: 1150, endFrequency: 540, q: 0.55, attack: 0.004 });
-      noiseBurst(bus, { start: 0.035, duration: 0.16, gain: 0.18, filterType: "highpass", frequency: 2200, endFrequency: 3900, q: 0.15, attack: 0.003 });
-      toneBurst(bus, { duration: 0.25, gain: 0.12, type: "sine", frequency: 220, endFrequency: 125, attack: 0.004 });
-      for (let i = 0; i < 4; i++) {
-        toneBurst(bus, {
-          start: 0.055 + i * 0.04 + Math.random() * 0.02,
-          duration: 0.065 + Math.random() * 0.035,
-          gain: 0.045 + Math.random() * 0.02,
-          type: "sine",
-          frequency: 1250 + Math.random() * 1200,
-          endFrequency: 720 + Math.random() * 650,
-          attack: 0.002
-        });
-      }
-      releaseSoundBus(bus, 1000);
+    const choices = duckType === "diamond"
+      ? ["splashHeavy", "splashLight", "splashHeavy"]
+      : duckType === "golden"
+        ? ["splashLight", "splashHeavy", "splashMove"]
+        : ["splashLight", "splashMove", "splashLight", "splashHeavy"];
+    const key = choices[Math.floor(Math.random() * choices.length)];
+    void playPondSample(key, {
+      pan: soundPanFromX(xPct),
+      level: duckType === "diamond" ? 0.88 : duckType === "golden" ? 0.82 : 0.76,
+      rate: 0.96 + Math.random() * 0.09
     });
   }
 
@@ -1580,37 +1639,24 @@
   }
 
   function playScootSound(duck, { panic = false, fight = false } = {}) {
-    runPondSound(() => {
-      const bus = soundBus(soundPanForDuck(duck), panic ? 1.08 : fight ? 1.0 : 0.96);
-      noiseBurst(bus, {
-        duration: panic ? 0.46 : 0.38,
-        gain: panic ? 0.64 : 0.52,
-        filterType: "bandpass",
-        frequency: 650,
-        endFrequency: panic ? 2400 : 1850,
-        q: 0.32,
-        attack: 0.003
-      });
-      noiseBurst(bus, { start: 0.025, duration: 0.34, gain: 0.27, filterType: "highpass", frequency: 950, endFrequency: 2600, q: 0.15, attack: 0.003 });
-      releaseSoundBus(bus, 1000);
+    void playPondSample("scoot", {
+      pan: soundPanForDuck(duck),
+      level: panic ? 0.82 : fight ? 0.74 : 0.68,
+      rate: panic ? 1.12 : 0.98 + Math.random() * 0.08
     });
-    playWingFlapSound(duck, { strength: panic ? 1.18 : fight ? 1.08 : 0.98, delay: 0.015 });
+    // Keep the existing synthesized flap as a quiet texture until a dedicated
+    // flap sample is sourced.
+    playWingFlapSound(duck, { strength: panic ? 0.72 : fight ? 0.64 : 0.58, delay: 0.015 });
   }
 
   function playQuackSound(duck) {
     if (!duck?.isConnected) return;
-    runPondSound(() => {
-      if (!duck?.isConnected) return;
-      const bus = soundBus(soundPanForDuck(duck), 1.02);
-      const base = 330 + Math.random() * 75;
-      const syllables = Math.random() < 0.25 ? 2 : 1;
-      for (let i = 0; i < syllables; i++) {
-        const at = i * 0.15;
-        toneBurst(bus, { start: at, duration: 0.15, gain: 0.22, type: "sawtooth", frequency: base, endFrequency: base * 0.68, attack: 0.006 });
-        toneBurst(bus, { start: at + 0.006, duration: 0.13, gain: 0.11, type: "square", frequency: base * 1.9, endFrequency: base * 1.35, attack: 0.006 });
-        noiseBurst(bus, { start: at, duration: 0.13, gain: 0.12, filterType: "bandpass", frequency: 1650, endFrequency: 950, q: 1.0, attack: 0.004 });
-      }
-      releaseSoundBus(bus, 950);
+    const keys = ["quackA", "quackB", "quackC"];
+    const key = keys[Math.floor(Math.random() * keys.length)];
+    void playPondSample(key, {
+      pan: soundPanForDuck(duck),
+      level: key === "quackC" ? 0.68 : 0.78,
+      rate: 0.94 + Math.random() * 0.12
     });
   }
 
@@ -1624,12 +1670,11 @@
   }
 
   function playFightIgnitionSound(duck, delay = 0) {
-    runPondSound(() => {
-      const bus = soundBus(soundPanForDuck(duck), 1.04);
-      toneBurst(bus, { start: delay, duration: 0.62, gain: 0.26, type: "sawtooth", frequency: 170, endFrequency: 560, attack: 0.006 });
-      toneBurst(bus, { start: delay + 0.025, duration: 0.55, gain: 0.11, type: "square", frequency: 340, endFrequency: 980, attack: 0.008 });
-      noiseBurst(bus, { start: delay, duration: 0.52, gain: 0.18, filterType: "bandpass", frequency: 620, endFrequency: 2200, q: 0.55, attack: 0.004 });
-      releaseSoundBus(bus, Math.round((delay + 1.15) * 1000));
+    void playPondSample("fightIgnite", {
+      pan: soundPanForDuck(duck),
+      level: 0.86,
+      rate: 0.98 + Math.random() * 0.04,
+      delay
     });
   }
 
@@ -1640,32 +1685,19 @@
   }
 
   function playFightClashSound(left, right, finalBlow = false) {
-    runPondSound(() => {
-      const bus = soundBus(fightSoundPan(left, right), finalBlow ? 1.22 : 1.08);
-      const wobble = 0.93 + Math.random() * 0.14;
-      noiseBurst(bus, { duration: finalBlow ? 0.24 : 0.16, gain: finalBlow ? 0.72 : 0.52, filterType: "highpass", frequency: finalBlow ? 800 : 1050, q: 0.12, attack: 0.002 });
-      [720, 1180, 1820].forEach((freq, index) => {
-        toneBurst(bus, {
-          duration: (finalBlow ? 0.54 : 0.38) - index * 0.05,
-          gain: (finalBlow ? 0.20 : 0.15) / (1 + index * 0.18),
-          type: index === 0 ? "square" : "sine",
-          frequency: freq * wobble,
-          endFrequency: freq * wobble * (0.76 + index * 0.04),
-          attack: 0.0015
-        });
-      });
-      if (finalBlow) toneBurst(bus, { duration: 0.34, gain: 0.18, type: "sine", frequency: 240, endFrequency: 110, attack: 0.002 });
-      releaseSoundBus(bus, finalBlow ? 1450 : 1000);
+    const key = finalBlow ? "fightClashB" : (Math.random() < 0.5 ? "fightClashA" : "fightClashB");
+    void playPondSample(key, {
+      pan: fightSoundPan(left, right),
+      level: finalBlow ? 0.98 : 0.82,
+      rate: finalBlow ? 0.9 : 0.94 + Math.random() * 0.12
     });
   }
 
   function playFightPowerDownSound(duck) {
-    runPondSound(() => {
-      const bus = soundBus(soundPanForDuck(duck), 1.0);
-      toneBurst(bus, { duration: 0.55, gain: 0.22, type: "sawtooth", frequency: 560, endFrequency: 160, attack: 0.004 });
-      toneBurst(bus, { start: 0.02, duration: 0.48, gain: 0.09, type: "square", frequency: 980, endFrequency: 320, attack: 0.005 });
-      noiseBurst(bus, { duration: 0.44, gain: 0.14, filterType: "bandpass", frequency: 2100, endFrequency: 520, q: 0.5, attack: 0.004 });
-      releaseSoundBus(bus, 1200);
+    void playPondSample("fightOff", {
+      pan: soundPanForDuck(duck),
+      level: 0.84,
+      rate: 0.98 + Math.random() * 0.04
     });
   }
 
@@ -1707,6 +1739,7 @@
         pondAudioLimiter.release.value = 0.16;
         pondAudioMaster.connect(pondAudioLimiter);
         pondAudioLimiter.connect(pondAudioContext.destination);
+        Promise.all(Object.keys(POND_SAMPLE_ASSETS).map(key => pondSampleBuffer(key))).catch(() => {});
         ensureNoiseBuffer();
       }
       const ready = () => {
@@ -4256,12 +4289,12 @@
     return true;
   }
 
-  function reactToClick(duck) {
+  function reactToClick(duck, scootDelayMs = NORMAL_TAP_SCOOT_DELAY_MS) {
     if (!["floating", "swimming"].includes(duck.dataset.motionState)) return;
 
-    // Long-press is the challenge gesture. A normal tap retains the original
-    // click behaviour and scoots immediately. If a fighter is already armed,
-    // tapping a nearby eligible duck accepts the challenge instead.
+    // v0.142: double-tap is the challenge gesture. The first tap still shows
+    // stats/reaction immediately, but its scoot waits briefly so a second tap
+    // can arm the challenge without fighting mobile long-press selection.
     if (armedFightDuck && armedFightDuck !== duck && armedFightDuck.isConnected && !fightBusy) {
       const first = armedFightDuck;
       const closeEnough = distance(currentPosition(first), currentPosition(duck)) <= FIGHT_TAP_MAX_DISTANCE;
@@ -4278,7 +4311,7 @@
 
     showPlayerStatsForDuck(duck);
     duck.dataset.clickScootPending = "true";
-    setTimeout(() => runPendingClickScoot(duck), 30);
+    setTimeout(() => runPendingClickScoot(duck), Math.max(0, scootDelayMs));
 
     if (duck.dataset.reacting === "true") return;
     const angry = Math.random() < 0.5;
@@ -4302,40 +4335,24 @@
     }, angry ? 900 : 820);
   }
 
-  function installFightLongPress(duck) {
-    let timer = null;
-    let startX = 0;
-    let startY = 0;
-    let fired = false;
+  function installFightDoubleTap(duck) {
+    let lastTapAt = 0;
 
-    const cancel = () => {
-      if (timer) clearTimeout(timer);
-      timer = null;
-    };
-
-    duck.addEventListener("pointerdown", event => {
+    duck.addEventListener("click", event => {
       if (event.button != null && event.button !== 0) return;
-      cancel();
-      fired = false;
-      startX = event.clientX;
-      startY = event.clientY;
-      timer = setTimeout(() => {
-        timer = null;
-        if (!fightTapEligibleDuck(duck) || fightBusy) return;
-        fired = true;
-        duck._suppressFightClickUntil = performance.now() + 700;
-        armDuckForFight(duck);
-      }, FIGHT_LONG_PRESS_MS);
-    });
+      const now = performance.now();
+      const isDoubleTap = now - lastTapAt <= FIGHT_DOUBLE_TAP_MS;
+      lastTapAt = now;
 
-    duck.addEventListener("pointermove", event => {
-      if (!timer) return;
-      if (Math.hypot(event.clientX - startX, event.clientY - startY) > 10) cancel();
-    });
-    duck.addEventListener("pointerup", cancel);
-    duck.addEventListener("pointercancel", cancel);
-    duck.addEventListener("pointerleave", event => {
-      if (event.pointerType === "mouse") cancel();
+      if (isDoubleTap && fightTapEligibleDuck(duck) && !fightBusy && !armedFightDuck) {
+        lastTapAt = 0;
+        clearDuckClickReaction(duck);
+        hidePlayerStats();
+        armDuckForFight(duck);
+        return;
+      }
+
+      reactToClick(duck, NORMAL_TAP_SCOOT_DELAY_MS);
     });
   }
 
@@ -4413,11 +4430,7 @@
       buildEntryVisual(duck, 1);
     }
 
-    installFightLongPress(duck);
-    duck.addEventListener("click", () => {
-      if (performance.now() < Number(duck._suppressFightClickUntil || 0)) return;
-      reactToClick(duck);
-    });
+    installFightDoubleTap(duck);
     duckLayer.appendChild(duck);
     ducks.set(id, duck);
 
