@@ -1,4 +1,16 @@
-# Duck Pond – v0.141
+# Duck Pond – v0.142
+
+
+## v0.142 – Real Sound Files + Double-Tap Fight Selection
+
+- Replaced the placeholder synthesized splash, quack and fight effects with the supplied real MP3 samples.
+- Added multiple splash and quack variants so repeated events do not sound identical.
+- Fight draw now uses the supplied lightsaber ignition, normal clashes alternate between the two supplied clash samples, the decisive hit uses the heavier clash treatment, and victory power-down uses the supplied shutdown sample.
+- Retained the accepted synthesized snake hiss.
+- Added a short derived scoot-water sample cut from the supplied water-splashing recording; the existing synthetic wing flap remains quietly layered underneath until a dedicated flap sample is sourced.
+- Replaced long-press fight challenge on ducks with double-tap/double-click. The first tap shows stats/reaction immediately while only the scoot is delayed about 280 ms; a second tap within 300 ms cancels that pending scoot and arms challenge mode.
+- Once armed, tapping a nearby eligible second duck starts the fight as before; challenge expiry still resumes the normal scoot.
+- No fight geometry, high-five behaviour, snake behaviour, CSV logic or artwork changed.
 
 
 ## v0.141 – Sound Pass – Audible Mix Fix
