@@ -1396,22 +1396,22 @@
   let snakeNextEligibleAt = Infinity;
   let snakeRunToken = 0;
 
-  // v0.142: real sample-based sound pass. Natural/fight effects use the
+  // v0.143: cross-browser real-sample compatibility pass. Natural/fight effects use the
   // supplied MP3 assets; the existing synthesized snake hiss and subtle wing
   // flap remain as fallbacks/texture. Samples are fetched early and decoded
   // once the AudioContext is unlocked by a user gesture.
   const POND_SAMPLE_ASSETS = {
-    splashLight: "assets/sounds/video_game_splash-ploor-699235037_a3tsdzd.mp3",
-    splashHeavy: "assets/sounds/heavy-water-splash.mp3",
-    splashMove: "assets/sounds/water-splashing-alpha.mp3",
-    scoot: "assets/sounds/scoot-water.mp3",
-    quackA: "assets/sounds/quack-sound-effect-gutlacky.mp3",
-    quackB: "assets/sounds/quack_3.mp3",
-    quackC: "assets/sounds/flamingoquack.mp3",
-    fightIgnite: "assets/sounds/lightsaber_02.mp3",
-    fightClashA: "assets/sounds/lightsaber-clash-02.mp3",
-    fightClashB: "assets/sounds/lightsaber-clash-04.mp3",
-    fightOff: "assets/sounds/lightsaber-off.mp3"
+    splashLight: "assets/sounds/video_game_splash-ploor-699235037_a3tsdzd.wav",
+    splashHeavy: "assets/sounds/heavy-water-splash.wav",
+    splashMove: "assets/sounds/water-splashing-alpha.wav",
+    scoot: "assets/sounds/scoot-water.wav",
+    quackA: "assets/sounds/quack-sound-effect-gutlacky.wav",
+    quackB: "assets/sounds/quack_3.wav",
+    quackC: "assets/sounds/flamingoquack.wav",
+    fightIgnite: "assets/sounds/lightsaber_02.wav",
+    fightClashA: "assets/sounds/lightsaber-clash-02.wav",
+    fightClashB: "assets/sounds/lightsaber-clash-04.wav",
+    fightOff: "assets/sounds/lightsaber-off.wav"
   };
   const pondSampleBytes = new Map();
   const pondSampleBuffers = new Map();
@@ -1463,7 +1463,7 @@
 
   primePondSampleDownloads();
 
-  // v0.142: sample-backed pond sound system layered over the v0.141 mobile-safe audio core. The original v0.140 mix
+  // v0.143: sample-backed pond sound system layered over the v0.141 mobile-safe audio core. The original v0.140 mix
   // was technically playing but far too quiet/thin on phones and headphones.
   // This pass keeps the same event hooks, adds stronger broadband transients,
   // a limiter/compressor, and resumes/queues a requested sound if the context
@@ -1609,12 +1609,12 @@
     const choices = duckType === "diamond"
       ? ["splashHeavy", "splashLight", "splashHeavy"]
       : duckType === "golden"
-        ? ["splashLight", "splashHeavy", "splashMove"]
-        : ["splashLight", "splashMove", "splashLight", "splashHeavy"];
+        ? ["splashLight", "splashHeavy", "splashLight"]
+        : ["splashLight", "splashHeavy", "splashLight", "splashHeavy"];
     const key = choices[Math.floor(Math.random() * choices.length)];
     void playPondSample(key, {
       pan: soundPanFromX(xPct),
-      level: duckType === "diamond" ? 0.88 : duckType === "golden" ? 0.82 : 0.76,
+      level: duckType === "diamond" ? 1.0 : duckType === "golden" ? 0.96 : 0.92,
       rate: 0.96 + Math.random() * 0.09
     });
   }
@@ -1641,12 +1641,11 @@
   function playScootSound(duck, { panic = false, fight = false } = {}) {
     void playPondSample("scoot", {
       pan: soundPanForDuck(duck),
-      level: panic ? 0.82 : fight ? 0.74 : 0.68,
+      level: panic ? 1.0 : fight ? 0.92 : 0.86,
       rate: panic ? 1.12 : 0.98 + Math.random() * 0.08
     });
-    // Keep the existing synthesized flap as a quiet texture until a dedicated
-    // flap sample is sourced.
-    playWingFlapSound(duck, { strength: panic ? 0.72 : fight ? 0.64 : 0.58, delay: 0.015 });
+    // v0.143: the synthetic flap was too artificial. Leave normal scoots as
+    // clean water movement until a dedicated wing-flap sample is supplied.
   }
 
   function playQuackSound(duck) {

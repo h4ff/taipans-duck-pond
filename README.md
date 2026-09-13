@@ -1,5 +1,15 @@
-# Duck Pond – v0.142
+# Duck Pond – v0.143
 
+
+
+## v0.143 – Cross-Browser Audio Compatibility
+
+- Standardised real sound effects to 44.1 kHz PCM WAV for consistent desktop/mobile Web Audio decoding.
+- Normalised sample levels.
+- Boosted entry splash and scoot-water playback.
+- Entry splash now uses the short dedicated splash samples only.
+- Removed the synthetic wing-flap texture from normal scoots pending a proper flap sample.
+- Keeps v0.142 double-tap fight selection unchanged.
 
 ## v0.142 – Real Sound Files + Double-Tap Fight Selection
 
