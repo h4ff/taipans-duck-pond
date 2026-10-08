@@ -610,60 +610,144 @@ body {
   overflow: hidden;
   clip-path: polygon(23% 59%, 45% 49.5%, 66.8% 53%, 66.4% 66.5%, 58% 75.5%, 46% 79%, 31% 79.5%, 22.5% 71.5%);
   opacity: 1;
+  mix-blend-mode: screen;
+}
+
+/* v0.145: a moving micro-glitter field keeps Gold/Diamond shirts visibly
+   special between the larger mirror-ball flashes. The clip-path above keeps
+   every effect on the shirt rather than glowing the whole duck. */
+.prestige-golden {
+  background:
+    radial-gradient(circle, rgba(255,250,180,.92) 0 1px, rgba(255,216,82,.55) 1.1px 1.7px, transparent 2px) 3px 1px / 12px 10px,
+    radial-gradient(circle, rgba(255,255,226,.82) 0 .8px, transparent 1.5px) 8px 5px / 15px 13px;
+  filter: drop-shadow(0 0 2px rgba(255,216,68,.46));
+  animation: prestige-glitter-drift 2.8s linear infinite;
+}
+
+.prestige-diamond {
+  background:
+    radial-gradient(circle, rgba(255,255,255,1) 0 1.2px, rgba(211,240,255,.88) 1.3px 1.9px, transparent 2.2px) 2px 1px / 10px 9px,
+    radial-gradient(circle, rgba(255,255,255,.94) 0 1px, transparent 1.7px) 7px 5px / 14px 12px;
+  filter: drop-shadow(0 0 3px rgba(225,247,255,.72));
+  animation: prestige-glitter-drift 2.05s linear infinite;
 }
 
 .prestige-shirt-sheen::before {
   content: "";
   position: absolute;
-  top: 43%;
-  left: -42%;
-  width: 36%;
-  height: 45%;
+  top: 42%;
+  left: -46%;
+  width: 40%;
+  height: 48%;
   border-radius: 50%;
   background: linear-gradient(108deg,
     rgba(255,255,255,0) 0%,
-    rgba(255,255,255,.35) 26%,
-    rgba(255,255,255,.98) 48%,
-    rgba(255,255,255,.45) 63%,
+    rgba(255,255,255,.22) 22%,
+    rgba(255,255,255,.98) 47%,
+    rgba(255,247,196,.72) 58%,
     rgba(255,255,255,0) 100%);
-  filter: blur(.4px) drop-shadow(0 0 4px rgba(255,255,255,.95));
+  filter: blur(.35px) drop-shadow(0 0 5px rgba(255,255,255,.95));
   transform: skewX(-14deg);
-  animation: prestige-mirror-sweep var(--prestige-cycle, 4.8s) ease-in-out var(--prestige-delay, 0s) infinite;
+  animation: prestige-mirror-sweep var(--prestige-cycle, 4.2s) ease-in-out var(--prestige-delay, 0s) infinite;
 }
 
 .prestige-shirt-sheen::after {
   content: "";
   position: absolute;
-  width: 10%;
+  width: 12%;
   aspect-ratio: 1 / 1;
-  left: 44%;
-  top: 59%;
+  left: 45%;
+  top: 58%;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255,255,255,1) 0 13%, rgba(255,255,255,.72) 18%, rgba(255,255,255,0) 58%);
-  filter: drop-shadow(0 0 4px rgba(255,255,255,.95));
+  background: radial-gradient(circle, rgba(255,255,255,1) 0 11%, rgba(255,255,255,.82) 16%, rgba(255,236,133,.5) 30%, rgba(255,255,255,0) 62%);
+  filter: drop-shadow(0 0 5px rgba(255,255,255,1));
   transform: scale(.2);
   opacity: 0;
-  animation: prestige-hotspot var(--prestige-cycle, 4.8s) ease-out var(--prestige-delay, 0s) infinite;
+  animation: prestige-hotspot var(--prestige-cycle, 4.2s) ease-out var(--prestige-delay, 0s) infinite;
 }
 
 .prestige-diamond::before {
-  width: 42%;
-  filter: blur(.25px) drop-shadow(0 0 6px rgba(255,255,255,1));
+  width: 47%;
+  background: linear-gradient(108deg,
+    rgba(255,255,255,0) 0%,
+    rgba(202,236,255,.35) 20%,
+    rgba(255,255,255,1) 45%,
+    rgba(221,244,255,.95) 57%,
+    rgba(255,255,255,0) 100%);
+  filter: blur(.18px) drop-shadow(0 0 7px rgba(255,255,255,1));
+}
+
+.prestige-glitter {
+  position: absolute;
+  left: var(--glitter-x);
+  top: var(--glitter-y);
+  width: var(--glitter-size);
+  height: var(--glitter-size);
+  opacity: 0;
+  transform: translate(-50%, -50%) rotate(var(--glitter-rotate)) scale(.2);
+  animation: prestige-glitter-pop var(--glitter-speed) ease-in-out var(--glitter-delay) infinite;
+}
+
+.prestige-glitter::before,
+.prestige-glitter::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 1.2px;
+  height: 100%;
+  border-radius: 999px;
+  background: rgba(255,255,255,.98);
+  box-shadow: 0 0 3px rgba(255,255,255,.95);
+  transform: translateX(-50%);
+}
+
+.prestige-glitter::after {
+  transform: translateX(-50%) rotate(90deg);
+}
+
+.prestige-golden .prestige-glitter {
+  filter: drop-shadow(0 0 2.5px rgba(255,208,57,.95));
+}
+
+.prestige-golden .prestige-glitter::before,
+.prestige-golden .prestige-glitter::after {
+  background: rgba(255,248,180,1);
+  box-shadow: 0 0 4px rgba(255,200,31,.95);
+}
+
+.prestige-diamond .prestige-glitter:nth-child(3n) {
+  --glitter-size: 9px;
+  filter: drop-shadow(0 0 5px rgba(221,247,255,1));
+}
+
+@keyframes prestige-glitter-drift {
+  0% { background-position: 3px 1px, 8px 5px; }
+  50% { background-position: 9px 5px, 2px 9px; }
+  100% { background-position: 15px 11px, -6px 17px; }
+}
+
+@keyframes prestige-glitter-pop {
+  0%, 36%, 100% { opacity: .06; transform: translate(-50%, -50%) rotate(var(--glitter-rotate)) scale(.25); }
+  43% { opacity: .5; transform: translate(-50%, -50%) rotate(var(--glitter-rotate)) scale(.65); }
+  50% { opacity: 1; transform: translate(-50%, -50%) rotate(calc(var(--glitter-rotate) + 16deg)) scale(1.35); }
+  58% { opacity: .55; transform: translate(-50%, -50%) rotate(calc(var(--glitter-rotate) + 28deg)) scale(.72); }
+  67% { opacity: .1; transform: translate(-50%, -50%) rotate(calc(var(--glitter-rotate) + 38deg)) scale(.3); }
 }
 
 @keyframes prestige-mirror-sweep {
-  0%, 58% { left: -42%; opacity: 0; }
-  62% { opacity: .35; }
-  69% { opacity: 1; }
-  80% { left: 108%; opacity: .95; }
-  84%, 100% { left: 108%; opacity: 0; }
+  0%, 50% { left: -46%; opacity: 0; }
+  55% { opacity: .28; }
+  63% { opacity: 1; }
+  77% { left: 108%; opacity: .98; }
+  82%, 100% { left: 108%; opacity: 0; }
 }
 
 @keyframes prestige-hotspot {
-  0%, 66% { opacity: 0; transform: scale(.15) rotate(0deg); }
-  70% { opacity: 1; transform: scale(1.45) rotate(22deg); }
-  76% { opacity: .45; transform: scale(.75) rotate(45deg); }
-  82%, 100% { opacity: 0; transform: scale(.15) rotate(60deg); }
+  0%, 58% { opacity: 0; transform: scale(.15) rotate(0deg); }
+  64% { opacity: 1; transform: scale(1.7) rotate(22deg); }
+  70% { opacity: .62; transform: scale(.9) rotate(45deg); }
+  78%, 100% { opacity: 0; transform: scale(.15) rotate(70deg); }
 }
 
 .duck.fight-active .prestige-shirt-sheen,

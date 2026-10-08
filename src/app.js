@@ -3958,11 +3958,28 @@
 
     let prestigeSheen = null;
     if (["golden", "diamond"].includes(duck.dataset.duckType)) {
+      const prestigeType = duck.dataset.duckType;
       prestigeSheen = document.createElement("span");
-      prestigeSheen.className = `prestige-shirt-sheen prestige-${duck.dataset.duckType}`;
+      prestigeSheen.className = `prestige-shirt-sheen prestige-${prestigeType}`;
       prestigeSheen.setAttribute("aria-hidden", "true");
       prestigeSheen.style.setProperty("--prestige-delay", `${(-Math.random() * 4.5).toFixed(2)}s`);
-      prestigeSheen.style.setProperty("--prestige-cycle", `${duck.dataset.duckType === "diamond" ? 3.4 + Math.random() * 1.0 : 4.6 + Math.random() * 1.4}s`);
+      prestigeSheen.style.setProperty("--prestige-cycle", `${prestigeType === "diamond" ? 3.0 + Math.random() * .8 : 4.0 + Math.random() * 1.0}s`);
+
+      // v0.145: make prestige shirts read clearly at normal pond scale.
+      // Independent glitter points keep the shirt alive between the broader
+      // reflective sweeps without turning the whole duck into a glow effect.
+      const glitterCount = prestigeType === "diamond" ? 9 : 7;
+      for (let i = 0; i < glitterCount; i++) {
+        const glitter = document.createElement("i");
+        glitter.className = "prestige-glitter";
+        glitter.style.setProperty("--glitter-x", `${27 + Math.random() * 36}%`);
+        glitter.style.setProperty("--glitter-y", `${54 + Math.random() * 22}%`);
+        glitter.style.setProperty("--glitter-size", `${(prestigeType === "diamond" ? 3.8 + Math.random() * 4.8 : 3.0 + Math.random() * 3.8).toFixed(1)}px`);
+        glitter.style.setProperty("--glitter-delay", `${(-Math.random() * 3.8).toFixed(2)}s`);
+        glitter.style.setProperty("--glitter-speed", `${(prestigeType === "diamond" ? 1.55 + Math.random() * .9 : 1.9 + Math.random() * 1.15).toFixed(2)}s`);
+        glitter.style.setProperty("--glitter-rotate", `${Math.round(Math.random() * 55)}deg`);
+        prestigeSheen.appendChild(glitter);
+      }
     }
 
     const hairSrc = visualHairSrc(duck, "swim");
