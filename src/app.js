@@ -3837,13 +3837,12 @@
     const entryShirtSrc = walkShirtSrc(duck.dataset.duckType, presentation);
     appendEntryImage(stack, "entry-shirt", entryShirtSrc);
 
-    // v0.148: walking Gold/Diamond ducks use a deterministic shirt-shaped
-    // prestige overlay. Avoid CSS image masks here: they proved unreliable
-    // across the deployed desktop/mobile browser mix.
+    // v0.149: walking Gold/Diamond prestige is fully independent of the swim
+    // prestige class so entry visuals cannot inherit swim-only suppression/cascade rules.
     if (["golden", "diamond"].includes(duck.dataset.duckType)) {
       const prestigeType = duck.dataset.duckType;
       const entryPrestige = document.createElement("span");
-      entryPrestige.className = `prestige-shirt-sheen entry-prestige-shirt prestige-${prestigeType}`;
+      entryPrestige.className = `entry-prestige-live entry-prestige-${prestigeType}`;
       entryPrestige.setAttribute("aria-hidden", "true");
       entryPrestige.style.setProperty("--prestige-delay", `${(-Math.random() * 4.5).toFixed(2)}s`);
       entryPrestige.style.setProperty("--prestige-cycle", `${prestigeType === "diamond" ? 3.0 + Math.random() * .8 : 4.0 + Math.random() * 1.0}s`);
@@ -3851,7 +3850,7 @@
       const glitterCount = prestigeType === "diamond" ? 9 : 7;
       for (let i = 0; i < glitterCount; i++) {
         const glitter = document.createElement("i");
-        glitter.className = "prestige-glitter";
+        glitter.className = "entry-prestige-glitter";
         glitter.style.setProperty("--glitter-x", `${34 + Math.random() * 36}%`);
         glitter.style.setProperty("--glitter-y", `${42 + Math.random() * 27}%`);
         glitter.style.setProperty("--glitter-size", `${(prestigeType === "diamond" ? 3.8 + Math.random() * 4.8 : 3.0 + Math.random() * 3.8).toFixed(1)}px`);

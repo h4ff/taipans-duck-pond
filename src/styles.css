@@ -617,18 +617,97 @@ body {
    Gold/Diamond prestige reads on the pier as well as in the pond. The clip-path above keeps
    every effect on the shirt rather than glowing the whole duck. */
 
-/* v0.148: walking prestige effect. Use a deterministic clip instead of an
-   external-image CSS mask so it renders consistently on GitHub Pages across
-   Safari/Chrome/Edge. This follows the supplied 512px walking shirt geometry. */
-.entry-prestige-shirt {
-  z-index: 4;
-  clip-path: polygon(37% 42%, 50% 40%, 62% 41%, 68% 45%, 70% 51%, 69% 59%, 65% 66%, 58% 70%, 47% 71%, 39% 68%, 34% 61%, 33% 51%, 34% 45%);
-  -webkit-clip-path: polygon(37% 42%, 50% 40%, 62% 41%, 68% 45%, 70% 51%, 69% 59%, 65% 66%, 58% 70%, 47% 71%, 39% 68%, 34% 61%, 33% 51%, 34% 45%);
+/* v0.149: independent walking Gold/Diamond prestige layer. This intentionally
+   does not share .prestige-shirt-sheen so swim-state suppression/cascade rules
+   cannot hide the entry effect. */
+.entry-prestige-live {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 1 !important;
+  clip-path: polygon(33% 40%, 50% 39%, 63% 40%, 69.5% 44%, 71% 52%, 69.5% 60%, 65% 67%, 58% 71%, 47% 71.5%, 39% 69%, 33% 62%, 32% 51%, 33% 44%);
 }
-
-.entry-stack.entry-female .entry-prestige-shirt {
-  clip-path: polygon(39% 44%, 51% 42%, 64% 43%, 70% 47%, 72% 53%, 71% 60%, 67% 67%, 59% 70%, 48% 71%, 41% 69%, 36% 62%, 35% 53%, 36% 47%);
-  -webkit-clip-path: polygon(39% 44%, 51% 42%, 64% 43%, 70% 47%, 72% 53%, 71% 60%, 67% 67%, 59% 70%, 48% 71%, 41% 69%, 36% 62%, 35% 53%, 36% 47%);
+.entry-stack.entry-female .entry-prestige-live {
+  clip-path: polygon(35% 42%, 51% 41%, 65% 42%, 71.5% 46%, 73% 53%, 71.5% 61%, 67% 68%, 59% 71%, 48% 71.5%, 40% 69.5%, 35% 63%, 34% 53%, 35% 46%);
+}
+.entry-prestige-golden {
+  background:
+    radial-gradient(circle, rgba(255,255,210,1) 0 1.4px, rgba(255,203,36,.95) 1.5px 2.2px, transparent 2.5px) 3px 2px / 12px 10px,
+    radial-gradient(circle, rgba(255,255,255,.95) 0 1px, transparent 1.8px) 8px 6px / 16px 13px;
+  filter: drop-shadow(0 0 3px rgba(255,206,42,.9));
+  animation: entry-prestige-drift 2.4s linear infinite;
+}
+.entry-prestige-diamond {
+  background:
+    radial-gradient(circle, rgba(255,255,255,1) 0 1.5px, rgba(202,238,255,1) 1.6px 2.3px, transparent 2.6px) 2px 1px / 10px 9px,
+    radial-gradient(circle, rgba(255,255,255,1) 0 1.1px, transparent 1.9px) 7px 5px / 14px 12px;
+  filter: drop-shadow(0 0 4px rgba(225,247,255,1));
+  animation: entry-prestige-drift 1.8s linear infinite;
+}
+.entry-prestige-live::before {
+  content: "";
+  position: absolute;
+  top: 36%;
+  left: -48%;
+  width: 42%;
+  height: 48%;
+  border-radius: 50%;
+  background: linear-gradient(108deg, transparent 0%, rgba(255,255,255,.25) 20%, rgba(255,255,255,1) 48%, rgba(255,247,190,.9) 58%, transparent 100%);
+  filter: drop-shadow(0 0 6px rgba(255,255,255,1));
+  transform: skewX(-14deg);
+  animation: entry-prestige-sweep var(--prestige-cycle, 4.2s) ease-in-out var(--prestige-delay, 0s) infinite;
+}
+.entry-prestige-diamond::before {
+  width: 49%;
+  background: linear-gradient(108deg, transparent 0%, rgba(205,239,255,.4) 18%, rgba(255,255,255,1) 45%, rgba(218,244,255,1) 58%, transparent 100%);
+}
+.entry-prestige-glitter {
+  position: absolute;
+  left: var(--glitter-x);
+  top: var(--glitter-y);
+  width: var(--glitter-size);
+  height: var(--glitter-size);
+  opacity: 0;
+  transform: translate(-50%,-50%) rotate(var(--glitter-rotate)) scale(.2);
+  animation: entry-prestige-pop var(--glitter-speed) ease-in-out var(--glitter-delay) infinite;
+}
+.entry-prestige-glitter::before,
+.entry-prestige-glitter::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 1.4px;
+  height: 100%;
+  border-radius: 999px;
+  background: rgba(255,255,255,1);
+  box-shadow: 0 0 4px rgba(255,255,255,1);
+  transform: translateX(-50%);
+}
+.entry-prestige-glitter::after { transform: translateX(-50%) rotate(90deg); }
+.entry-prestige-golden .entry-prestige-glitter { filter: drop-shadow(0 0 3px rgba(255,201,30,1)); }
+.entry-prestige-golden .entry-prestige-glitter::before,
+.entry-prestige-golden .entry-prestige-glitter::after { background: rgba(255,247,170,1); }
+.entry-prestige-diamond .entry-prestige-glitter:nth-child(3n) { filter: drop-shadow(0 0 6px rgba(220,247,255,1)); }
+@keyframes entry-prestige-drift {
+  0% { background-position: 3px 2px, 8px 6px; }
+  50% { background-position: 10px 6px, 2px 10px; }
+  100% { background-position: 16px 12px, -7px 18px; }
+}
+@keyframes entry-prestige-pop {
+  0%, 34%, 100% { opacity: .08; transform: translate(-50%,-50%) rotate(var(--glitter-rotate)) scale(.25); }
+  46% { opacity: .75; transform: translate(-50%,-50%) rotate(var(--glitter-rotate)) scale(.9); }
+  52% { opacity: 1; transform: translate(-50%,-50%) rotate(calc(var(--glitter-rotate) + 18deg)) scale(1.45); }
+  64% { opacity: .22; transform: translate(-50%,-50%) rotate(calc(var(--glitter-rotate) + 34deg)) scale(.4); }
+}
+@keyframes entry-prestige-sweep {
+  0%, 48% { left: -48%; opacity: 0; }
+  55% { opacity: .35; }
+  64% { opacity: 1; }
+  78% { left: 108%; opacity: 1; }
+  84%, 100% { left: 108%; opacity: 0; }
 }
 
 .prestige-golden {

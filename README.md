@@ -1,8 +1,14 @@
-# Duck Pond – v0.148
+# Duck Pond – v0.149
 
 
 
 
+
+## v0.149 – Walking Prestige Render Fix
+
+- Gold/Diamond walking glitter now uses a completely independent entry-only render class rather than inheriting the swimming prestige layer.
+- Entry glitter/sweep is forced visible and clipped directly to the walking shirt region.
+- Swimming prestige and Diamond trail remain unchanged.
 
 ## v0.148 – Walking Prestige Render Fix
 
