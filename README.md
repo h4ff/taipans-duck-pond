@@ -1,8 +1,22 @@
-# Duck Pond – v0.157
+# Duck Pond – v0.159
 
 
 
 
+
+## v0.159 – Gangnam Idle-Render Isolation
+
+- The full 1672×941 Gangnam stage is now completely removed from rendering during normal pond play (`display: none`).
+- The pavilion-door hotspot is kept as a separate lightweight control so Gangnam can still be triggered normally.
+- Gangnam compositor hints are only enabled while the performer is actually active.
+- Routine visuals, timing, choreography, audio and normal pond quality/zoom are unchanged.
+
+## v0.158 – Mobile Performance Pass
+
+- Full-canvas Gangnam door/verandah artwork is no longer composited while the event is inactive.
+- During Gangnam, non-essential pond CSS animation work (idle bob/glitter/wing cosmetics) is paused and Diamond trail particle spawning is suspended.
+- Gangnam performer receives compositor hints only while it is the moving focus.
+- Portrait render scale/quality is unchanged in this pass.
 
 ## v0.157 – Release Candidate Security / Cleanup Pass
 
