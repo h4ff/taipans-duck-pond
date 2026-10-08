@@ -2171,9 +2171,11 @@ body.pond-focus-mode .fight-test-rig { display: none !important; }
 }
 
 
-/* v0.154 — Gangnam verandah alignment/layering pass: smaller and higher
-   verandah performer, with the front dance wing above the aviators. */
+/* v0.159 — Gangnam isolation pass. The full 1672x941 Gangnam stage is removed
+   from rendering entirely during normal pond play. Only the tiny door hotspot
+   remains live; the stage exists in the render tree for the routine itself. */
 .gangnam-stage {
+  display: none;
   position: absolute;
   inset: 0;
   width: 1672px;
@@ -2181,6 +2183,7 @@ body.pond-focus-mode .fight-test-rig { display: none !important; }
   z-index: 2305;
   pointer-events: none;
 }
+.gangnam-stage.is-active { display: block; }
 .gangnam-door-cavity,
 .gangnam-verandah {
   position: absolute;
@@ -2189,9 +2192,11 @@ body.pond-focus-mode .fight-test-rig { display: none !important; }
   height: 941px;
   object-fit: fill;
   pointer-events: none;
+  visibility: hidden;
 }
+.gangnam-stage.is-active .gangnam-verandah { visibility: visible; }
 .gangnam-door-cavity { z-index: 1; opacity: 0; }
-.gangnam-door-cavity.is-open { opacity: 1; }
+.gangnam-door-cavity.is-open { visibility: visible; opacity: 1; }
 .gangnam-performer {
   --gangnam-size: 59px;
   --gangnam-facing: 1;
@@ -2203,6 +2208,9 @@ body.pond-focus-mode .fight-test-rig { display: none !important; }
   transform-origin: 50% 100%;
   pointer-events: none;
   filter: drop-shadow(0 5px 2px rgba(24,39,44,.18));
+}
+.gangnam-stage.is-active .gangnam-performer:not([hidden]) {
+  will-change: left, top, transform;
 }
 .gangnam-performer .duck-visual { width: 100%; height: 100%; }
 .gangnam-performer .entry-stack {
@@ -2255,6 +2263,20 @@ body.pond-focus-mode .fight-test-rig { display: none !important; }
   -webkit-user-select: none;
   -webkit-touch-callout: none;
 }
+
+/* Freeze non-essential pond decoration during the Gangnam cutscene. Core
+   positions remain untouched; this only pauses CSS cosmetics and trail visuals. */
+.scene-world.gangnam-running .duck .swim-stack,
+.scene-world.gangnam-running .duck .prestige-shirt-sheen,
+.scene-world.gangnam-running .duck .entry-prestige-live,
+.scene-world.gangnam-running .duck .swim-wing-front,
+.scene-world.gangnam-running .duck .swim-wing-back {
+  animation-play-state: paused !important;
+}
+.scene-world.gangnam-running .diamond-trail-glint {
+  display: none !important;
+}
+
 @keyframes gangnam-body-bounce {
   0%,100% { transform: scaleX(var(--gangnam-facing)) translateY(0) rotate(-1deg) scaleY(1); }
   50% { transform: scaleX(var(--gangnam-facing)) translateY(7px) rotate(1deg) scaleY(.94); }

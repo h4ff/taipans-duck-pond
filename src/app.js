@@ -4163,6 +4163,9 @@
   }
 
   function prestigeTrailTick() {
+    // v0.158: the Gangnam cutscene already adds several animated layers; skip
+    // decorative Diamond trail particles while it is active to reduce mobile GPU work.
+    if (gangnamActive) return;
     for (const duck of ducks.values()) {
       if (duck.dataset.duckType !== "diamond") continue;
       if (duck.dataset.motionState !== "swimming") continue;
@@ -5389,6 +5392,9 @@
 
     if (gangnamActive || !gangnamPerformer || !gangnamDoorCavity) return;
     gangnamActive = true;
+    if (world) world.classList.add("gangnam-running");
+    // v0.159: this is the only point where the heavy Gangnam stage enters rendering.
+    if (gangnamStage) gangnamStage.classList.add("is-active");
     hidePlayerStats();
     cancelArmedFight({ resumeScoot: false });
 
@@ -5504,6 +5510,9 @@
       gangnamPerformer.classList.remove("is-on-pier", "is-reversed", "is-lasso", "is-hip", "is-travelling");
       gangnamPerformer.replaceChildren();
       if (pondAudioMaster && oldMaster != null) pondAudioMaster.gain.value = oldMaster;
+      if (world) world.classList.remove("gangnam-running");
+      // Return normal pond play to a render tree with no Gangnam stage at all.
+      if (gangnamStage) gangnamStage.classList.remove("is-active");
       gangnamActive = false;
     }
   }
