@@ -5381,9 +5381,9 @@
     gangnamPerformer.style.opacity = "0";
     gangnamPerformer.classList.remove("is-reversed", "is-lasso", "is-hip", "is-on-pier", "is-travelling");
     gangnamDoorCavity.classList.add("is-open");
-    // v0.154: verandah performer sits ~20px higher and 10% smaller than v0.153.
-    gangnamSetPosition(64.55, 37.03);
-    gangnamTogglePoseLoop();
+    // v0.155: verandah performer drops back down ~10px. Under the verandah he now
+    // uses normal walking legs by default, reserving the Gangnam legs for a single lasso beat.
+    gangnamSetPosition(64.55, 38.09);
 
     try {
       gangnamMusic = new Audio("assets/sounds/gangam-style-avc.mp3");
@@ -5392,21 +5392,29 @@
       gangnamMusic.currentTime = 0;
       await gangnamMusic.play().catch(() => {});
 
-      // Fade out of the doorway, facing right, and travel to the verandah end.
+      // Verandah section: travel with the normal walking legs, briefly hit the
+      // lasso using the Gangnam stance, then resume normal walking back and into the door.
       gangnamPerformer.style.opacity = "1";
-      await gangnamAnimateTo(71.7, 36.93, 2550);
+      gangnamSetTravelLegs(true);
+      await gangnamAnimateTo(71.7, 37.99, 2550);
 
-      // Turn the whole layered performer and dance back across the verandah.
+      gangnamSetTravelLegs(false);
+      applyGangnamPose(2);
+      await sleep(720);
+      applyGangnamPose(0);
+
       gangnamPerformer.classList.add("is-reversed");
-      await gangnamAnimateTo(57.2, 36.93, 3150);
+      gangnamSetTravelLegs(true);
+      await gangnamAnimateTo(57.2, 37.99, 3150);
 
-      // Turn back towards the door and keep dancing while returning to it.
+      // Turn back towards the door and keep walking while returning to it.
       gangnamPerformer.classList.remove("is-reversed");
       const elapsedBeforeDoor = gangnamMusic && Number.isFinite(gangnamMusic.currentTime)
         ? gangnamMusic.currentTime * 1000
         : 5700;
       const returnToDoorMs = Math.max(1300, breakdownAtMs - elapsedBeforeDoor - 620);
-      await gangnamAnimateTo(64.65, 37.03, returnToDoorMs);
+      await gangnamAnimateTo(64.65, 38.09, returnToDoorMs);
+      gangnamSetTravelLegs(false);
       gangnamPerformer.style.opacity = "0";
 
       // Stay in the doorway during the breakdown, then close it just before
