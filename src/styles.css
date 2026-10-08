@@ -2171,14 +2171,14 @@ body.pond-focus-mode .fight-test-rig { display: none !important; }
 }
 
 
-/* v0.150 — Gangnam pavilion easter egg. Full-canvas door/verandah layers preserve
-   the artwork's exact registration with the 1672x941 scene. */
+/* v0.151 — Gangnam second pass: smaller performer, hip-pose shuffle, and
+   revised verandah/pier timing while keeping the door/verandah registration exact. */
 .gangnam-stage {
   position: absolute;
   inset: 0;
   width: 1672px;
   height: 941px;
-  z-index: 420;
+  z-index: 2305;
   pointer-events: none;
 }
 .gangnam-door-cavity,
@@ -2193,7 +2193,7 @@ body.pond-focus-mode .fight-test-rig { display: none !important; }
 .gangnam-door-cavity { z-index: 1; opacity: 0; }
 .gangnam-door-cavity.is-open { opacity: 1; }
 .gangnam-performer {
-  --gangnam-size: 116px;
+  --gangnam-size: 86px;
   position: absolute;
   z-index: 2;
   width: var(--gangnam-size);
@@ -2223,10 +2223,15 @@ body.pond-focus-mode .fight-test-rig { display: none !important; }
 .gangnam-leg-front { z-index: 5; transform-origin: 37% 80%; animation: gangnam-leg-front .42s ease-in-out infinite; }
 .gangnam-wing-rear { z-index: 1; transform-origin: 70% 52%; animation: gangnam-rear-wrist .42s ease-in-out infinite; }
 .gangnam-wing-front { z-index: 7; transform-origin: 42% 52%; animation: gangnam-front-cross .42s ease-in-out infinite; }
+.gangnam-wing-hip { z-index: 8; opacity: 0; transform-origin: 42% 54%; animation: gangnam-hip-shuffle .58s ease-in-out infinite; }
 .gangnam-aviators { z-index: 12; }
 .gangnam-performer.is-lasso .gangnam-wing-front { animation: gangnam-lasso .42s ease-in-out infinite; }
 .gangnam-performer.is-lasso .gangnam-wing-rear { animation: gangnam-lasso-rear .42s ease-in-out infinite; }
+.gangnam-performer.is-hip .gangnam-wing-front { opacity: 0; }
+.gangnam-performer.is-hip .gangnam-wing-rear { opacity: 0; }
+.gangnam-performer.is-hip .gangnam-wing-hip { opacity: 1; }
 .gangnam-performer.is-reversed .entry-stack { transform: scaleX(-1); }
+.gangnam-performer.is-on-pier { z-index: 6; }
 .gangnam-verandah { z-index: 3; }
 .gangnam-door-hotspot {
   position: absolute;
@@ -2264,6 +2269,10 @@ body.pond-focus-mode .fight-test-rig { display: none !important; }
 @keyframes gangnam-rear-wrist {
   0%,100% { transform: rotate(5deg); }
   50% { transform: rotate(-8deg) translateY(3px); }
+}
+@keyframes gangnam-hip-shuffle {
+  0%,100% { transform: rotate(-6deg) translate(0,0); }
+  50% { transform: rotate(5deg) translate(4px,2px); }
 }
 @keyframes gangnam-lasso {
   0%,100% { transform: rotate(-72deg) translate(-2px,-2px); }

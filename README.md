@@ -1,8 +1,15 @@
-# Duck Pond – v0.150
+# Duck Pond – v0.151
 
 
 
 
+
+## v0.151 – Gangnam Timing / Layering / Hip-Pose Pass
+
+- Gangnam performer resized down closer to normal walking-duck scale.
+- Updated recoloured front/rear wing assets, plus a new bent wing-on-hip pose for the sideways shuffle.
+- Travis now stays on the verandah for the main first section, disappears through the door for the breakdown, then reappears on the pier.
+- Pier section now renders above the pier layer, dances to the end, then turns and dances back off-screen as the song ends.
 
 ## v0.150 – Gangnam Pavilion Event
 

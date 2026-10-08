@@ -1004,6 +1004,7 @@
       "assets/gangnam/LeftLegGangnam.png",
       "assets/gangnam/RearLegGangnam.png",
       "assets/gangnam/GlassesWalkingAviators.png",
+      "assets/gangnam/HipWingGangnam.png",
       SWIM_ASSETS.faces.neutral,
       SWIM_ASSETS.faces.surprised,
       SWIM_ASSETS.faces.angry,
@@ -1397,6 +1398,7 @@
   let gangnamDoorTapAt = 0;
   let gangnamMusic = null;
   let gangnamPoseTimer = null;
+  let gangnamPosePhase = 0;
 
   const ducks = new Map();
   let nextDuckId = 1;
@@ -5307,17 +5309,26 @@
     gangnamDanceImage(stack, "gangnam-wing-rear", "assets/gangnam/RearWingGangnam.png");
     gangnamDanceImage(stack, "gangnam-leg-front", "assets/gangnam/LeftLegGangnam.png");
     gangnamDanceImage(stack, "gangnam-wing-front", "assets/gangnam/FrontWingGangnam.png");
+    gangnamDanceImage(stack, "gangnam-wing-hip", "assets/gangnam/HipWingGangnam.png");
     gangnamDanceImage(stack, "gangnam-aviators", "assets/gangnam/GlassesWalkingAviators.png");
+  }
+
+  function applyGangnamPose(phase) {
+    if (!gangnamPerformer) return;
+    gangnamPerformer.classList.toggle("is-lasso", phase === 2);
+    gangnamPerformer.classList.toggle("is-hip", phase === 1);
   }
 
   function gangnamTogglePoseLoop() {
     clearInterval(gangnamPoseTimer);
-    let lasso = false;
+    gangnamPosePhase = 0;
+    applyGangnamPose(gangnamPosePhase);
+    const phases = [0, 1, 0, 2];
     gangnamPoseTimer = setInterval(() => {
       if (!gangnamActive || !gangnamPerformer || gangnamPerformer.hidden) return;
-      lasso = !lasso;
-      gangnamPerformer.classList.toggle("is-lasso", lasso);
-    }, 1680);
+      gangnamPosePhase = (gangnamPosePhase + 1) % phases.length;
+      applyGangnamPose(phases[gangnamPosePhase]);
+    }, 1180);
   }
 
   function gangnamAnimateTo(xPct, yPct, duration) {
@@ -5332,6 +5343,12 @@
   }
 
   async function runGangnamEvent() {
+    const fallbackSongMs = 20500;
+    const breakdownAtMs = 10450;
+    const verandahDriftMs = 900;
+    const retreatMs = 720;
+    const doorBeatMs = 520;
+
     if (gangnamActive || !gangnamPerformer || !gangnamDoorCavity) return;
     gangnamActive = true;
     hidePlayerStats();
@@ -5343,9 +5360,9 @@
     buildGangnamPerformer();
     gangnamPerformer.hidden = false;
     gangnamPerformer.style.opacity = "0";
-    gangnamPerformer.classList.remove("is-reversed", "is-lasso");
+    gangnamPerformer.classList.remove("is-reversed", "is-lasso", "is-hip", "is-on-pier");
     gangnamDoorCavity.classList.add("is-open");
-    gangnamSetPosition(64.8, 39.2);
+    gangnamSetPosition(64.55, 42.0);
     gangnamTogglePoseLoop();
 
     try {
@@ -5356,32 +5373,42 @@
       await gangnamMusic.play().catch(() => {});
 
       gangnamPerformer.animate([
-        { opacity: 0, transform: "translate(-50%,-100%) scale(.72)" },
-        { opacity: 1, transform: "translate(-50%,-100%) scale(.82)" }
-      ], { duration: 500, easing: "ease-out", fill: "forwards" });
+        { opacity: 0, transform: "translate(-50%,-100%) scale(.74)" },
+        { opacity: 1, transform: "translate(-50%,-100%) scale(.86)" }
+      ], { duration: 420, easing: "ease-out", fill: "forwards" });
       gangnamPerformer.style.opacity = "1";
-      await gangnamAnimateTo(66.0, 40.4, 850);
-      await sleep(4300);
+      await gangnamAnimateTo(65.35, 42.6, verandahDriftMs);
+
+      const songDurationMs = gangnamMusic && Number.isFinite(gangnamMusic.duration)
+        ? Math.round(gangnamMusic.duration * 1000)
+        : fallbackSongMs;
+      const verandahDanceMs = Math.max(3200, breakdownAtMs - verandahDriftMs - 260);
+      await sleep(verandahDanceMs);
 
       gangnamPerformer.classList.add("is-reversed");
-      await gangnamAnimateTo(64.9, 39.2, 700);
+      await gangnamAnimateTo(64.7, 42.05, retreatMs);
       gangnamPerformer.style.opacity = "0";
-      await sleep(260);
+      await sleep(doorBeatMs);
       gangnamDoorCavity.classList.remove("is-open");
 
-      // Reappear at the front-left of the pier and dance to the jump end,
-      // then turn and dance back as the clip finishes.
+      // Reappear on top of the pier just after the breakdown, then turn and
+      // dance back facing the pavilion so the song ends as he exits left.
       gangnamPerformer.classList.remove("is-reversed");
-      gangnamSetPosition(-4, 76.6);
+      gangnamPerformer.classList.add("is-on-pier");
+      gangnamSetPosition(1.8, 74.5);
       gangnamPerformer.style.opacity = "1";
-      await gangnamAnimateTo(31, 76.45, 6200);
+
+      const remainingAfterBreakMs = Math.max(2600, songDurationMs - breakdownAtMs - retreatMs - doorBeatMs);
+      const outMs = Math.round(remainingAfterBreakMs * 0.45);
+      const backMs = Math.max(1800, remainingAfterBreakMs - outMs);
+      await gangnamAnimateTo(33.2, 74.25, outMs);
       gangnamPerformer.classList.add("is-reversed");
-      await gangnamAnimateTo(-7, 76.6, 6300);
+      await gangnamAnimateTo(-8.5, 74.4, backMs);
 
       const remaining = gangnamMusic && Number.isFinite(gangnamMusic.duration)
         ? Math.max(0, (gangnamMusic.duration - gangnamMusic.currentTime) * 1000)
         : 0;
-      if (remaining > 40) await sleep(Math.min(remaining, 1200));
+      if (remaining > 30) await sleep(Math.min(remaining, 900));
     } finally {
       clearInterval(gangnamPoseTimer);
       gangnamPoseTimer = null;
@@ -5391,6 +5418,7 @@
       gangnamMusic = null;
       gangnamDoorCavity.classList.remove("is-open");
       gangnamPerformer.hidden = true;
+      gangnamPerformer.classList.remove("is-on-pier", "is-reversed", "is-lasso", "is-hip");
       gangnamPerformer.replaceChildren();
       if (pondAudioMaster && oldMaster != null) pondAudioMaster.gain.value = oldMaster;
       gangnamActive = false;
