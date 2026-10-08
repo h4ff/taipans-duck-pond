@@ -5381,8 +5381,8 @@
     gangnamPerformer.style.opacity = "0";
     gangnamPerformer.classList.remove("is-reversed", "is-lasso", "is-hip", "is-on-pier", "is-travelling");
     gangnamDoorCavity.classList.add("is-open");
-    // v0.152: feet sit on the verandah deck rather than hanging below it.
-    gangnamSetPosition(64.55, 39.15);
+    // v0.154: verandah performer sits ~20px higher and 10% smaller than v0.153.
+    gangnamSetPosition(64.55, 37.03);
     gangnamTogglePoseLoop();
 
     try {
@@ -5394,11 +5394,11 @@
 
       // Fade out of the doorway, facing right, and travel to the verandah end.
       gangnamPerformer.style.opacity = "1";
-      await gangnamAnimateTo(71.7, 39.05, 2550);
+      await gangnamAnimateTo(71.7, 36.93, 2550);
 
       // Turn the whole layered performer and dance back across the verandah.
       gangnamPerformer.classList.add("is-reversed");
-      await gangnamAnimateTo(57.2, 39.05, 3150);
+      await gangnamAnimateTo(57.2, 36.93, 3150);
 
       // Turn back towards the door and keep dancing while returning to it.
       gangnamPerformer.classList.remove("is-reversed");
@@ -5406,7 +5406,7 @@
         ? gangnamMusic.currentTime * 1000
         : 5700;
       const returnToDoorMs = Math.max(1300, breakdownAtMs - elapsedBeforeDoor - 620);
-      await gangnamAnimateTo(64.65, 39.15, returnToDoorMs);
+      await gangnamAnimateTo(64.65, 37.03, returnToDoorMs);
       gangnamPerformer.style.opacity = "0";
 
       // Stay in the doorway during the breakdown, then close it just before
