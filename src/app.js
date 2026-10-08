@@ -575,13 +575,32 @@
     });
   }
 
-  function tableHtml(headers, rows) {
-    const escape = value => String(value ?? "—")
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;");
-    return `<div class="data-table-wrap"><table class="data-table"><thead><tr>${headers.map(header => `<th>${escape(header)}</th>`).join("")}</tr></thead><tbody>${rows.map(row => `<tr>${row.map(cell => `<td>${escape(cell)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+  function buildDataTable(headers, rows) {
+    const wrap = document.createElement("div");
+    wrap.className = "data-table-wrap";
+    const table = document.createElement("table");
+    table.className = "data-table";
+    const thead = document.createElement("thead");
+    const headRow = document.createElement("tr");
+    for (const header of headers) {
+      const th = document.createElement("th");
+      th.textContent = String(header ?? "—");
+      headRow.appendChild(th);
+    }
+    thead.appendChild(headRow);
+    const tbody = document.createElement("tbody");
+    for (const row of rows) {
+      const tr = document.createElement("tr");
+      for (const cell of row) {
+        const td = document.createElement("td");
+        td.textContent = String(cell ?? "—");
+        tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+    }
+    table.append(thead, tbody);
+    wrap.appendChild(table);
+    return wrap;
   }
 
   function renderDataDebug(context, weekEvents, pondEvents) {
@@ -591,22 +610,22 @@
       dataDebugRange.textContent = `Selected Monday ${formatClubDate(context.monday)} → playback ${formatClubDate(context.start)}–${formatClubDate(context.end)} • ${pondEvents.length} cumulative ducks`;
     }
     if (dataLeaderboard) {
-      dataLeaderboard.innerHTML = tableHtml(
+      dataLeaderboard.replaceChildren(buildDataTable(
         ["Rank", "Player", "Ducks", "Latest"],
         leaders.map((leader, index) => [index + 1, displayPlayerName(leader.player), leader.count, formatClubDate(leader.latestDate)])
-      );
+      ));
     }
     if (dataWeekEvents) {
-      dataWeekEvents.innerHTML = tableHtml(
+      dataWeekEvents.replaceChildren(buildDataTable(
         ["Date", "Player", "Team", "Type"],
         weekEvents.map(event => {
           const player = playerById(event.playerId);
           return [formatClubDate(event.date), player ? displayPlayerName(player) : event.playerId, event.team, event.duckType];
         })
-      );
+      ));
     }
     if (dataPondEvents) {
-      dataPondEvents.innerHTML = tableHtml(
+      dataPondEvents.replaceChildren(buildDataTable(
         ["Event", "Date", "Player", "Team", "Type", "Presentation", "Feather", "Build", "Hair", "Headwear", "Roles"],
         pondEvents.map(event => {
           const player = playerById(event.playerId);
@@ -624,7 +643,7 @@
             (player?.roles || []).join(", ") || "—"
           ];
         })
-      );
+      ));
     }
   }
 
