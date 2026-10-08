@@ -1,8 +1,16 @@
-# Duck Pond – v0.156
+# Duck Pond – v0.157
 
 
 
 
+
+## v0.157 – Release Candidate Security / Cleanup Pass
+
+- Removed the last HTML-string rendering path; hidden diagnostic tables now use safe DOM/text nodes.
+- Added a same-origin Content Security Policy and `no-referrer` policy.
+- Completed static review for secrets, external dependencies, CSV/DOM injection paths, event/timer lifecycle and public-repo exposure.
+- Added `docs/RELEASE_SECURITY_REVIEW.md` with findings and residual considerations.
+- No intentional feature, animation, CSV schema or pond-geometry changes.
 
 ## v0.156 – Gangnam Asset Refresh + Walking Prestige Alignment
 
