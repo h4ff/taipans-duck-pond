@@ -1,7 +1,16 @@
-# Duck Pond – v0.144
+# Duck Pond – v0.145
 
 
 
+
+
+## v0.145 – Gold/Diamond Glitter Pass
+
+- Replaced the brief prestige-shirt-only shine treatment with a continuous code-drawn glitter field so Golden and Diamond ducks stand out at normal pond scale.
+- Golden shirts now carry warm gold micro-glitter plus independent star pops and an occasional stronger reflective sweep.
+- Diamond shirts use denser/brighter white-silver glitter, larger occasional starbursts and a stronger reflective sweep.
+- Preserved the accepted silver Diamond movement trail unchanged.
+- Effects remain constrained to the shirt and are suppressed during fight, snake panic and pond entry as before; no artwork/assets changed.
 
 ## v0.144 – Scoot Audio Cleanup
 
