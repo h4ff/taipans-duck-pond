@@ -1459,8 +1459,17 @@ footer {
 
   .scene-viewport {
     margin: 0;
+    overflow: hidden;
+    overscroll-behavior: none;
+    touch-action: none;
+  }
+
+  /* v0.160: only enter the scrollable/pannable compositor path after the
+     user actually zooms beyond the landscape fit-to-screen view. */
+  .scene-viewport.landscape-pan-enabled {
     overflow: auto;
     overscroll-behavior: contain;
+    touch-action: pan-x pan-y;
   }
 
   .world-stage {

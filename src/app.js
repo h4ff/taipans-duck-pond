@@ -1916,6 +1916,12 @@
     worldStage.style.height = `${renderedHeight}px`;
     scene.style.height = `${viewportHeight}px`;
 
+    // v0.160: at normal mobile-landscape scale the pond already fits inside
+    // the viewport, so keep it out of WebKit's expensive scrollable compositor
+    // path. Re-enable internal pan/scroll only when user zoom creates overflow.
+    const landscapePanNeeded = landscapeMobileMode() && mobileUserZoom > 1.01;
+    scene.classList.toggle("landscape-pan-enabled", landscapePanNeeded);
+
     world.style.left = "0";
     world.style.top = "0";
     world.style.transform = `scale(${worldScale})`;
