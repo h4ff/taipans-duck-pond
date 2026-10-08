@@ -1,8 +1,13 @@
-# Duck Pond – v0.145
+# Duck Pond – v0.146
 
 
 
 
+
+## v0.146 – Walking Prestige Effects
+
+- Gold and Diamond shirt prestige glitter/effects now remain visible while ducks are walking/entering on the pier, not just once they are swimming.
+- Prestige shirt effects are still suppressed during fights and snake panic.
 
 ## v0.145 – Gold/Diamond Glitter Pass
 
