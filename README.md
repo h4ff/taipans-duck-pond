@@ -1,8 +1,14 @@
-# Duck Pond – v0.153
+# Duck Pond – v0.154
 
 
 
 
+
+## v0.154 – Gangnam Verandah Alignment / Layering
+
+- Verandah-only Travis scale reduced by ~10% (66px to 59px); pier scale remains unchanged.
+- Verandah choreography path lifted by ~20px across the full left/right/return sequence.
+- Front dance wing (and hip-pose front wing) now renders above the aviators; rear wing layering is unchanged.
 
 ## v0.153 – Gangnam Verandah/Pier Choreography Pass
 
