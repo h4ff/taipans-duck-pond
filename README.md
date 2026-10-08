@@ -1,8 +1,16 @@
-# Duck Pond – v0.152
+# Duck Pond – v0.153
 
 
 
 
+
+## v0.153 – Gangnam Verandah/Pier Choreography Pass
+
+- Updated verandah foreground asset and reduced the verandah-only Travis scale.
+- Corrected Gangnam leg assets used for stationary/dance poses.
+- Pier travel now uses the normal walking legs; dedicated Gangnam legs appear only during the end-of-pier performance.
+- Pier route moves slightly upward/away from camera, then pauses for lasso + hands-on-hips shuffle before turning back.
+- Rear Gangnam wing intentionally unchanged pending a later art correction.
 
 ## v0.152 – Gangnam Direction / Scale Pass
 
