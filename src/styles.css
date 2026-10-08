@@ -616,6 +616,23 @@ body {
 /* v0.146: keep the glitter field visible during walking/entering too, so
    Gold/Diamond prestige reads on the pier as well as in the pond. The clip-path above keeps
    every effect on the shirt rather than glowing the whole duck. */
+
+/* v0.147: walking prestige effect. The mask is the exact walking shirt asset,
+   so the same glitter/sweep treatment follows the shirt while the layered
+   walking legs and wings animate around it. */
+.entry-prestige-shirt {
+  z-index: 2;
+  clip-path: none;
+  -webkit-mask-image: var(--prestige-entry-mask);
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-image: var(--prestige-entry-mask);
+  mask-position: center;
+  mask-size: contain;
+  mask-repeat: no-repeat;
+}
+
 .prestige-golden {
   background:
     radial-gradient(circle, rgba(255,250,180,.92) 0 1px, rgba(255,216,82,.55) 1.1px 1.7px, transparent 2px) 3px 1px / 12px 10px,

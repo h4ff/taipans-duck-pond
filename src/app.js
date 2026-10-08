@@ -3834,7 +3834,36 @@
     // Layered walking architecture (v0.93 blink/wing refinement). The supplied 512px components stay
     // aligned on one canvas while the legs and wings move independently in code/CSS.
     appendEntryImage(stack, "entry-leg entry-leg-rear", walkLegSrc("rear", tone));
-    appendEntryImage(stack, "entry-shirt", walkShirtSrc(duck.dataset.duckType, presentation));
+    const entryShirtSrc = walkShirtSrc(duck.dataset.duckType, presentation);
+    appendEntryImage(stack, "entry-shirt", entryShirtSrc);
+
+    // v0.147: walking Gold/Diamond ducks need the same prestige treatment as
+    // their swimming visuals. This layer is masked to the actual walking shirt
+    // PNG so glitter cannot bleed onto feathers, face or legs.
+    if (["golden", "diamond"].includes(duck.dataset.duckType)) {
+      const prestigeType = duck.dataset.duckType;
+      const entryPrestige = document.createElement("span");
+      entryPrestige.className = `prestige-shirt-sheen entry-prestige-shirt prestige-${prestigeType}`;
+      entryPrestige.setAttribute("aria-hidden", "true");
+      entryPrestige.style.setProperty("--prestige-entry-mask", `url("${entryShirtSrc}")`);
+      entryPrestige.style.setProperty("--prestige-delay", `${(-Math.random() * 4.5).toFixed(2)}s`);
+      entryPrestige.style.setProperty("--prestige-cycle", `${prestigeType === "diamond" ? 3.0 + Math.random() * .8 : 4.0 + Math.random() * 1.0}s`);
+
+      const glitterCount = prestigeType === "diamond" ? 9 : 7;
+      for (let i = 0; i < glitterCount; i++) {
+        const glitter = document.createElement("i");
+        glitter.className = "prestige-glitter";
+        glitter.style.setProperty("--glitter-x", `${34 + Math.random() * 36}%`);
+        glitter.style.setProperty("--glitter-y", `${42 + Math.random() * 27}%`);
+        glitter.style.setProperty("--glitter-size", `${(prestigeType === "diamond" ? 3.8 + Math.random() * 4.8 : 3.0 + Math.random() * 3.8).toFixed(1)}px`);
+        glitter.style.setProperty("--glitter-delay", `${(-Math.random() * 3.8).toFixed(2)}s`);
+        glitter.style.setProperty("--glitter-speed", `${(prestigeType === "diamond" ? 1.55 + Math.random() * .9 : 1.9 + Math.random() * 1.15).toFixed(2)}s`);
+        glitter.style.setProperty("--glitter-rotate", `${Math.round(Math.random() * 55)}deg`);
+        entryPrestige.appendChild(glitter);
+      }
+      stack.appendChild(entryPrestige);
+    }
+
     appendEntryImage(stack, "entry-body", walkBodySrc(tone, presentation));
     if (duckHasFlamingo(duck)) appendEntryImage(stack, "entry-flamingo", FLAMINGO_ASSETS.walk);
     const walkHair = visualHairSrc(duck, "walk");
@@ -3965,7 +3994,7 @@
       prestigeSheen.style.setProperty("--prestige-delay", `${(-Math.random() * 4.5).toFixed(2)}s`);
       prestigeSheen.style.setProperty("--prestige-cycle", `${prestigeType === "diamond" ? 3.0 + Math.random() * .8 : 4.0 + Math.random() * 1.0}s`);
 
-      // v0.146: keep prestige shirts readable at pond scale, including during pier entry.
+      // Prestige shirts remain readable at pond scale; walking uses its own masked layer.
       // Independent glitter points keep the shirt alive between the broader
       // reflective sweeps without turning the whole duck into a glow effect.
       const glitterCount = prestigeType === "diamond" ? 9 : 7;
