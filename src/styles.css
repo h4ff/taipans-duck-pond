@@ -2168,6 +2168,13 @@ body.pond-focus-mode .fight-test-rig { display: none !important; }
 
 @media (max-width: 900px) and (pointer: coarse) and (orientation: landscape) {
   .fight-test-rig { display: none !important; }
+
+  /* v0.161 — reduce per-duck compositing cost on mobile landscape.
+     These are deliberately landscape-only so portrait/desktop visuals remain unchanged. */
+  .duck {
+    filter: none;
+    will-change: auto;
+  }
 }
 
 /* v0.137: subtle challenge cue while the long-pressed fighter is armed. */
