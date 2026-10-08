@@ -2171,8 +2171,8 @@ body.pond-focus-mode .fight-test-rig { display: none !important; }
 }
 
 
-/* v0.151 — Gangnam second pass: smaller performer, hip-pose shuffle, and
-   revised verandah/pier timing while keeping the door/verandah registration exact. */
+/* v0.152 — Gangnam direction/scale pass: separate verandah/pier sizes and
+   a facing variable so the full layered performer mirrors with its route. */
 .gangnam-stage {
   position: absolute;
   inset: 0;
@@ -2194,6 +2194,7 @@ body.pond-focus-mode .fight-test-rig { display: none !important; }
 .gangnam-door-cavity.is-open { opacity: 1; }
 .gangnam-performer {
   --gangnam-size: 86px;
+  --gangnam-facing: 1;
   position: absolute;
   z-index: 2;
   width: var(--gangnam-size);
@@ -2206,7 +2207,8 @@ body.pond-focus-mode .fight-test-rig { display: none !important; }
 .gangnam-performer .duck-visual { width: 100%; height: 100%; }
 .gangnam-performer .entry-stack {
   width: 100%;
-  transform: none;
+  transform: scaleX(var(--gangnam-facing));
+  transform-origin: 50% 100%;
   animation: gangnam-body-bounce .42s ease-in-out infinite;
 }
 .gangnam-performer .entry-leg,
@@ -2230,8 +2232,8 @@ body.pond-focus-mode .fight-test-rig { display: none !important; }
 .gangnam-performer.is-hip .gangnam-wing-front { opacity: 0; }
 .gangnam-performer.is-hip .gangnam-wing-rear { opacity: 0; }
 .gangnam-performer.is-hip .gangnam-wing-hip { opacity: 1; }
-.gangnam-performer.is-reversed .entry-stack { transform: scaleX(-1); }
-.gangnam-performer.is-on-pier { z-index: 6; }
+.gangnam-performer.is-reversed { --gangnam-facing: -1; }
+.gangnam-performer.is-on-pier { --gangnam-size: 162px; z-index: 6; }
 .gangnam-verandah { z-index: 3; }
 .gangnam-door-hotspot {
   position: absolute;
@@ -2251,8 +2253,8 @@ body.pond-focus-mode .fight-test-rig { display: none !important; }
   -webkit-touch-callout: none;
 }
 @keyframes gangnam-body-bounce {
-  0%,100% { transform: translateY(0) rotate(-1deg) scaleY(1); }
-  50% { transform: translateY(7px) rotate(1deg) scaleY(.94); }
+  0%,100% { transform: scaleX(var(--gangnam-facing)) translateY(0) rotate(-1deg) scaleY(1); }
+  50% { transform: scaleX(var(--gangnam-facing)) translateY(7px) rotate(1deg) scaleY(.94); }
 }
 @keyframes gangnam-leg-front {
   0%,100% { transform: rotate(-7deg) translateX(-2px); }
