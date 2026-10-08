@@ -1,8 +1,17 @@
-# Duck Pond – v0.149
+# Duck Pond – v0.150
 
 
 
 
+
+## v0.150 – Gangnam Pavilion Event
+
+- Double-click/tap the pavilion door to trigger the Gangnam Easter egg.
+- A separate Travis Lee performance duck appears from the pavilion, wearing aviators, dances behind the verandah, returns through the door, then reappears on the pier.
+- The performance duck dances to the end of the pier, turns and dances back as the supplied 20.5-second music clip finishes.
+- Existing Travis ducks in the pond are not touched.
+- Pond event sounds and random snake/fight/high-five/collision events are suppressed for the duration of the performance.
+- Uses the supplied Gangnam wing/leg, aviator, verandah and door-cavity assets.
 
 ## v0.149 – Walking Prestige Render Fix
 
