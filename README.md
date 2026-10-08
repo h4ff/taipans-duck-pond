@@ -1,6 +1,14 @@
-# Duck Pond – v0.143
+# Duck Pond – v0.144
 
 
+
+
+## v0.144 – Scoot Audio Cleanup
+
+- Removed the synthetic wing-flap layer from scooting entirely.
+- Replaced the previous 420 ms scoot effect with a short 180 ms water skim derived from the existing water-movement recording.
+- Reduced scoot volume so the effect supports motion without reading as another splash or competing with event sounds.
+- No animation, fight, snake, high-five, CSV, or visual behaviour changed in this build.
 
 ## v0.143 – Cross-Browser Audio Compatibility
 
