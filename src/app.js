@@ -13,6 +13,10 @@
   const duckLayer = document.getElementById("duckLayer");
   const splashLayer = document.getElementById("splashLayer");
   const destinationMarker = document.getElementById("destinationMarker");
+  const gangnamStage = document.getElementById("gangnamStage");
+  const gangnamDoorCavity = document.getElementById("gangnamDoorCavity");
+  const gangnamPerformer = document.getElementById("gangnamPerformer");
+  const gangnamDoorHotspot = document.getElementById("gangnamDoorHotspot");
 
   const addMaleButton = document.getElementById("addMaleButton");
   const addFemaleButton = document.getElementById("addFemaleButton");
@@ -993,6 +997,13 @@
       "assets/scene/foreground-near-bank.png",
       "assets/scene/foreground-reeds.png",
       "assets/scene/pier-foreground.png",
+      "assets/gangnam/DoorCavity.png",
+      "assets/gangnam/Verandah.png",
+      "assets/gangnam/FrontWingGangnam.png",
+      "assets/gangnam/RearWingGangnam.png",
+      "assets/gangnam/LeftLegGangnam.png",
+      "assets/gangnam/RearLegGangnam.png",
+      "assets/gangnam/GlassesWalkingAviators.png",
       SWIM_ASSETS.faces.neutral,
       SWIM_ASSETS.faces.surprised,
       SWIM_ASSETS.faces.angry,
@@ -1382,6 +1393,11 @@
     }
   }
 
+  let gangnamActive = false;
+  let gangnamDoorTapAt = 0;
+  let gangnamMusic = null;
+  let gangnamPoseTimer = null;
+
   const ducks = new Map();
   let nextDuckId = 1;
   let activeSwimmers = 0;
@@ -1441,6 +1457,7 @@
   }
 
   async function playPondSample(key, { pan = 0, level = 1, rate = 1, delay = 0 } = {}) {
+    if (gangnamActive) return false;
     if (!pondAudioContext || !pondAudioMaster) return false;
     try {
       if (pondAudioContext.state !== "running") await pondAudioContext.resume();
@@ -1661,6 +1678,7 @@
   }
 
   function playSnakeHissSound() {
+    if (gangnamActive) return;
     runPondSound(() => {
       const bus = soundBus(0.52, 1.15);
       noiseBurst(bus, { duration: 1.15, gain: 0.82, filterType: "highpass", frequency: 1500, endFrequency: 4200, q: 0.12, attack: 0.015 });
@@ -2542,6 +2560,7 @@
   }
 
   function plannedSamePlayerHighFive(mover, from, to) {
+    if (gangnamActive) return null;
     const playerId = String(mover.dataset.playerId || "");
     if (!playerId) return null;
 
@@ -3072,6 +3091,7 @@
   function snakeWatchTick() {
     clearTimeout(snakeWatchTimer);
     if (!snakeEventEnabled) return;
+    if (gangnamActive) { snakeWatchTimer = setTimeout(snakeWatchTick, 700); return; }
 
     const now = performance.now();
     if (!snakeBusy) {
@@ -3709,7 +3729,7 @@
   function randomFightTick() {
     randomFightTimer = null;
     const now = performance.now();
-    if (!fightBusy && !armedFightDuck && now >= randomFightNextEligibleAt) {
+    if (!gangnamActive && !fightBusy && !armedFightDuck && now >= randomFightNextEligibleAt) {
       const eligibleCount = [...ducks.values()].filter(fightEligibleDuck).length;
       const pairs = eligibleCount >= RANDOM_FIGHT_MIN_DUCKS ? nearbyFightPairs() : [];
       if (pairs.length && Math.random() < 0.28) {
@@ -3723,6 +3743,7 @@
   }
 
   function triggerCollisionReaction(a, b) {
+    if (gangnamActive) return;
     if (a.dataset.fightActive === "true" || b.dataset.fightActive === "true") return;
     const aPlayerId = String(a.dataset.playerId || "");
     const bPlayerId = String(b.dataset.playerId || "");
@@ -4383,6 +4404,7 @@
     let lastTapAt = 0;
 
     duck.addEventListener("click", event => {
+      if (gangnamActive) return;
       if (event.button != null && event.button !== 0) return;
       const now = performance.now();
       const isDoubleTap = now - lastTapAt <= FIGHT_DOUBLE_TAP_MS;
@@ -5235,6 +5257,157 @@
     closePlayerStats.addEventListener("click", event => {
       event.stopPropagation();
       hidePlayerStats();
+    });
+  }
+
+
+  function gangnamSetPosition(xPct, yPct) {
+    if (!gangnamPerformer) return;
+    gangnamPerformer.style.left = `${xPct}%`;
+    gangnamPerformer.style.top = `${yPct}%`;
+  }
+
+  function gangnamDanceImage(stack, className, src) {
+    const img = document.createElement("img");
+    img.className = `gangnam-dance-layer ${className}`;
+    img.src = src;
+    img.alt = "";
+    stack.appendChild(img);
+    return img;
+  }
+
+  function buildGangnamPerformer() {
+    if (!gangnamPerformer) return;
+    gangnamPerformer.replaceChildren();
+    gangnamPerformer.className = "gangnam-performer";
+    gangnamPerformer.dataset.presentation = "male";
+    gangnamPerformer.dataset.featherTone = "yellow";
+    gangnamPerformer.dataset.duckType = "standard";
+    gangnamPerformer.dataset.idleFace = "neutral";
+    gangnamPerformer.dataset.hair = "none";
+    gangnamPerformer.dataset.headwear = "none";
+    gangnamPerformer.dataset.clubRole = "player";
+    gangnamPerformer.dataset.roles = "";
+    gangnamPerformer.dataset.isLeader = "false";
+    gangnamPerformer.dataset.swimAccessory = "none";
+
+    const travis = PLAYER_PROFILES.find(player => String(player.name || "").trim().toLowerCase() === "travis lee");
+    if (travis) {
+      gangnamPerformer.dataset.presentation = travis.presentation === "female" ? "female" : "male";
+      gangnamPerformer.dataset.hair = travis.hair || "none";
+    }
+
+    const visual = document.createElement("span");
+    visual.className = "duck-visual";
+    gangnamPerformer.appendChild(visual);
+    buildEntryVisual(gangnamPerformer, 2);
+    const stack = gangnamPerformer.querySelector(".entry-stack");
+    if (!stack) return;
+    gangnamDanceImage(stack, "gangnam-leg-rear", "assets/gangnam/RearLegGangnam.png");
+    gangnamDanceImage(stack, "gangnam-wing-rear", "assets/gangnam/RearWingGangnam.png");
+    gangnamDanceImage(stack, "gangnam-leg-front", "assets/gangnam/LeftLegGangnam.png");
+    gangnamDanceImage(stack, "gangnam-wing-front", "assets/gangnam/FrontWingGangnam.png");
+    gangnamDanceImage(stack, "gangnam-aviators", "assets/gangnam/GlassesWalkingAviators.png");
+  }
+
+  function gangnamTogglePoseLoop() {
+    clearInterval(gangnamPoseTimer);
+    let lasso = false;
+    gangnamPoseTimer = setInterval(() => {
+      if (!gangnamActive || !gangnamPerformer || gangnamPerformer.hidden) return;
+      lasso = !lasso;
+      gangnamPerformer.classList.toggle("is-lasso", lasso);
+    }, 1680);
+  }
+
+  function gangnamAnimateTo(xPct, yPct, duration) {
+    if (!gangnamPerformer) return Promise.resolve();
+    const fromLeft = gangnamPerformer.style.left || `${xPct}%`;
+    const fromTop = gangnamPerformer.style.top || `${yPct}%`;
+    const animation = gangnamPerformer.animate([
+      { left: fromLeft, top: fromTop },
+      { left: `${xPct}%`, top: `${yPct}%` }
+    ], { duration, easing: "linear", fill: "forwards" });
+    return animation.finished.catch(() => {}).then(() => gangnamSetPosition(xPct, yPct));
+  }
+
+  async function runGangnamEvent() {
+    if (gangnamActive || !gangnamPerformer || !gangnamDoorCavity) return;
+    gangnamActive = true;
+    hidePlayerStats();
+    cancelArmedFight({ resumeScoot: false });
+
+    const oldMaster = pondAudioMaster ? pondAudioMaster.gain.value : null;
+    if (pondAudioMaster) pondAudioMaster.gain.value = 0;
+
+    buildGangnamPerformer();
+    gangnamPerformer.hidden = false;
+    gangnamPerformer.style.opacity = "0";
+    gangnamPerformer.classList.remove("is-reversed", "is-lasso");
+    gangnamDoorCavity.classList.add("is-open");
+    gangnamSetPosition(64.8, 39.2);
+    gangnamTogglePoseLoop();
+
+    try {
+      gangnamMusic = new Audio("assets/sounds/gangam-style-avc.mp3");
+      gangnamMusic.preload = "auto";
+      gangnamMusic.volume = 0.92;
+      gangnamMusic.currentTime = 0;
+      await gangnamMusic.play().catch(() => {});
+
+      gangnamPerformer.animate([
+        { opacity: 0, transform: "translate(-50%,-100%) scale(.72)" },
+        { opacity: 1, transform: "translate(-50%,-100%) scale(.82)" }
+      ], { duration: 500, easing: "ease-out", fill: "forwards" });
+      gangnamPerformer.style.opacity = "1";
+      await gangnamAnimateTo(66.0, 40.4, 850);
+      await sleep(4300);
+
+      gangnamPerformer.classList.add("is-reversed");
+      await gangnamAnimateTo(64.9, 39.2, 700);
+      gangnamPerformer.style.opacity = "0";
+      await sleep(260);
+      gangnamDoorCavity.classList.remove("is-open");
+
+      // Reappear at the front-left of the pier and dance to the jump end,
+      // then turn and dance back as the clip finishes.
+      gangnamPerformer.classList.remove("is-reversed");
+      gangnamSetPosition(-4, 76.6);
+      gangnamPerformer.style.opacity = "1";
+      await gangnamAnimateTo(31, 76.45, 6200);
+      gangnamPerformer.classList.add("is-reversed");
+      await gangnamAnimateTo(-7, 76.6, 6300);
+
+      const remaining = gangnamMusic && Number.isFinite(gangnamMusic.duration)
+        ? Math.max(0, (gangnamMusic.duration - gangnamMusic.currentTime) * 1000)
+        : 0;
+      if (remaining > 40) await sleep(Math.min(remaining, 1200));
+    } finally {
+      clearInterval(gangnamPoseTimer);
+      gangnamPoseTimer = null;
+      if (gangnamMusic) {
+        try { gangnamMusic.pause(); gangnamMusic.currentTime = 0; } catch {}
+      }
+      gangnamMusic = null;
+      gangnamDoorCavity.classList.remove("is-open");
+      gangnamPerformer.hidden = true;
+      gangnamPerformer.replaceChildren();
+      if (pondAudioMaster && oldMaster != null) pondAudioMaster.gain.value = oldMaster;
+      gangnamActive = false;
+    }
+  }
+
+  if (gangnamDoorHotspot) {
+    gangnamDoorHotspot.addEventListener("click", event => {
+      event.preventDefault();
+      event.stopPropagation();
+      const now = performance.now();
+      const doubleTap = now - gangnamDoorTapAt <= 420;
+      gangnamDoorTapAt = now;
+      if (doubleTap) {
+        gangnamDoorTapAt = 0;
+        void runGangnamEvent();
+      }
     });
   }
 

@@ -2169,3 +2169,107 @@ body.pond-focus-mode .fight-test-rig { display: none !important; }
   0%, 100% { filter: none; }
   45% { filter: brightness(1.06); }
 }
+
+
+/* v0.150 — Gangnam pavilion easter egg. Full-canvas door/verandah layers preserve
+   the artwork's exact registration with the 1672x941 scene. */
+.gangnam-stage {
+  position: absolute;
+  inset: 0;
+  width: 1672px;
+  height: 941px;
+  z-index: 420;
+  pointer-events: none;
+}
+.gangnam-door-cavity,
+.gangnam-verandah {
+  position: absolute;
+  inset: 0;
+  width: 1672px;
+  height: 941px;
+  object-fit: fill;
+  pointer-events: none;
+}
+.gangnam-door-cavity { z-index: 1; opacity: 0; }
+.gangnam-door-cavity.is-open { opacity: 1; }
+.gangnam-performer {
+  --gangnam-size: 116px;
+  position: absolute;
+  z-index: 2;
+  width: var(--gangnam-size);
+  height: var(--gangnam-size);
+  transform: translate(-50%, -100%);
+  transform-origin: 50% 100%;
+  pointer-events: none;
+  filter: drop-shadow(0 5px 2px rgba(24,39,44,.18));
+}
+.gangnam-performer .duck-visual { width: 100%; height: 100%; }
+.gangnam-performer .entry-stack {
+  width: 100%;
+  transform: none;
+  animation: gangnam-body-bounce .42s ease-in-out infinite;
+}
+.gangnam-performer .entry-leg,
+.gangnam-performer .entry-wing { display: none !important; }
+.gangnam-dance-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+.gangnam-leg-rear { z-index: 0; transform-origin: 58% 82%; animation: gangnam-leg-rear .42s ease-in-out infinite; }
+.gangnam-leg-front { z-index: 5; transform-origin: 37% 80%; animation: gangnam-leg-front .42s ease-in-out infinite; }
+.gangnam-wing-rear { z-index: 1; transform-origin: 70% 52%; animation: gangnam-rear-wrist .42s ease-in-out infinite; }
+.gangnam-wing-front { z-index: 7; transform-origin: 42% 52%; animation: gangnam-front-cross .42s ease-in-out infinite; }
+.gangnam-aviators { z-index: 12; }
+.gangnam-performer.is-lasso .gangnam-wing-front { animation: gangnam-lasso .42s ease-in-out infinite; }
+.gangnam-performer.is-lasso .gangnam-wing-rear { animation: gangnam-lasso-rear .42s ease-in-out infinite; }
+.gangnam-performer.is-reversed .entry-stack { transform: scaleX(-1); }
+.gangnam-verandah { z-index: 3; }
+.gangnam-door-hotspot {
+  position: absolute;
+  left: 63.9%;
+  top: 31.8%;
+  width: 3.8%;
+  height: 7.6%;
+  z-index: 5;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  pointer-events: auto;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+@keyframes gangnam-body-bounce {
+  0%,100% { transform: translateY(0) rotate(-1deg) scaleY(1); }
+  50% { transform: translateY(7px) rotate(1deg) scaleY(.94); }
+}
+@keyframes gangnam-leg-front {
+  0%,100% { transform: rotate(-7deg) translateX(-2px); }
+  50% { transform: rotate(10deg) translateX(5px) translateY(2px); }
+}
+@keyframes gangnam-leg-rear {
+  0%,100% { transform: rotate(8deg) translateX(3px); }
+  50% { transform: rotate(-9deg) translateX(-4px) translateY(2px); }
+}
+@keyframes gangnam-front-cross {
+  0%,100% { transform: rotate(-8deg) translateY(-1px); }
+  50% { transform: rotate(9deg) translateY(4px); }
+}
+@keyframes gangnam-rear-wrist {
+  0%,100% { transform: rotate(5deg); }
+  50% { transform: rotate(-8deg) translateY(3px); }
+}
+@keyframes gangnam-lasso {
+  0%,100% { transform: rotate(-72deg) translate(-2px,-2px); }
+  50% { transform: rotate(-91deg) translate(-3px,-7px); }
+}
+@keyframes gangnam-lasso-rear {
+  0%,100% { transform: rotate(12deg); }
+  50% { transform: rotate(-15deg) translateY(3px); }
+}
