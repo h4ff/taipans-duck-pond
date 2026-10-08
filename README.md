@@ -1,8 +1,14 @@
-# Duck Pond – v0.154
+# Duck Pond – v0.155
 
 
 
 
+
+## v0.155 – Verandah Walk / Lasso Cleanup
+
+- Under the verandah, Travis now uses the normal walking legs by default rather than dancing the whole time.
+- The Gangnam legs are now reserved for the single verandah lasso beat.
+- Verandah Travis has been moved down by about 10 px; pier choreography and sizing are unchanged.
 
 ## v0.154 – Gangnam Verandah Alignment / Layering
 
