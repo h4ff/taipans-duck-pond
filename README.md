@@ -1,8 +1,14 @@
-# Duck Pond – v0.146
+# Duck Pond – v0.147
 
 
 
 
+
+## v0.147 – Walking Prestige Render Fix
+
+- Gold and Diamond walking ducks now get a real prestige glitter/sweep layer in the layered walking sprite stack.
+- The walking effect is masked to the exact walking shirt PNG, keeping the effect on the shirt while legs/wings animate.
+- Swimming prestige effects and Diamond silver trail are unchanged.
 
 ## v0.146 – Walking Prestige Effects
 
