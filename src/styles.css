@@ -617,9 +617,8 @@ body {
    Gold/Diamond prestige reads on the pier as well as in the pond. The clip-path above keeps
    every effect on the shirt rather than glowing the whole duck. */
 
-/* v0.149: independent walking Gold/Diamond prestige layer. This intentionally
-   does not share .prestige-shirt-sheen so swim-state suppression/cascade rules
-   cannot hide the entry effect. */
+/* v0.156: tighten the walking prestige overlay so the glitter sits more cleanly
+   on the side-view shirt and stops reading as a boxy panel. */
 .entry-prestige-live {
   position: absolute;
   inset: 0;
@@ -627,41 +626,42 @@ body {
   pointer-events: none;
   overflow: hidden;
   opacity: 1 !important;
-  clip-path: polygon(33% 40%, 50% 39%, 63% 40%, 69.5% 44%, 71% 52%, 69.5% 60%, 65% 67%, 58% 71%, 47% 71.5%, 39% 69%, 33% 62%, 32% 51%, 33% 44%);
+  mix-blend-mode: screen;
+  clip-path: polygon(38% 42%, 48.5% 40.5%, 60.5% 41.5%, 66.5% 45.5%, 67.5% 52.5%, 65.5% 60.5%, 60.5% 66.5%, 53% 69.5%, 44% 69.8%, 37.8% 66.8%, 35.2% 60.2%, 35.4% 48%);
 }
 .entry-stack.entry-female .entry-prestige-live {
-  clip-path: polygon(35% 42%, 51% 41%, 65% 42%, 71.5% 46%, 73% 53%, 71.5% 61%, 67% 68%, 59% 71%, 48% 71.5%, 40% 69.5%, 35% 63%, 34% 53%, 35% 46%);
+  clip-path: polygon(39.5% 43%, 50% 41.5%, 62% 42.5%, 68.5% 46.5%, 69.5% 53%, 67% 61.5%, 61.5% 67.5%, 53.5% 70.2%, 44.5% 70.5%, 38.5% 67.2%, 36% 60.8%, 36.5% 48.8%);
 }
 .entry-prestige-golden {
   background:
-    radial-gradient(circle, rgba(255,255,210,1) 0 1.4px, rgba(255,203,36,.95) 1.5px 2.2px, transparent 2.5px) 3px 2px / 12px 10px,
-    radial-gradient(circle, rgba(255,255,255,.95) 0 1px, transparent 1.8px) 8px 6px / 16px 13px;
-  filter: drop-shadow(0 0 3px rgba(255,206,42,.9));
+    radial-gradient(circle, rgba(255,252,220,.95) 0 1.1px, rgba(255,208,50,.82) 1.2px 1.9px, transparent 2.1px) 2px 2px / 11px 9px,
+    radial-gradient(circle, rgba(255,255,255,.75) 0 .8px, transparent 1.5px) 6px 5px / 14px 11px;
+  filter: drop-shadow(0 0 2px rgba(255,206,42,.72));
   animation: entry-prestige-drift 2.4s linear infinite;
 }
 .entry-prestige-diamond {
   background:
-    radial-gradient(circle, rgba(255,255,255,1) 0 1.5px, rgba(202,238,255,1) 1.6px 2.3px, transparent 2.6px) 2px 1px / 10px 9px,
-    radial-gradient(circle, rgba(255,255,255,1) 0 1.1px, transparent 1.9px) 7px 5px / 14px 12px;
-  filter: drop-shadow(0 0 4px rgba(225,247,255,1));
+    radial-gradient(circle, rgba(255,255,255,.96) 0 1.15px, rgba(210,240,255,.9) 1.25px 1.95px, transparent 2.2px) 2px 1px / 10px 9px,
+    radial-gradient(circle, rgba(255,255,255,.75) 0 .8px, transparent 1.5px) 6px 5px / 13px 11px;
+  filter: drop-shadow(0 0 3px rgba(225,247,255,.84));
   animation: entry-prestige-drift 1.8s linear infinite;
 }
 .entry-prestige-live::before {
   content: "";
   position: absolute;
-  top: 36%;
-  left: -48%;
-  width: 42%;
-  height: 48%;
+  top: 39%;
+  left: -46%;
+  width: 36%;
+  height: 38%;
   border-radius: 50%;
-  background: linear-gradient(108deg, transparent 0%, rgba(255,255,255,.25) 20%, rgba(255,255,255,1) 48%, rgba(255,247,190,.9) 58%, transparent 100%);
-  filter: drop-shadow(0 0 6px rgba(255,255,255,1));
+  background: linear-gradient(108deg, transparent 0%, rgba(255,255,255,.18) 18%, rgba(255,255,255,.9) 46%, rgba(255,247,190,.78) 58%, transparent 100%);
+  filter: drop-shadow(0 0 5px rgba(255,255,255,.92));
   transform: skewX(-14deg);
   animation: entry-prestige-sweep var(--prestige-cycle, 4.2s) ease-in-out var(--prestige-delay, 0s) infinite;
 }
 .entry-prestige-diamond::before {
-  width: 49%;
-  background: linear-gradient(108deg, transparent 0%, rgba(205,239,255,.4) 18%, rgba(255,255,255,1) 45%, rgba(218,244,255,1) 58%, transparent 100%);
+  width: 41%;
+  background: linear-gradient(108deg, transparent 0%, rgba(205,239,255,.32) 18%, rgba(255,255,255,.92) 45%, rgba(218,244,255,.92) 58%, transparent 100%);
 }
 .entry-prestige-glitter {
   position: absolute;
@@ -2272,8 +2272,8 @@ body.pond-focus-mode .fight-test-rig { display: none !important; }
   50% { transform: rotate(9deg) translateY(4px); }
 }
 @keyframes gangnam-rear-wrist {
-  0%,100% { transform: rotate(5deg); }
-  50% { transform: rotate(-8deg) translateY(3px); }
+  0%,100% { transform: rotate(-3deg) translateY(-1px); }
+  50% { transform: rotate(9deg) translateY(4px); }
 }
 @keyframes gangnam-hip-shuffle {
   0%,100% { transform: rotate(-6deg) translate(0,0); }

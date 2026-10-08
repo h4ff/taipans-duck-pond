@@ -3875,8 +3875,8 @@
       for (let i = 0; i < glitterCount; i++) {
         const glitter = document.createElement("i");
         glitter.className = "entry-prestige-glitter";
-        glitter.style.setProperty("--glitter-x", `${34 + Math.random() * 36}%`);
-        glitter.style.setProperty("--glitter-y", `${42 + Math.random() * 27}%`);
+        glitter.style.setProperty("--glitter-x", `${39 + Math.random() * 24}%`);
+        glitter.style.setProperty("--glitter-y", `${45 + Math.random() * 21}%`);
         glitter.style.setProperty("--glitter-size", `${(prestigeType === "diamond" ? 3.8 + Math.random() * 4.8 : 3.0 + Math.random() * 3.8).toFixed(1)}px`);
         glitter.style.setProperty("--glitter-delay", `${(-Math.random() * 3.8).toFixed(2)}s`);
         glitter.style.setProperty("--glitter-speed", `${(prestigeType === "diamond" ? 1.55 + Math.random() * .9 : 1.9 + Math.random() * 1.15).toFixed(2)}s`);
@@ -5381,7 +5381,7 @@
     gangnamPerformer.style.opacity = "0";
     gangnamPerformer.classList.remove("is-reversed", "is-lasso", "is-hip", "is-on-pier", "is-travelling");
     gangnamDoorCavity.classList.add("is-open");
-    // v0.155: verandah performer drops back down ~10px. Under the verandah he now
+    // v0.156: verandah performer keeps the v0.155 position, with corrected Gangnam assets and a synced rear-arm bounce. Under the verandah he now
     // uses normal walking legs by default, reserving the Gangnam legs for a single lasso beat.
     gangnamSetPosition(64.55, 38.09);
 
