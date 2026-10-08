@@ -1,8 +1,14 @@
-# Duck Pond – v0.159
+# Duck Pond – v0.160
 
 
 
 
+
+## v0.160 – Mobile Landscape Compositor Fix
+
+- Mobile landscape at the normal fit-to-screen scale no longer uses a scrollable pond viewport.
+- Internal scrolling/panning is enabled only after pinch zoom creates genuine overflow.
+- Visual framing, pond scale, controls and choreography are unchanged; this is a WebKit/iPhone performance correction only.
 
 ## v0.159 – Gangnam Idle-Render Isolation
 
