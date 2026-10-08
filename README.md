@@ -1,8 +1,14 @@
-# Duck Pond – v0.147
+# Duck Pond – v0.148
 
 
 
 
+
+## v0.148 – Walking Prestige Render Fix
+
+- Reworked Gold/Diamond prestige effects during pier entry using a deterministic walking-shirt clip rather than browser-dependent image masking.
+- Walking prestige layer now sits above the walking body so the glitter/sweep remains visible.
+- Separate male/female shirt-shaped clips keep the effect constrained to the walking shirt region.
 
 ## v0.147 – Walking Prestige Render Fix
 
