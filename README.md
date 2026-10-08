@@ -1,8 +1,16 @@
-# Duck Pond – v0.151
+# Duck Pond – v0.152
 
 
 
 
+
+## v0.152 – Gangnam Direction / Scale Pass
+
+- Raised Travis on the verandah and changed that section from mostly dancing in place to travelling right, turning, dancing left, then returning through the door for the breakdown.
+- Corrected Gangnam front/rear leg assets.
+- Fixed whole-performer mirroring so the dance layers genuinely face the travel direction.
+- Pier Travis now matches the normal hero walking-duck scale instead of the smaller verandah scale.
+- Pier choreography now travels right to the end, holds a brief lasso pose, flips, then dances back off-screen in time with the end of the song.
 
 ## v0.151 – Gangnam Timing / Layering / Hip-Pose Pass
 
