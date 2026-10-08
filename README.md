@@ -1,8 +1,14 @@
-# Duck Pond – v0.160
+# Duck Pond – v0.161
 
 
 
 
+
+## v0.161 – Mobile Landscape Duck Compositing Test
+
+- Removed the base duck `drop-shadow()` filter on coarse-pointer mobile landscape only.
+- Removed permanent per-duck `will-change` promotion on coarse-pointer mobile landscape only.
+- Portrait, desktop, duck behaviour, Gangnam choreography, sounds and data are unchanged.
 
 ## v0.160 – Mobile Landscape Compositor Fix
 
