@@ -1396,10 +1396,10 @@
   let snakeNextEligibleAt = Infinity;
   let snakeRunToken = 0;
 
-  // v0.143: cross-browser real-sample compatibility pass. Natural/fight effects use the
-  // supplied MP3 assets; the existing synthesized snake hiss and subtle wing
-  // flap remain as fallbacks/texture. Samples are fetched early and decoded
-  // once the AudioContext is unlocked by a user gesture.
+  // v0.144: sample-backed pond audio. Natural/fight effects use the supplied
+  // real audio assets; the snake hiss remains synthesized. The previous
+  // synthetic flap has been removed from scoots entirely. Samples are fetched
+  // early and decoded once the AudioContext is unlocked by a user gesture.
   const POND_SAMPLE_ASSETS = {
     splashLight: "assets/sounds/video_game_splash-ploor-699235037_a3tsdzd.wav",
     splashHeavy: "assets/sounds/heavy-water-splash.wav",
@@ -1463,7 +1463,7 @@
 
   primePondSampleDownloads();
 
-  // v0.143: sample-backed pond sound system layered over the v0.141 mobile-safe audio core. The original v0.140 mix
+  // v0.144: sample-backed pond sound system layered over the v0.141 mobile-safe audio core. The original v0.140 mix
   // was technically playing but far too quiet/thin on phones and headphones.
   // This pass keeps the same event hooks, adds stronger broadband transients,
   // a limiter/compressor, and resumes/queues a requested sound if the context
@@ -1639,13 +1639,14 @@
   }
 
   function playScootSound(duck, { panic = false, fight = false } = {}) {
+    // v0.144: keep scoots deliberately understated. The old synthetic flap was
+    // distracting, and the previous 420 ms water clip read as another splash.
+    // This sample is a 180 ms skim cut from the supplied water recording.
     void playPondSample("scoot", {
       pan: soundPanForDuck(duck),
-      level: panic ? 1.0 : fight ? 0.92 : 0.86,
-      rate: panic ? 1.12 : 0.98 + Math.random() * 0.08
+      level: panic ? 0.62 : fight ? 0.56 : 0.48,
+      rate: panic ? 1.08 : 0.98 + Math.random() * 0.05
     });
-    // v0.143: the synthetic flap was too artificial. Leave normal scoots as
-    // clean water movement until a dedicated wing-flap sample is supplied.
   }
 
   function playQuackSound(duck) {
