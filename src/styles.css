@@ -613,24 +613,22 @@ body {
   mix-blend-mode: screen;
 }
 
-/* v0.146: keep the glitter field visible during walking/entering too, so
+/* v0.148: keep the glitter field visible during walking/entering too, so
    Gold/Diamond prestige reads on the pier as well as in the pond. The clip-path above keeps
    every effect on the shirt rather than glowing the whole duck. */
 
-/* v0.147: walking prestige effect. The mask is the exact walking shirt asset,
-   so the same glitter/sweep treatment follows the shirt while the layered
-   walking legs and wings animate around it. */
+/* v0.148: walking prestige effect. Use a deterministic clip instead of an
+   external-image CSS mask so it renders consistently on GitHub Pages across
+   Safari/Chrome/Edge. This follows the supplied 512px walking shirt geometry. */
 .entry-prestige-shirt {
-  z-index: 2;
-  clip-path: none;
-  -webkit-mask-image: var(--prestige-entry-mask);
-  -webkit-mask-position: center;
-  -webkit-mask-size: contain;
-  -webkit-mask-repeat: no-repeat;
-  mask-image: var(--prestige-entry-mask);
-  mask-position: center;
-  mask-size: contain;
-  mask-repeat: no-repeat;
+  z-index: 4;
+  clip-path: polygon(37% 42%, 50% 40%, 62% 41%, 68% 45%, 70% 51%, 69% 59%, 65% 66%, 58% 70%, 47% 71%, 39% 68%, 34% 61%, 33% 51%, 34% 45%);
+  -webkit-clip-path: polygon(37% 42%, 50% 40%, 62% 41%, 68% 45%, 70% 51%, 69% 59%, 65% 66%, 58% 70%, 47% 71%, 39% 68%, 34% 61%, 33% 51%, 34% 45%);
+}
+
+.entry-stack.entry-female .entry-prestige-shirt {
+  clip-path: polygon(39% 44%, 51% 42%, 64% 43%, 70% 47%, 72% 53%, 71% 60%, 67% 67%, 59% 70%, 48% 71%, 41% 69%, 36% 62%, 35% 53%, 36% 47%);
+  -webkit-clip-path: polygon(39% 44%, 51% 42%, 64% 43%, 70% 47%, 72% 53%, 71% 60%, 67% 67%, 59% 70%, 48% 71%, 41% 69%, 36% 62%, 35% 53%, 36% 47%);
 }
 
 .prestige-golden {

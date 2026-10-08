@@ -3837,15 +3837,14 @@
     const entryShirtSrc = walkShirtSrc(duck.dataset.duckType, presentation);
     appendEntryImage(stack, "entry-shirt", entryShirtSrc);
 
-    // v0.147: walking Gold/Diamond ducks need the same prestige treatment as
-    // their swimming visuals. This layer is masked to the actual walking shirt
-    // PNG so glitter cannot bleed onto feathers, face or legs.
+    // v0.148: walking Gold/Diamond ducks use a deterministic shirt-shaped
+    // prestige overlay. Avoid CSS image masks here: they proved unreliable
+    // across the deployed desktop/mobile browser mix.
     if (["golden", "diamond"].includes(duck.dataset.duckType)) {
       const prestigeType = duck.dataset.duckType;
       const entryPrestige = document.createElement("span");
       entryPrestige.className = `prestige-shirt-sheen entry-prestige-shirt prestige-${prestigeType}`;
       entryPrestige.setAttribute("aria-hidden", "true");
-      entryPrestige.style.setProperty("--prestige-entry-mask", `url("${entryShirtSrc}")`);
       entryPrestige.style.setProperty("--prestige-delay", `${(-Math.random() * 4.5).toFixed(2)}s`);
       entryPrestige.style.setProperty("--prestige-cycle", `${prestigeType === "diamond" ? 3.0 + Math.random() * .8 : 4.0 + Math.random() * 1.0}s`);
 
