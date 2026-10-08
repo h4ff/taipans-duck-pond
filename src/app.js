@@ -3965,7 +3965,7 @@
       prestigeSheen.style.setProperty("--prestige-delay", `${(-Math.random() * 4.5).toFixed(2)}s`);
       prestigeSheen.style.setProperty("--prestige-cycle", `${prestigeType === "diamond" ? 3.0 + Math.random() * .8 : 4.0 + Math.random() * 1.0}s`);
 
-      // v0.145: make prestige shirts read clearly at normal pond scale.
+      // v0.146: keep prestige shirts readable at pond scale, including during pier entry.
       // Independent glitter points keep the shirt alive between the broader
       // reflective sweeps without turning the whole duck into a glow effect.
       const glitterCount = prestigeType === "diamond" ? 9 : 7;

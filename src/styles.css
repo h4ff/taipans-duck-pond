@@ -613,8 +613,8 @@ body {
   mix-blend-mode: screen;
 }
 
-/* v0.145: a moving micro-glitter field keeps Gold/Diamond shirts visibly
-   special between the larger mirror-ball flashes. The clip-path above keeps
+/* v0.146: keep the glitter field visible during walking/entering too, so
+   Gold/Diamond prestige reads on the pier as well as in the pond. The clip-path above keeps
    every effect on the shirt rather than glowing the whole duck. */
 .prestige-golden {
   background:
@@ -751,8 +751,7 @@ body {
 }
 
 .duck.fight-active .prestige-shirt-sheen,
-.duck.snake-panic .prestige-shirt-sheen,
-.duck[data-motion-state="entering"] .prestige-shirt-sheen {
+.duck.snake-panic .prestige-shirt-sheen {
   opacity: 0;
 }
 
