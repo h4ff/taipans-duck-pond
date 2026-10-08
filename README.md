@@ -1,8 +1,14 @@
-# Duck Pond – v0.155
+# Duck Pond – v0.156
 
 
 
 
+
+## v0.156 – Gangnam Asset Refresh + Walking Prestige Alignment
+
+- Updated Gangnam rear leg, front leg and rear wing assets.
+- Rear arm now bounces in sync with the front arm during the crossed-wrists move.
+- Walking Gold/Diamond prestige glitter has been tightened and repositioned so it sits more cleanly on the shirt and reads less boxy during entry/walking.
 
 ## v0.155 – Verandah Walk / Lasso Cleanup
 
