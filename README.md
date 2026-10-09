@@ -1,8 +1,15 @@
-# Duck Pond – v0.161
+# Duck Pond – v0.162
 
 
 
 
+
+## v0.162 – High-Duck-Count Movement Performance
+
+- Pond swimming movement now uses compositor-friendly `translate` positioning instead of rewriting `left`/`top` every frame.
+- Permanent `will-change` promotion has been removed from idle/floating ducks; only actively swimming ducks receive a translate compositor hint.
+- Depth scale and z-index writes are cached so unchanged values are not pushed back into the DOM every animation frame.
+- Entry/pier and Gangnam choreography remain on their existing positioning paths.
 
 ## v0.161 – Mobile Landscape Duck Compositing Test
 
