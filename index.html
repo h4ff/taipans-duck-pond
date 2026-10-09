@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'; connect-src 'self'; font-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; worker-src 'none';">
-  <title>Taipans Duck Pond — v0.180</title>
-  <link rel="stylesheet" href="src/styles.css?v=0.180">
+  <title>Taipans Duck Pond — v0.182</title>
+  <link rel="stylesheet" href="src/styles.css?v=0.182">
 </head>
 <body>
   <main class="app-shell production-shell">
@@ -28,7 +28,14 @@
       </div>
     </header>
 
+    <div id="facebookBrowserNotice" class="facebook-browser-notice" hidden>
+      <span>Open the Duck Pond in your browser to use landscape mode and view the full pond.</span>
+      <button id="closeFacebookBrowserNotice" type="button" aria-label="Dismiss browser notice">×</button>
+    </div>
+
     <section id="sceneFrame" class="scene-frame" aria-label="Interactive Taipan duck pond">
+      <div id="landscapeScrollHintLeft" class="landscape-scroll-hint landscape-scroll-hint-left" hidden aria-hidden="true">‹</div>
+      <div id="landscapeScrollHintRight" class="landscape-scroll-hint landscape-scroll-hint-right" hidden aria-hidden="true">›</div>
       <div id="scene" class="scene-viewport">
         <div id="worldStage" class="world-stage">
           <div id="world" class="scene-world">
@@ -105,6 +112,6 @@
     <div id="status" hidden aria-live="polite"></div>
   </main>
 
-  <script src="src/app.js?v=0.180"></script>
+  <script src="src/app.js?v=0.182"></script>
 </body>
 </html>
