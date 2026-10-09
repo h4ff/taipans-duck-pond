@@ -1,42 +1,27 @@
 # Roadmap
 
-## Puddle — current
+## v1.0 — production launch
 
-- [x] One-click local prototype
-- [x] Correct broad world layout
-- [x] Short front-left pier
-- [x] Add Duck control
-- [x] Waddle entrance
-- [x] Splash
-- [x] Swim to stable pond position
-- [x] Listless bobbing
-- [x] Click reaction
-- [x] Multiple-duck test
+- [x] Data-driven weekly duck entries
+- [x] Cumulative pond across club weeks
+- [x] Empty/washout week support
+- [x] Player identities, nicknames and presentation attributes
+- [x] Standard, Golden and Diamond ducks
+- [x] Mobile/desktop pond views and pinch zoom
+- [x] Scoreboard and player stats
+- [x] Fight, snake, collision and high-five events
+- [x] Gangnam pavilion easter egg
+- [x] Sound pass
+- [x] Mobile high-population performance pass
+- [x] Security and production-code cleanup
 
-## Pond — next
+## After launch
 
-- [ ] Faithful pavilion artwork
-- [ ] Faithful scoreboard artwork
-- [ ] Final pond map
-- [ ] Separate swim duck asset without visible feet
-- [ ] Better drift and collision avoidance
-- [ ] Persistent duck identities
-- [ ] Player name labels
-- [ ] Save/load pond state
-
-## Billabong — later
-
-- [ ] Weekly score import
-- [ ] Player table
-- [ ] Round metadata
-- [ ] Milestone rules
-- [ ] Video export
-- [ ] Club publishing presets
-
-## Taipan — later
-
-- [ ] Snake-in-the-grass system
-- [ ] Rare idle easter eggs
-- [ ] Multi-click duck reactions
-- [ ] Weather and finals modes
-- [ ] Sound design and music
+- [ ] Separate production and development GitHub Pages repositories
+- [ ] Improve/replace scoot sound
+- [ ] Ambient pond/wind/wildlife audio
+- [ ] Nervous-duck breath sound
+- [ ] Scoreboard/art polish where useful
+- [ ] Additional idle personality behaviours
+- [ ] Cricket mini-game / ball interaction
+- [ ] Revisit custom domain/hosting only if the project expands beyond club use

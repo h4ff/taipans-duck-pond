@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'; connect-src 'self'; font-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; worker-src 'none';">
-  <title>Taipans Duck Pond — v0.179</title>
-  <link rel="stylesheet" href="src/styles.css?v=0.179">
+  <title>Taipans Duck Pond — v0.180</title>
+  <link rel="stylesheet" href="src/styles.css?v=0.180">
 </head>
 <body>
   <main class="app-shell production-shell">
@@ -23,31 +23,10 @@
       </div>
 
       <div class="mobile-toolbar-actions production-mobile-actions" aria-label="Pond controls">
-        <button id="mobileControlsToggle" type="button" hidden aria-expanded="false" aria-controls="developerControls">Test Controls</button>
         <button id="mobilePondToggle" type="button" class="secondary" aria-pressed="false">Expand Pond</button>
         <button id="mobileZoomReset" type="button" class="secondary" hidden>Reset Zoom</button>
       </div>
     </header>
-
-
-    <!-- Development hooks remain in the DOM so the test architecture can be
-         re-enabled later without carrying the test rig in the production UI. -->
-    <div id="developerControls" class="controls developer-controls-hidden" hidden aria-hidden="true">
-      <select id="playerSelect" disabled></select>
-      <button id="addPlayerButton" type="button" disabled>Add Selected Player</button>
-      <p id="playerIdentitySummary"></p>
-      <button id="duckTypeButton" type="button" disabled>Duck Type</button>
-      <button id="featherToneButton" type="button" disabled>Feather</button>
-      <button id="buildVariantButton" type="button" disabled>Build</button>
-      <button id="addMaleButton" type="button" disabled>Add Male</button>
-      <button id="addFemaleButton" type="button" disabled>Add Female</button>
-      <button id="load60Button" type="button" disabled>Load 60</button>
-      <button id="testPresidentButton" type="button" disabled>President</button>
-      <button id="testLeaderButton" type="button" disabled>Leader</button>
-      <button id="testCaptainButton" type="button" disabled>Captain</button>
-      <button id="testCoachButton" type="button" disabled>Coach</button>
-      <button id="resetButton" type="button" disabled>Reset</button>
-    </div>
 
     <section id="sceneFrame" class="scene-frame" aria-label="Interactive Taipan duck pond">
       <div id="scene" class="scene-viewport">
@@ -123,20 +102,9 @@
       </div>
 
     </section>
-
-
-    <!-- Hidden development diagnostics. Kept as data sinks for the existing
-         runtime, but no longer rendered in the production experience. -->
-    <section id="dataDebugPanel" hidden aria-hidden="true">
-      <p id="dataLoadStatus"></p>
-      <p id="dataDebugRange"></p>
-      <div id="dataLeaderboard"></div>
-      <div id="dataWeekEvents"></div>
-      <div id="dataPondEvents"></div>
-    </section>
     <div id="status" hidden aria-live="polite"></div>
   </main>
 
-  <script src="src/app.js?v=0.179"></script>
+  <script src="src/app.js?v=0.180"></script>
 </body>
 </html>

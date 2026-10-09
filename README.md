@@ -1,4 +1,4 @@
-# Duck Pond — v0.179
+# Duck Pond — v0.180
 
 Duck Pond is the Taipans Cricket Club weekly duck animation. Player and duck data are loaded from CSV files and rendered as an interactive pond for desktop and mobile browsers.
 
@@ -36,6 +36,6 @@ The season is anchored to **28 Sep–4 Oct 2026**. Empty/washout weeks remain se
 
 The production build is suitable for static hosting on GitHub Pages. Treat everything committed to a public production repository, including CSV data and assets, as publicly accessible.
 
-## Release note
+## v0.180 cleanup
 
-v0.179 aligns the three swimming Golden/Diamond prestige stars to fixed points measured from the approved 512×512 swim-art coordinate system. Walking prestige and movement trails are unchanged.
+This pre-1.0 hygiene build removes the hidden development/test controls, hidden CSV diagnostic tables, obsolete test helpers, four unused JavaScript functions, the obsolete Windows launcher, and two unreferenced Gangnam assets. No production pond behaviour, player data schema, artwork geometry, prestige placement, Gangnam choreography, fights, snake, high-fives or audio is intentionally changed.

@@ -1,13 +1,14 @@
 # Backlog
 
-- Taipan subtly rustles grass before appearing.
+- Improve scoot/flap audio when a better source is available.
+- Add ambient wind/pond/wildlife sound.
+- Add nervous-duck deep breath.
 - Duck gets more annoyed after repeated clicks.
 - Duck turns its back on the viewer.
-- Nearby ducks wake when one quacks.
-- Duck briefly sinks and resurfaces.
-- Two ducks gently bump and separate.
-- Rare bubbles appear beneath a duck.
-- Dragonfly lands on a sleeping duck.
-- Lily pads wobble.
-- Scoreboard click sequence triggers a hidden event.
-- Rain, overcast, twilight, finals, and Christmas scene modes.
+- Nearby ducks react when one quacks.
+- Rare bubbles beneath a duck.
+- Dragonfly/lily-pad idle details.
+- Rain, overcast, twilight, finals and Christmas scene modes.
+- Cricket-ball interaction / mini-game.
+- Additional scoreboard/easter-egg ideas.
+- Custom domain/commercial hosting only if the project grows beyond club use.

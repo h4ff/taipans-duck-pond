@@ -21,27 +21,10 @@
   const gangnamPerformer = document.getElementById("gangnamPerformer");
   const gangnamDoorHotspot = document.getElementById("gangnamDoorHotspot");
 
-  const addMaleButton = document.getElementById("addMaleButton");
-  const addFemaleButton = document.getElementById("addFemaleButton");
-  const duckTypeButton = document.getElementById("duckTypeButton");
-  const featherToneButton = document.getElementById("featherToneButton");
-  const buildVariantButton = document.getElementById("buildVariantButton");
-  const load60Button = document.getElementById("load60Button");
-  const testPresidentButton = document.getElementById("testPresidentButton");
-  const testLeaderButton = document.getElementById("testLeaderButton");
-  const testCaptainButton = document.getElementById("testCaptainButton");
-  const testCoachButton = document.getElementById("testCoachButton");
-  const resetButton = document.getElementById("resetButton");
-  const developerControls = document.getElementById("developerControls");
-  const mobileControlsToggle = document.getElementById("mobileControlsToggle");
   const mobilePondToggle = document.getElementById("mobilePondToggle");
   const mobileZoomReset = document.getElementById("mobileZoomReset");
 
-  const playerSelect = document.getElementById("playerSelect");
-  const addPlayerButton = document.getElementById("addPlayerButton");
-  const playerIdentitySummary = document.getElementById("playerIdentitySummary");
   const weekSelect = document.getElementById("weekSelect");
-  const loadWeekButton = document.getElementById("loadWeekButton");
   const weekSummary = document.getElementById("weekSummary");
 
   const scoreboardLabel = document.getElementById("scoreboardLabel");
@@ -51,11 +34,6 @@
   const panelDuckCount = document.getElementById("panelDuckCount");
   const panelWeekLabel = document.getElementById("panelWeekLabel");
   const panelLeaderboard = document.getElementById("panelLeaderboard");
-  const dataDebugRange = document.getElementById("dataDebugRange");
-  const dataLoadStatus = document.getElementById("dataLoadStatus");
-  const dataLeaderboard = document.getElementById("dataLeaderboard");
-  const dataWeekEvents = document.getElementById("dataWeekEvents");
-  const dataPondEvents = document.getElementById("dataPondEvents");
   const liveScoreboard = document.getElementById("liveScoreboard");
   const scoreboardPanel = document.getElementById("scoreboardPanel");
   const closeScoreboard = document.getElementById("closeScoreboard");
@@ -338,7 +316,6 @@
 
     if (!PLAYER_PROFILES.length) throw new Error("players.csv did not contain any valid player records.");
     const diagnostic = `${PLAYER_PROFILES.length} players • ${DUCK_EVENTS.length} duck events loaded${DATA_WARNINGS.length ? ` • ${DATA_WARNINGS.length} warning${DATA_WARNINGS.length === 1 ? "" : "s"}` : " • no rejected rows"}`;
-    if (dataLoadStatus) dataLoadStatus.textContent = diagnostic;
     console.info(`Duck Pond data: ${diagnostic}`);
     if (DATA_WARNINGS.length) console.warn("Duck Pond data warnings", DATA_WARNINGS);
   }
@@ -347,17 +324,6 @@
     return DUCK_EVENTS
       .filter(event => event.playerId === playerId && event.date <= endIso)
       .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
-  }
-
-  function describePlayer(player) {
-    if (!player) return "Unknown player";
-    const roleText = (player.roles || []).length ? ` • ${(player.roles || []).join(" + ")}` : "";
-    const feather = FEATHER_TONES[player.featherTone]?.label || player.featherTone || "White";
-    const build = BUILD_VARIANTS[player.build]?.label || player.build || "Standard";
-    const hairText = player.hair && player.hair !== "none" ? ` • hair: ${hairLabel(player.hair)}` : " • hair: none";
-    const headwearText = ` • headwear: ${PLAYER_HEADWEAR_LABELS[player.playerHeadwear] || "No hat"}`;
-    const nicknameText = player.nickname ? ` • public nickname: ${player.nickname}` : "";
-    return `${player.name} • ${player.presentation} • ${feather} • ${build}${hairText}${headwearText}${roleText}${nicknameText}`;
   }
 
   function formatClubDate(isoDate) {
@@ -578,78 +544,6 @@
     });
   }
 
-  function buildDataTable(headers, rows) {
-    const wrap = document.createElement("div");
-    wrap.className = "data-table-wrap";
-    const table = document.createElement("table");
-    table.className = "data-table";
-    const thead = document.createElement("thead");
-    const headRow = document.createElement("tr");
-    for (const header of headers) {
-      const th = document.createElement("th");
-      th.textContent = String(header ?? "—");
-      headRow.appendChild(th);
-    }
-    thead.appendChild(headRow);
-    const tbody = document.createElement("tbody");
-    for (const row of rows) {
-      const tr = document.createElement("tr");
-      for (const cell of row) {
-        const td = document.createElement("td");
-        td.textContent = String(cell ?? "—");
-        tr.appendChild(td);
-      }
-      tbody.appendChild(tr);
-    }
-    table.append(thead, tbody);
-    wrap.appendChild(table);
-    return wrap;
-  }
-
-  function renderDataDebug(context, weekEvents, pondEvents) {
-    if (!context) return;
-    const leaders = leaderboardForEvents(pondEvents);
-    if (dataDebugRange) {
-      dataDebugRange.textContent = `Selected Monday ${formatClubDate(context.monday)} → playback ${formatClubDate(context.start)}–${formatClubDate(context.end)} • ${pondEvents.length} cumulative ducks`;
-    }
-    if (dataLeaderboard) {
-      dataLeaderboard.replaceChildren(buildDataTable(
-        ["Rank", "Player", "Ducks", "Latest"],
-        leaders.map((leader, index) => [index + 1, displayPlayerName(leader.player), leader.count, formatClubDate(leader.latestDate)])
-      ));
-    }
-    if (dataWeekEvents) {
-      dataWeekEvents.replaceChildren(buildDataTable(
-        ["Date", "Player", "Team", "Type"],
-        weekEvents.map(event => {
-          const player = playerById(event.playerId);
-          return [formatClubDate(event.date), player ? displayPlayerName(player) : event.playerId, event.team, event.duckType];
-        })
-      ));
-    }
-    if (dataPondEvents) {
-      dataPondEvents.replaceChildren(buildDataTable(
-        ["Event", "Date", "Player", "Team", "Type", "Presentation", "Feather", "Build", "Hair", "Headwear", "Roles"],
-        pondEvents.map(event => {
-          const player = playerById(event.playerId);
-          return [
-            event.id,
-            formatClubDate(event.date),
-            player ? displayPlayerName(player) : event.playerId,
-            event.team,
-            event.duckType,
-            player?.presentation || "—",
-            FEATHER_TONES[player?.featherTone]?.label || player?.featherTone || "—",
-            BUILD_VARIANTS[player?.build]?.label || player?.build || "—",
-            player?.hair && player.hair !== "none" ? hairLabel(player.hair) : "None",
-            PLAYER_HEADWEAR_LABELS[player?.playerHeadwear] || "No hat",
-            (player?.roles || []).join(", ") || "—"
-          ];
-        })
-      ));
-    }
-  }
-
   function normalizedRoles(roles = [], clubRole = "player") {
     const values = Array.isArray(roles) ? roles : [roles];
     const safe = new Set(values.filter(role => ["president", "captain", "coach"].includes(role)));
@@ -839,7 +733,6 @@
   }
 
   const DUCK_TYPES = ["standard", "golden", "diamond"];
-  let selectedDuckType = "standard";
   const FEATHER_TONES = {
     white: { label: "White" },
     yellow: { label: "Yellow" },
@@ -847,7 +740,6 @@
     darkBrown: { label: "Dark Brown" }
   };
   const FEATHER_TONE_KEYS = ["white", "yellow", "lightBrown", "darkBrown"];
-  let selectedFeatherTone = "white";
 
   const BUILD_VARIANTS = {
     standard: { label: "Standard", scaleX: 1.00, scaleY: 1.00 },
@@ -856,8 +748,6 @@
     stocky: { label: "Stocky", scaleX: 1.12, scaleY: .97 },
     big: { label: "Big", scaleX: 1.16, scaleY: 1.08 }
   };
-  const BUILD_VARIANT_KEYS = ["standard", "short", "beanpole", "stocky", "big"];
-  let selectedBuildVariant = "standard";
   const HAIR_STYLE_LABELS = {
     buzz: "Buzz Cut",
     short: "Short",
@@ -950,18 +840,6 @@
     if (headwear === "leader") return leaderHairSrc(duck.dataset.hair, phase);
     return phase === "walk" ? walkHairSrc(duck.dataset.hair) : swimHairSrc(duck.dataset.hair);
   }
-
-  function randomHairKey() {
-    if (Math.random() < 0.3) return "none";
-    const visibleKeys = HAIR_KEYS.filter(key => key !== "none");
-    return visibleKeys[Math.floor(Math.random() * visibleKeys.length)] || "none";
-  }
-
-  const PLAYER_HEADWEAR_KEYS = ["none", "cap"];
-  const PLAYER_HEADWEAR_LABELS = {
-    none: "No hat",
-    cap: "TCC cap"
-  };
 
   function canonicalPlayerHeadwear(value) {
     const normalized = String(value || "").trim().toLowerCase();
@@ -1131,7 +1009,7 @@
     }
 
     // Full production manifest retained for low-priority background warming
-    // and for developer/test controls without slowing the first usable paint.
+    // without slowing the first usable paint.
     const urls = new Set();
     addCommonSceneAssets(urls);
 
@@ -1274,17 +1152,8 @@
     throw lastError || new Error(`Image failed to preload: ${url}`);
   }
 
-  const duckControlButtons = [
-    duckTypeButton, featherToneButton, buildVariantButton, addMaleButton, addFemaleButton,
-    load60Button, testPresidentButton, testLeaderButton, testCaptainButton,
-    testCoachButton, resetButton, addPlayerButton, loadWeekButton,
-    playerSelect, weekSelect
-  ];
-
-  function setDuckControlsEnabled(enabled) {
-    for (const control of duckControlButtons) {
-      if (control) control.disabled = !enabled;
-    }
+  function setWeekSelectEnabled(enabled) {
+    if (weekSelect) weekSelect.disabled = !enabled;
   }
 
   function loadingPercent(done, total) {
@@ -1377,7 +1246,7 @@
   }
 
   async function initialiseProductionAssets() {
-    setDuckControlsEnabled(false);
+    setWeekSelectEnabled(false);
     const initialContext = weekSelect?.value ? weekContextForMonday(weekSelect.value) : null;
     const manifest = productionImageManifest(initialContext);
     if (status) status.textContent = "Loading pond… 0%";
@@ -1391,7 +1260,7 @@
     const failures = await preloadManifest(manifest, { showProgress: true });
 
     if (failures.length) {
-      setDuckControlsEnabled(false);
+      setWeekSelectEnabled(false);
       if (status) status.textContent = `Pond loading failed on ${failures.length} required image${failures.length === 1 ? "" : "s"}. Reload to retry.`;
       if (loadingOverlay) loadingOverlay.classList.add("loading-failed");
       if (loadingTitle) loadingTitle.textContent = "Pond loading failed";
@@ -1399,7 +1268,7 @@
       return;
     }
 
-    setDuckControlsEnabled(true);
+    setWeekSelectEnabled(true);
     if (status) status.textContent = `Ready — ${manifest.length} images required for this pond loaded; remaining variants will warm in the background.`;
     if (loadingProgress) loadingProgress.textContent = "100%";
     if (loadingTitle) loadingTitle.textContent = "Pond ready";
@@ -1620,33 +1489,6 @@
     source.stop(now + duration + 0.04);
   }
 
-  function toneBurst(bus, {
-    start = 0,
-    duration = 0.16,
-    gain = 0.1,
-    type = "sine",
-    frequency = 320,
-    endFrequency = null,
-    attack = 0.004
-  } = {}) {
-    if (!bus || !pondAudioReady()) return;
-    const now = pondAudioContext.currentTime + Math.max(0, start);
-    const oscillator = pondAudioContext.createOscillator();
-    oscillator.type = type;
-    oscillator.frequency.setValueAtTime(Math.max(30, frequency), now);
-    if (Number.isFinite(endFrequency)) {
-      oscillator.frequency.exponentialRampToValueAtTime(Math.max(30, endFrequency), now + duration);
-    }
-    const envelope = pondAudioContext.createGain();
-    envelope.gain.setValueAtTime(0.0001, now);
-    envelope.gain.exponentialRampToValueAtTime(Math.max(0.0002, gain), now + Math.max(0.003, attack));
-    envelope.gain.exponentialRampToValueAtTime(0.0001, now + duration);
-    oscillator.connect(envelope);
-    envelope.connect(bus);
-    oscillator.start(now);
-    oscillator.stop(now + duration + 0.03);
-  }
-
   function playSplashSound(xPct, duckType = "standard") {
     const choices = duckType === "diamond"
       ? ["splashHeavy", "splashLight", "splashHeavy"]
@@ -1658,25 +1500,6 @@
       pan: soundPanFromX(xPct),
       level: duckType === "diamond" ? 1.0 : duckType === "golden" ? 0.96 : 0.92,
       rate: 0.96 + Math.random() * 0.09
-    });
-  }
-
-  function playWingFlapSound(duck, { strength = 1, delay = 0 } = {}) {
-    runPondSound(() => {
-      const bus = soundBus(soundPanForDuck(duck), 0.92 * strength);
-      for (let i = 0; i < 3; i++) {
-        noiseBurst(bus, {
-          start: delay + i * 0.082,
-          duration: 0.085,
-          gain: 0.24,
-          filterType: "bandpass",
-          frequency: 1050 + i * 180,
-          endFrequency: 620 + i * 120,
-          q: 0.48,
-          attack: 0.003
-        });
-      }
-      releaseSoundBus(bus, Math.round((delay + 0.7) * 1000));
     });
   }
 
@@ -2744,16 +2567,6 @@
 
 
 
-  function updateFeatherToneButton() {
-    const tone = FEATHER_TONES[selectedFeatherTone] || FEATHER_TONES.white;
-    featherToneButton.textContent = `Feather: ${tone.label}`;
-  }
-
-  function updateBuildVariantButton() {
-    const variant = BUILD_VARIANTS[selectedBuildVariant] || BUILD_VARIANTS.standard;
-    buildVariantButton.textContent = `Build: ${variant.label}`;
-  }
-
   function setDuckFace(duck, faceName) {
     const face = duck.querySelector(".swim-face");
     if (!face) return;
@@ -3290,41 +3103,6 @@
   }
 
 
-  function samePlayerEscapePoint(duck, sourcePoint) {
-    const from = currentPosition(duck);
-    let dx = from.x - sourcePoint.x;
-    let dy = from.y - sourcePoint.y;
-    let length = Math.hypot(dx, dy);
-
-    if (length < .1) {
-      const angle = Math.random() * Math.PI * 2;
-      dx = Math.cos(angle);
-      dy = Math.sin(angle);
-      length = 1;
-    }
-
-    dx /= length;
-    dy /= length;
-
-    for (const distanceAway of [12, 10, 8]) {
-      for (const angleOffset of [0, .22, -.22, .42, -.42]) {
-        const c = Math.cos(angleOffset);
-        const s = Math.sin(angleOffset);
-        const rx = dx * c - dy * s;
-        const ry = dx * s + dy * c;
-        const candidate = {
-          x: from.x + rx * distanceAway,
-          y: from.y + ry * distanceAway * .60
-        };
-        if (canDuckStopAt(candidate.x, candidate.y) && segmentClear(from, candidate)) {
-          return candidate;
-        }
-      }
-    }
-
-    return nearbyPoint(from);
-  }
-
   function samePlayerPairReady(a, b, now = performance.now()) {
     if (!a?.isConnected || !b?.isConnected) return false;
     if (a.dataset.reacting === "true" || b.dataset.reacting === "true") return false;
@@ -3401,29 +3179,6 @@
       }
     }
     return pairs;
-  }
-
-  function chooseFightPair() {
-    const eligible = [...ducks.values()].filter(fightEligibleDuck);
-    if (eligible.length < 2) return null;
-    let best = null;
-    let bestScore = Infinity;
-    for (let i = 0; i < eligible.length - 1; i++) {
-      for (let j = i + 1; j < eligible.length; j++) {
-        const a = eligible[i];
-        const b = eligible[j];
-        const ap = currentPosition(a);
-        const bp = currentPosition(b);
-        const d = distance(ap, bp);
-        // Prefer a pair already reasonably close so the setup itself is subtle.
-        const score = Math.abs(d - 10) + Math.abs(ap.y - bp.y) * .8;
-        if (score < bestScore) {
-          best = [a, b];
-          bestScore = score;
-        }
-      }
-    }
-    return best;
   }
 
   function fightAlignmentFor(a, b) {
@@ -4565,13 +4320,12 @@
   function makeDuck({
     point,
     instant = false,
-    duckType = selectedDuckType,
-    featherTone = selectedFeatherTone,
-    buildVariant = selectedBuildVariant,
+    duckType = "standard",
+    featherTone = "white",
+    buildVariant = "standard",
     clubRole = "player",
     roles = [],
     isLeader = false,
-    testRole = "",
     presentation = "male",
     hair = "none",
     playerHeadwear = "none",
@@ -4599,7 +4353,6 @@
     duck.dataset.roles = assignedRoles.join(",");
     duck.dataset.clubRole = assignedRoles.includes("president") ? "president" : "player";
     duck.dataset.isLeader = isLeader ? "true" : "false";
-    duck.dataset.testRole = testRole || "";
     duck.dataset.playerId = playerId || "";
     duck.dataset.playerName = playerName || "";
     duck.dataset.eventId = eventId || "";
@@ -4922,7 +4675,7 @@
 
   function makePlayerDuck(player, event = {}, { instant = false, point = null } = {}) {
     if (!player) return null;
-    const duckType = DUCK_TYPES.includes(event.duckType) ? event.duckType : selectedDuckType;
+    const duckType = DUCK_TYPES.includes(event.duckType) ? event.duckType : "standard";
     const spawnPoint = point || (instant ? distributedPoint() : { x: 37, y: 77.6 });
 
     return makeDuck({
@@ -4943,28 +4696,6 @@
       eventId: event.id || "",
       eventDate: event.date || ""
     });
-  }
-
-  function populatePlayerSelect() {
-    if (!playerSelect) return;
-    playerSelect.replaceChildren();
-    for (const player of PLAYER_PROFILES) {
-      const option = document.createElement("option");
-      option.value = player.id;
-      // Developer/player test controls always show the canonical roster name.
-      // Nickname overrides are reserved for public pond displays.
-      option.textContent = player.name || player.id;
-      playerSelect.appendChild(option);
-    }
-    updatePlayerIdentitySummary();
-  }
-
-  function updatePlayerIdentitySummary() {
-    if (!playerIdentitySummary) return;
-    const player = playerById(playerSelect?.value);
-    playerIdentitySummary.textContent = player
-      ? `${describePlayer(player)} • event shirt currently ${selectedDuckType}`
-      : "No player profile loaded.";
   }
 
   function populateWeekSelect() {
@@ -5028,23 +4759,6 @@
     weekSummary.textContent = `${entering} new duck${entering === 1 ? "" : "s"} • ${earlier + entering} in pond`;
   }
 
-  function addSelectedPlayerDuck() {
-    const player = playerById(playerSelect?.value);
-    if (!player) return;
-    const event = {
-      id: `manual-${Date.now()}`,
-      playerId: player.id,
-      date: "",
-      team: "Test",
-      duckType: selectedDuckType
-    };
-    const duck = makePlayerDuck(player, event, { instant: false });
-    if (!duck) return;
-    status.textContent = `Adding ${player.name}: permanent ${player.presentation}/${FEATHER_TONES[player.featherTone]?.label || player.featherTone}/${BUILD_VARIANTS[player.build]?.label || player.build}/${player.hair && player.hair !== "none" ? hairLabel(player.hair) : "No hair"}/${PLAYER_HEADWEAR_LABELS[player.playerHeadwear] || "No hat"}; ${selectedDuckType} event shirt.`;
-    showEntrantScoreboard(player, event, 1, 1);
-    animateEntry(duck, null, { onSplash: showLeaderboardScoreboard });
-  }
-
   async function loadSelectedWeek({ assetsReady = false } = {}) {
     const monday = weekSelect?.value || "";
     if (!monday) {
@@ -5081,7 +4795,6 @@
       makePlayerDuck(player, event, { instant: true, point: distributedPoint() });
     }
 
-    renderDataDebug(context, weekEvents, pondEvents);
     showLeaderboardScoreboard();
     status.textContent = `${earlierEvents.length} earlier ducks are already in the pond. ${weekEvents.length} ducks from ${formatClubDate(context.start)}–${formatClubDate(context.end)} will enter via the pier.`;
 
@@ -5124,20 +4837,6 @@
     enableRandomFights();
   }
 
-  function addAnimatedDuck(presentation = "male") {
-    const resolvedPresentation = presentation === "female" ? "female" : "male";
-    const duck = makeDuck({
-      point:{x:37,y:73.6},
-      instant:false,
-      duckType:selectedDuckType,
-      featherTone:selectedFeatherTone,
-      buildVariant:selectedBuildVariant,
-      presentation: resolvedPresentation
-    });
-    status.textContent = `Adding ${resolvedPresentation} ${selectedDuckType} duck with ${FEATHER_TONES[selectedFeatherTone].label.toLowerCase()} feathers and ${BUILD_VARIANTS[selectedBuildVariant].label.toLowerCase()} build.`;
-    animateEntry(duck, null);
-  }
-
   function disposeDuck(duck) {
     if (!duck) return;
     clearTimeout(duck._roamTimer);
@@ -5165,53 +4864,6 @@
     duck.remove();
   }
 
-  function existingRoleDuck(role) {
-    for (const duck of ducks.values()) {
-      if (duck.dataset.testRole === role) return duck;
-    }
-
-    // President and current leader are single-instance test concepts for now,
-    // so their Load 60 representatives can be replaced by the replay button.
-    for (const duck of ducks.values()) {
-      if (role === "president" && duckHasRole(duck, "president")) return duck;
-      if (role === "leader" &&
-          duck.dataset.isLeader === "true" &&
-          !duckHasRole(duck, "president")) return duck;
-    }
-    return null;
-  }
-
-  function replayRoleEntry(role) {
-    const existing = existingRoleDuck(role);
-    if (existing) disposeDuck(existing);
-
-    const president = role === "president";
-    const leader = role === "leader";
-    const roles = president ? ["president"] : ["captain", "coach"].filter(item => item === role);
-    const duck = makeDuck({
-      point: { x:37, y:73.6 },
-      instant: false,
-      duckType: selectedDuckType,
-      // The president is always the known white duck. Other role tests follow
-      // the current feather/build controls so overlays can be judged broadly.
-      featherTone: president ? "white" : selectedFeatherTone,
-      buildVariant: selectedBuildVariant,
-      roles,
-      clubRole: president ? "president" : "player",
-      isLeader: leader,
-      testRole: role
-    });
-
-    const roleStatus = {
-      president: `President re-entering from the pier (white duck, ${selectedDuckType} shirt, crown).`,
-      leader: "Duck leader re-entering from the pier with the yellow leader cap.",
-      captain: "Captain re-entering from the pier with the shirt C marker.",
-      coach: "Coach re-entering from the pier with the whistle and lanyard."
-    };
-    status.textContent = roleStatus[role] || "Role test duck re-entering from the pier.";
-    animateEntry(duck, null);
-  }
-
   function resetPond() {
     dateRangeLoadToken++;
     disableSnakeEvent();
@@ -5234,170 +4886,10 @@
     status.textContent = "Pond reset.";
   }
 
-  function loadPopulation(target = 60) {
-    resetPond();
-    const points = [];
-
-    // Development population includes one president and one current leader so
-    // both role overlays can be judged in a busy pond. Keep them away from the
-    // golden/diamond tail of the fixed stress-test distribution.
-    const presidentIndex = target > 20 ? 18 : 0;
-    const leaderIndex = target > 20 ? 19 : Math.min(1, Math.max(0, target - 1));
-
-    // Repeatable club roles: six captain examples and two coach examples in
-    // the 60-duck stress population. Deliberate overlaps prove roles stack:
-    // the current leader is also a captain, and one captain is also a coach.
-    const captainIndexes = new Set([2, 8, 14, 19, 36, 47].filter(index => index < target));
-    const coachIndexes = new Set([11, 36].filter(index => index < target));
-    // Make around 30% of the stress population female-presentation ducks,
-    // spread across the pond rather than clustered together.
-    const femaleTarget = Math.max(0, Math.round(target * 0.3));
-    const femaleCandidates = Array.from({ length: target }, (_, index) => index)
-      .filter(index => index !== presidentIndex);
-    const femaleIndexes = new Set();
-    if (femaleTarget > 0 && femaleCandidates.length > 0) {
-      for (let n = 0; n < Math.min(femaleTarget, femaleCandidates.length); n++) {
-        const pick = Math.floor((n + 0.5) * femaleCandidates.length / Math.min(femaleTarget, femaleCandidates.length));
-        femaleIndexes.add(femaleCandidates[pick]);
-      }
-    }
-
-    // Yellow feathering is intentionally rare. For Load 60 this produces
-    // exactly three yellow-feather ducks (never the white president), and no
-    // population generated here can exceed three.
-    const loadFeathers = Array.from({ length: target }, () => {
-      const nonYellow = ["white", "lightBrown", "darkBrown"];
-      return nonYellow[Math.floor(Math.random() * nonYellow.length)];
-    });
-    const yellowCandidates = Array.from({ length: target }, (_, index) => index)
-      .filter(index => index !== presidentIndex && index !== leaderIndex);
-    for (let i = yellowCandidates.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [yellowCandidates[i], yellowCandidates[j]] = [yellowCandidates[j], yellowCandidates[i]];
-    }
-    for (const index of yellowCandidates.slice(0, Math.min(3, yellowCandidates.length))) {
-      loadFeathers[index] = "yellow";
-    }
-    if (target > 0) loadFeathers[presidentIndex] = "white";
-
-    for (let i = 0; i < target; i++) {
-      let best = null;
-      let bestNearest = -1;
-
-      for (let attempt = 0; attempt < 120; attempt++) {
-        const candidate = randomWaterPoint();
-        if (!canDuckStopAt(candidate.x, candidate.y)) continue;
-
-        const nearest = points.length
-          ? Math.min(...points.map(other => distance(candidate, other)))
-          : 999;
-
-        if (nearest > bestNearest) {
-          bestNearest = nearest;
-          best = candidate;
-        }
-      }
-
-      const safeBest = nearestValidStoppingPoint(best || randomWaterPoint());
-      points.push(safeBest);
-
-      // Fixed stress-test distribution: 55 standard, 4 golden, 1 diamond.
-      let loadDuckType = "standard";
-      if (i >= target - 1) loadDuckType = "diamond";
-      else if (i >= target - 5) loadDuckType = "golden";
-
-      let featherTone = loadFeathers[i];
-
-      // For the 60-duck stress test, exaggeration is deliberately uncommon:
-      // one beanpole, a handful of broader ducks, some short ducks, mostly standard.
-      let buildVariant = "standard";
-      if (i === 0) buildVariant = "beanpole";
-      else if (i < 7) buildVariant = "stocky";
-      else if (i < 10) buildVariant = "big";
-      else if (i < 18) buildVariant = "short";
-
-      const isPresident = i === presidentIndex;
-      const isLeader = i === leaderIndex && !isPresident;
-      const presentation = femaleIndexes.has(i) ? "female" : "male";
-      const roles = [];
-      let hair = randomHairKey();
-      let playerHeadwear = Math.random() < 0.35 ? "cap" : "none";
-      if (isPresident) hair = "short-gray";
-      if (isPresident) roles.push("president");
-      if (captainIndexes.has(i)) roles.push("captain");
-      if (coachIndexes.has(i)) roles.push("coach");
-
-      if (isPresident) {
-        // President is a role/headwear rule, not a duck-type rule. Keep white
-        // feathers, but allow the current selected standard/golden/diamond type.
-        loadDuckType = selectedDuckType;
-        featherTone = "white";
-      }
-      makeDuck({
-        point: safeBest,
-        instant: true,
-        duckType: loadDuckType,
-        featherTone,
-        buildVariant,
-        roles,
-        clubRole: isPresident ? "president" : "player",
-        isLeader,
-        presentation,
-        hair,
-        playerHeadwear
-      });
-    }
-
-    const yellowCount = [...ducks.values()]
-      .filter(duck => duck.dataset.featherTone === "yellow").length;
-    status.textContent =
-      `Loaded ${target} ducks with president crown, leader cap, optional club caps, ${captainIndexes.size} captains, ${coachIndexes.size} coaches, ${femaleIndexes.size} female-presentation ducks, ${yellowCount} yellow-feather ducks and mixed hair overlays.`;
-  }
-
-  function updateDuckTypeButton() {
-    const label = selectedDuckType.charAt(0).toUpperCase() + selectedDuckType.slice(1);
-    duckTypeButton.textContent = `Duck Type: ${label}`;
-  }
-
-  featherToneButton.addEventListener("click", () => {
-    const index = FEATHER_TONE_KEYS.indexOf(selectedFeatherTone);
-    selectedFeatherTone = FEATHER_TONE_KEYS[(index + 1) % FEATHER_TONE_KEYS.length];
-    updateFeatherToneButton();
-    status.textContent = `New ducks will use ${FEATHER_TONES[selectedFeatherTone].label.toLowerCase()} feathers.`;
-  });
-
-  buildVariantButton.addEventListener("click", () => {
-    const index = BUILD_VARIANT_KEYS.indexOf(selectedBuildVariant);
-    selectedBuildVariant = BUILD_VARIANT_KEYS[(index + 1) % BUILD_VARIANT_KEYS.length];
-    updateBuildVariantButton();
-    status.textContent = `New ducks will use the ${BUILD_VARIANTS[selectedBuildVariant].label.toLowerCase()} build.`;
-  });
-
-  duckTypeButton.addEventListener("click", () => {
-    const index = DUCK_TYPES.indexOf(selectedDuckType);
-    selectedDuckType = DUCK_TYPES[(index + 1) % DUCK_TYPES.length];
-    updateDuckTypeButton();
-    status.textContent =
-      `New ducks will be ${selectedDuckType}.`;
-    updatePlayerIdentitySummary();
-  });
-
-  if (playerSelect) playerSelect.addEventListener("change", updatePlayerIdentitySummary);
-  if (addPlayerButton) addPlayerButton.addEventListener("click", addSelectedPlayerDuck);
   if (weekSelect) weekSelect.addEventListener("change", () => {
     updateWeekSummary();
     loadSelectedWeek();
   });
-  if (loadWeekButton) loadWeekButton.addEventListener("click", loadSelectedWeek);
-
-  addMaleButton.addEventListener("click", () => addAnimatedDuck("male"));
-  addFemaleButton.addEventListener("click", () => addAnimatedDuck("female"));
-  load60Button.addEventListener("click", () => loadPopulation(60));
-  testPresidentButton.addEventListener("click", () => replayRoleEntry("president"));
-  testLeaderButton.addEventListener("click", () => replayRoleEntry("leader"));
-  testCaptainButton.addEventListener("click", () => replayRoleEntry("captain"));
-  testCoachButton.addEventListener("click", () => replayRoleEntry("coach"));
-  resetButton.addEventListener("click", resetPond);
 
   liveScoreboard.addEventListener("click", () => {
     scoreboardPanel.hidden = false;
@@ -5725,26 +5217,12 @@
   scene.addEventListener("touchend", endPondPinch, { passive: true });
   scene.addEventListener("touchcancel", endPondPinch, { passive: true });
 
-  function setMobileControlsOpen(open) {
-    if (!developerControls || !mobileControlsToggle) return;
-    developerControls.classList.toggle("mobile-open", open);
-    mobileControlsToggle.setAttribute("aria-expanded", String(open));
-    mobileControlsToggle.textContent = open ? "Hide Controls" : "Test Controls";
-  }
-
-  if (mobileControlsToggle) {
-    mobileControlsToggle.addEventListener("click", () => {
-      setMobileControlsOpen(!developerControls.classList.contains("mobile-open"));
-    });
-  }
-
   if (mobilePondToggle) {
     mobilePondToggle.addEventListener("click", () => {
       mobilePondExpanded = !mobilePondExpanded;
       document.body.classList.toggle("pond-focus-mode", mobilePondExpanded);
       mobilePondToggle.setAttribute("aria-pressed", String(mobilePondExpanded));
       mobilePondToggle.textContent = mobilePondExpanded ? "Normal View" : "Expand Pond";
-      if (mobilePondExpanded) setMobileControlsOpen(false);
       applyWorldScale();
     });
   }
@@ -5787,7 +5265,7 @@
 
   function showStartupFailure(error) {
     console.error("Duck Pond startup failed", error);
-    setDuckControlsEnabled(false);
+    setWeekSelectEnabled(false);
     if (loadingOverlay) {
       loadingOverlay.hidden = false;
       loadingOverlay.classList.remove("loading-complete");
@@ -5798,18 +5276,14 @@
     if (status) status.textContent = `Pond startup error: ${error?.message || error || "Unknown error"}`;
   }
 
-  const prestigeTrailTimer = setInterval(prestigeTrailTick, 170);
+  setInterval(prestigeTrailTick, 170);
 
   try {
     applyWorldScale();
     updateCounts();
-    updateDuckTypeButton();
-    updateFeatherToneButton();
-    updateBuildVariantButton();
-    setDuckControlsEnabled(false);
+    setWeekSelectEnabled(false);
     loadProductionData()
       .then(() => {
-        populatePlayerSelect();
         populateWeekSelect();
         return initialiseProductionAssets();
       })
