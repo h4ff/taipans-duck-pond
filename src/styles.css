@@ -615,24 +615,11 @@ body {
 /* v0.164 prestige performance pass: one clipped surface per shirt, plus cheap
    pseudo-element shimmer/starburst. No per-sparkle DOM nodes, filters or blend modes. */
 .prestige-golden {
-  background:
-    linear-gradient(rgba(255,200,24,.18), rgba(255,224,74,.10)),
-    radial-gradient(circle at 28% 64%, rgba(255,251,165,1) 0 1.7%, transparent 2.5%),
-    radial-gradient(circle at 42% 55%, rgba(255,255,225,1) 0 1.35%, transparent 2.1%),
-    radial-gradient(circle at 54% 69%, rgba(255,209,34,1) 0 1.65%, transparent 2.5%),
-    radial-gradient(circle at 61% 58%, rgba(255,250,182,.96) 0 1.2%, transparent 1.9%),
-    radial-gradient(circle at 36% 74%, rgba(255,196,18,.92) 0 1.3%, transparent 2.0%);
+  background: linear-gradient(rgba(255,200,24,.16), rgba(255,224,74,.08));
 }
 
 .prestige-diamond {
-  background:
-    linear-gradient(rgba(215,245,255,.18), rgba(255,255,255,.09)),
-    radial-gradient(circle at 27% 63%, rgba(255,255,255,1) 0 1.8%, transparent 2.6%),
-    radial-gradient(circle at 39% 54%, rgba(198,238,255,1) 0 1.55%, transparent 2.3%),
-    radial-gradient(circle at 51% 70%, rgba(255,255,255,1) 0 1.9%, transparent 2.7%),
-    radial-gradient(circle at 61% 58%, rgba(208,242,255,1) 0 1.45%, transparent 2.2%),
-    radial-gradient(circle at 34% 75%, rgba(255,255,255,.98) 0 1.4%, transparent 2.1%),
-    radial-gradient(circle at 57% 76%, rgba(190,234,255,.96) 0 1.3%, transparent 2.0%);
+  background: linear-gradient(rgba(215,245,255,.16), rgba(255,255,255,.08));
 }
 
 .prestige-shirt-sheen::before,
@@ -688,13 +675,13 @@ body {
 .prestige-shirt-glint {
   position: absolute;
   z-index: 8;
-  width: var(--shirt-glint-size, 11px);
-  height: var(--shirt-glint-size, 11px);
+  width: var(--shirt-glint-size, 10px);
+  height: var(--shirt-glint-size, 10px);
   pointer-events: none;
   opacity: 0;
   transform-origin: 50% 50%;
-  transform: translate(-50%, -50%) rotate(var(--shirt-glint-rotate, 0deg)) scale(.25);
-  animation: prestige-shirt-glint-pop var(--shirt-glint-cycle, 1.7s) ease-out var(--shirt-glint-delay, 0s) infinite;
+  transform: translate(-50%, -50%) rotate(var(--shirt-glint-rotate, 0deg)) scale(.18);
+  animation: prestige-shirt-glint-pop var(--shirt-glint-cycle, .72s) ease-out var(--shirt-glint-delay, 0s) infinite;
 }
 
 .prestige-shirt-glint::before,
@@ -725,23 +712,12 @@ body {
   --shirt-glint-shadow: rgba(210,243,255,.98);
 }
 
-.prestige-shirt-glint-swim {
-  left: 47%;
-  top: 64%;
-}
-
-.prestige-shirt-glint-walk {
-  left: 51%;
-  top: 55%;
-}
-
 @keyframes prestige-shirt-glint-pop {
-  0% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--shirt-glint-rotate, 0deg)) scale(.25); }
-  8% { opacity: .35; transform: translate(-50%, -50%) rotate(var(--shirt-glint-rotate, 0deg)) scale(.45); }
-  14% { opacity: 1; transform: translate(-50%, -50%) rotate(var(--shirt-glint-rotate, 0deg)) scale(1.15); }
-  27% { opacity: .92; transform: translate(-50%, -50%) rotate(calc(var(--shirt-glint-rotate, 0deg) + 8deg)) scale(1); }
-  42% { opacity: 0; transform: translate(-50%, -50%) rotate(calc(var(--shirt-glint-rotate, 0deg) + 24deg)) scale(.25); }
-  43%, 100% { opacity: 0; transform: translate(-50%, -50%) rotate(calc(var(--shirt-glint-rotate, 0deg) + 24deg)) scale(.25); }
+  0% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--shirt-glint-rotate, 0deg)) scale(.15); }
+  12% { opacity: .35; transform: translate(-50%, -50%) rotate(var(--shirt-glint-rotate, 0deg)) scale(.38); }
+  24% { opacity: 1; transform: translate(-50%, -50%) rotate(var(--shirt-glint-rotate, 0deg)) scale(1.08); }
+  50% { opacity: .92; transform: translate(-50%, -50%) rotate(calc(var(--shirt-glint-rotate, 0deg) + 8deg)) scale(.9); }
+  100% { opacity: 0; transform: translate(-50%, -50%) rotate(calc(var(--shirt-glint-rotate, 0deg) + 24deg)) scale(.22); }
 }
 
 /* Walking prestige keeps the v0.156 shirt alignment, but now uses the same

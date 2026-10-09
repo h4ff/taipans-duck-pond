@@ -3906,25 +3906,35 @@
     return image;
   }
 
-  function createPrestigeShirtGlint(prestigeType, mode) {
-    const glint = document.createElement("span");
-    glint.className = `prestige-shirt-glint prestige-shirt-glint-${prestigeType} prestige-shirt-glint-${mode}`;
-    glint.setAttribute("aria-hidden", "true");
+  function createPrestigeShirtGlints(prestigeType, mode) {
+    const count = prestigeType === "diamond" ? 3 : 2;
+    const glints = [];
+    const xRange = mode === "walk" ? [42, 60] : [39, 58];
+    const yRange = mode === "walk" ? [48, 66] : [57, 72];
 
-    // v0.168: use the same readable pixel scale and fast pop language as the
-    // movement trail, while retaining only one shirt-glint node per prestige duck.
-    const size = prestigeType === "diamond"
-      ? 10.5 + Math.random() * 5.5
-      : 9 + Math.random() * 5;
-    const cycle = prestigeType === "diamond"
-      ? 1.25 + Math.random() * .35
-      : 1.55 + Math.random() * .4;
+    for (let i = 0; i < count; i += 1) {
+      const glint = document.createElement("span");
+      glint.className = `prestige-shirt-glint prestige-shirt-glint-${prestigeType}`;
+      glint.setAttribute("aria-hidden", "true");
 
-    glint.style.setProperty("--shirt-glint-size", `${size.toFixed(1)}px`);
-    glint.style.setProperty("--shirt-glint-delay", `${(-Math.random() * cycle).toFixed(2)}s`);
-    glint.style.setProperty("--shirt-glint-cycle", `${cycle.toFixed(2)}s`);
-    glint.style.setProperty("--shirt-glint-rotate", `${Math.round(Math.random() * 45)}deg`);
-    return glint;
+      const size = prestigeType === "diamond"
+        ? 8.5 + Math.random() * 4.5
+        : 7.5 + Math.random() * 4;
+      const cycle = prestigeType === "diamond"
+        ? 1.0 + Math.random() * .22
+        : 1.08 + Math.random() * .28;
+      const left = xRange[0] + Math.random() * (xRange[1] - xRange[0]);
+      const top = yRange[0] + Math.random() * (yRange[1] - yRange[0]);
+
+      glint.style.left = `${left.toFixed(1)}%`;
+      glint.style.top = `${top.toFixed(1)}%`;
+      glint.style.setProperty("--shirt-glint-size", `${size.toFixed(1)}px`);
+      glint.style.setProperty("--shirt-glint-delay", `${(-Math.random() * cycle).toFixed(2)}s`);
+      glint.style.setProperty("--shirt-glint-cycle", `${cycle.toFixed(2)}s`);
+      glint.style.setProperty("--shirt-glint-rotate", `${Math.round(Math.random() * 45)}deg`);
+      glints.push(glint);
+    }
+    return glints;
   }
 
   function buildEntryVisual(duck, frameIndex = 1) {
@@ -3954,7 +3964,7 @@
       entryPrestige.style.setProperty("--prestige-cycle", `${prestigeType === "diamond" ? 2.45 + Math.random() * .65 : 3.15 + Math.random() * .8}s`);
 
       stack.appendChild(entryPrestige);
-      stack.appendChild(createPrestigeShirtGlint(prestigeType, "walk"));
+      for (const glint of createPrestigeShirtGlints(prestigeType, "walk")) stack.appendChild(glint);
     }
 
     appendEntryImage(stack, "entry-body", walkBodySrc(tone, presentation));
@@ -4079,7 +4089,7 @@
     body.alt = "";
 
     let prestigeSheen = null;
-    let prestigeGlint = null;
+    let prestigeGlints = null;
     if (["golden", "diamond"].includes(duck.dataset.duckType)) {
       const prestigeType = duck.dataset.duckType;
       prestigeSheen = document.createElement("span");
@@ -4087,10 +4097,11 @@
       prestigeSheen.setAttribute("aria-hidden", "true");
       prestigeSheen.style.setProperty("--prestige-delay", `${(-Math.random() * 4.5).toFixed(2)}s`);
       prestigeSheen.style.setProperty("--prestige-cycle", `${prestigeType === "diamond" ? 2.45 + Math.random() * .65 : 3.15 + Math.random() * .8}s`);
-      prestigeGlint = createPrestigeShirtGlint(prestigeType, "swim");
+      prestigeGlints = createPrestigeShirtGlints(prestigeType, "swim");
 
-      // v0.167: keep the cheap clipped shimmer, but use one dedicated trail-style
-      // glint outside the shirt clip so the prestige flash reads at pond scale.
+      // v0.169: the dotted shirt texture is gone. Walking and swimming prestige
+      // now use a small number of real trail-style shirt glints, which read much
+      // better at pond scale without returning to the old expensive sparkle field.
     }
 
     const hairSrc = visualHairSrc(duck, "swim");
@@ -4167,7 +4178,9 @@
 
     stack.append(wingBack, body, wake);
     if (prestigeSheen) stack.appendChild(prestigeSheen);
-    if (prestigeGlint) stack.appendChild(prestigeGlint);
+    if (prestigeGlints) {
+      for (const glint of prestigeGlints) stack.appendChild(glint);
+    }
     if (showHair) stack.appendChild(hair);
     stack.appendChild(face);
     if (duckHasFlamingo(duck)) stack.appendChild(flamingo);
