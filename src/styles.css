@@ -680,6 +680,8 @@ body {
   pointer-events: none;
   opacity: 0;
   transform-origin: 50% 50%;
+  left: var(--shirt-glint-left, 50%);
+  top: var(--shirt-glint-top, 50%);
   transform: translate(-50%, -50%) rotate(var(--shirt-glint-rotate, 0deg)) scale(.18);
   animation: prestige-shirt-glint-pop var(--shirt-glint-cycle, .72s) ease-out var(--shirt-glint-delay, 0s) infinite;
 }
@@ -710,6 +712,12 @@ body {
 .prestige-shirt-glint-diamond {
   --shirt-glint-color: rgba(255,255,255,1);
   --shirt-glint-shadow: rgba(210,243,255,.98);
+}
+
+.prestige-shirt-glint-front,
+.prestige-shirt-glint-back,
+.prestige-shirt-glint-low {
+  /* anchor positions are assigned inline from JS so walk/swim can differ */
 }
 
 @keyframes prestige-shirt-glint-pop {

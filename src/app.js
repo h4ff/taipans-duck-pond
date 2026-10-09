@@ -3907,27 +3907,36 @@
   }
 
   function createPrestigeShirtGlints(prestigeType, mode) {
-    const count = prestigeType === "diamond" ? 3 : 2;
     const glints = [];
-    const xRange = mode === "walk" ? [42, 60] : [39, 58];
-    const yRange = mode === "walk" ? [48, 66] : [57, 72];
+    const anchors = mode === "walk"
+      ? [
+          { name: "front", left: 62, top: 52 },
+          { name: "back", left: 39, top: 46 },
+          { name: "low", left: 52, top: 67 }
+        ]
+      : [
+          { name: "front", left: 61, top: 58 },
+          { name: "back", left: 37, top: 51 },
+          { name: "low", left: 52, top: 72 }
+        ];
 
-    for (let i = 0; i < count; i += 1) {
+    // Gold and Diamond both get the three readable anchor points now.
+    for (const anchor of anchors) {
       const glint = document.createElement("span");
-      glint.className = `prestige-shirt-glint prestige-shirt-glint-${prestigeType}`;
+      glint.className = `prestige-shirt-glint prestige-shirt-glint-${prestigeType} prestige-shirt-glint-${anchor.name}`;
       glint.setAttribute("aria-hidden", "true");
 
       const size = prestigeType === "diamond"
-        ? 8.5 + Math.random() * 4.5
-        : 7.5 + Math.random() * 4;
+        ? 9 + Math.random() * 4.5
+        : 8 + Math.random() * 4;
       const cycle = prestigeType === "diamond"
-        ? 1.0 + Math.random() * .22
-        : 1.08 + Math.random() * .28;
-      const left = xRange[0] + Math.random() * (xRange[1] - xRange[0]);
-      const top = yRange[0] + Math.random() * (yRange[1] - yRange[0]);
+        ? 0.98 + Math.random() * .18
+        : 1.06 + Math.random() * .22;
+      const left = anchor.left + (Math.random() * 2 - 1) * 1.4;
+      const top = anchor.top + (Math.random() * 2 - 1) * 1.2;
 
-      glint.style.left = `${left.toFixed(1)}%`;
-      glint.style.top = `${top.toFixed(1)}%`;
+      glint.style.setProperty("--shirt-glint-left", `${left.toFixed(1)}%`);
+      glint.style.setProperty("--shirt-glint-top", `${top.toFixed(1)}%`);
       glint.style.setProperty("--shirt-glint-size", `${size.toFixed(1)}px`);
       glint.style.setProperty("--shirt-glint-delay", `${(-Math.random() * cycle).toFixed(2)}s`);
       glint.style.setProperty("--shirt-glint-cycle", `${cycle.toFixed(2)}s`);
