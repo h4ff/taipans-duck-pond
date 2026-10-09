@@ -1,8 +1,16 @@
-# Duck Pond – v0.165
+# Duck Pond – v0.166
 
 
 
 
+
+## v0.166 – Trail-Style Shirt Glint
+
+- Golden and Diamond shirt flashes now use the same crisp cross-glint visual language as their movement trails.
+- Applies to both walking and swimming prestige ducks.
+- Golden uses a warm gold glint; Diamond uses a brighter icy-white glint.
+- The shirt sparkle remains a single pseudo-element per prestige duck, preserving the low-cost prestige architecture.
+- Existing Golden and Diamond swimming trails are unchanged; no trail is shown while walking.
 
 ## v0.165 – Prestige Visibility + Golden Trail
 
