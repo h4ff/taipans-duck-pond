@@ -1926,6 +1926,7 @@
     world.style.top = "0";
     world.style.transform = `scale(${worldScale})`;
     updateMobileZoomUi();
+    scheduleViewportActivityRefresh();
 
     if (scaleScrollFrame) cancelAnimationFrame(scaleScrollFrame);
     scaleScrollFrame = requestAnimationFrame(() => {
@@ -1988,6 +1989,44 @@
     element.style.left = `${xPx}px`;
     element.style.top = `${yPx}px`;
   }
+
+  // v0.163: keep the expensive pond simulation focused on what can actually
+  // affect the current viewport. Positions are still tracked logically for all
+  // ducks, but cosmetic animation work can pause while a duck is well off-screen.
+  const DUCK_MOVE_UPDATE_MS = 1000 / 30;
+  const DUCK_DEPTH_UPDATE_MS = 100;
+  const DUCK_VIEWPORT_MARGIN_PX = 150;
+  let viewportActivityFrame = null;
+
+  function duckNearViewportAt(point, marginPx = DUCK_VIEWPORT_MARGIN_PX) {
+    if (!scene || !Number.isFinite(worldScale) || worldScale <= 0) return true;
+    const left = scene.scrollLeft / worldScale - marginPx;
+    const top = scene.scrollTop / worldScale - marginPx;
+    const right = (scene.scrollLeft + scene.clientWidth) / worldScale + marginPx;
+    const bottom = (scene.scrollTop + scene.clientHeight) / worldScale + marginPx;
+    const x = pctToWorldX(point.x);
+    const y = pctToWorldY(point.y);
+    return x >= left && x <= right && y >= top && y <= bottom;
+  }
+
+  function setDuckViewportActivity(duck, point = currentPosition(duck)) {
+    if (!duck?.isConnected || !Number.isFinite(point.x) || !Number.isFinite(point.y)) return true;
+    const active = duckNearViewportAt(point);
+    duck.classList.toggle("viewport-paused", !active);
+    return active;
+  }
+
+  function refreshDuckViewportActivity() {
+    viewportActivityFrame = null;
+    for (const duck of ducks.values()) setDuckViewportActivity(duck);
+  }
+
+  function scheduleViewportActivityRefresh() {
+    if (viewportActivityFrame) return;
+    viewportActivityFrame = requestAnimationFrame(refreshDuckViewportActivity);
+  }
+
+  if (scene) scene.addEventListener("scroll", scheduleViewportActivityRefresh, { passive: true });
 
   function updateCounts() {
     const count = ducks.size;
@@ -2541,6 +2580,9 @@
         }
       }
 
+      let lastMoveUpdate = started - DUCK_MOVE_UPDATE_MS;
+      let lastDepthUpdate = started - DUCK_DEPTH_UPDATE_MS;
+
       function frame(now) {
         if (!duck.isConnected) {
           endHighFive();
@@ -2555,13 +2597,25 @@
         }
 
         const raw = Math.min(1, (now - started) / duration);
+        const finalFrame = raw >= 1;
+
+        // v0.163: the display may request 60 frames/sec, but ordinary pond
+        // movement only needs ~30 simulation/DOM updates per second. Keeping
+        // rAF as the clock preserves timing while halving the expensive work.
+        if (!finalFrame && now - lastMoveUpdate < DUCK_MOVE_UPDATE_MS) {
+          duck._moveFrame = requestAnimationFrame(frame);
+          return;
+        }
+        lastMoveUpdate = now;
+
         const progress = swimProgress(raw);
         const point = quadraticPoint(from, control, safeTo, progress);
         const tangent = quadraticTangent(from, control, safeTo, progress);
+        const viewportActive = setDuckViewportActivity(duck, point);
 
         setFacingForMovement(duck, tangent.x);
 
-        if (stack) {
+        if (stack && viewportActive) {
           const settleStart = .80;
           let tiltFactor = 1;
           if (raw > settleStart) {
@@ -2575,7 +2629,13 @@
         setWorldPosition(duck, point.x, point.y);
         duck.dataset.x = point.x.toFixed(3);
         duck.dataset.y = point.y.toFixed(3);
-        setDepth(duck, point.y);
+
+        // Depth changes are visually slow; 10 Hz is enough to keep overlaps
+        // convincing without rewriting scale/z-order on every movement tick.
+        if (finalFrame || now - lastDepthUpdate >= DUCK_DEPTH_UPDATE_MS) {
+          setDepth(duck, point.y);
+          lastDepthUpdate = now;
+        }
 
         if (highFive) {
           if (!highFiveStarted && raw >= highFiveStartRaw) beginHighFive();
@@ -2583,7 +2643,7 @@
             const stationary = highFive.stationary;
             if (!stationary?.isConnected || stationary.dataset.motionState !== "floating") {
               endHighFive();
-            } else if (Math.abs(raw - contactRaw) < .018) {
+            } else if (Math.abs(raw - contactRaw) < .024) {
               duck.classList.add("same-player-highfive-contact");
               stationary.classList.add("same-player-highfive-contact");
             } else {
@@ -2594,12 +2654,15 @@
           }
         }
 
-        checkDuckCollisions(duck);
+        // Collision checks are already internally throttled; skip them for
+        // ducks well outside the viewport until they are relevant again.
+        if (viewportActive) checkDuckCollisions(duck);
 
-        if (raw < 1) {
+        if (!finalFrame) {
           duck._moveFrame = requestAnimationFrame(frame);
         } else {
           if (stack) stack.style.setProperty("--swim-tilt", "0deg");
+          duck.classList.remove("viewport-paused");
           endHighFive();
           resolve({ cancelled: false });
         }
