@@ -677,29 +677,71 @@ body {
   --prestige-glint-core: rgba(205,241,255,.98);
 }
 
-/* v0.166: the shirt flash now uses the same simple cross-glint language as the
-   movement trail. It remains a single pseudo-element, so there are no extra
-   sparkle nodes or filter/blend costs. */
+/* v0.167: the visible sparkle is now a dedicated trail-style glint element
+   outside the clipped shimmer layer. This lets the flash extend past the shirt
+   edge at peak size while keeping the cheap one-surface shimmer underneath. */
 .prestige-shirt-sheen::after,
 .entry-prestige-live::after {
-  content: "";
-  position: absolute;
-  left: 47%;
-  top: 59%;
-  width: 22%;
-  aspect-ratio: 1 / 1;
-  opacity: 0;
-  background:
-    linear-gradient(90deg, transparent 46%, var(--prestige-glint) 48% 52%, transparent 54%),
-    linear-gradient(0deg, transparent 46%, var(--prestige-glint) 48% 52%, transparent 54%),
-    radial-gradient(circle, var(--prestige-glint-core) 0 8%, transparent 24%);
-  transform: scale(.25) rotate(0deg);
-  animation: prestige-lite-star var(--prestige-cycle, 4.6s) ease-out var(--prestige-delay, 0s) infinite;
+  content: none;
 }
 
-.prestige-diamond::after,
-.entry-prestige-diamond::after {
-  width: 27%;
+.prestige-shirt-glint {
+  position: absolute;
+  z-index: 8;
+  width: 12%;
+  aspect-ratio: 1 / 1;
+  pointer-events: none;
+  opacity: 0;
+  transform-origin: 50% 50%;
+  transform: translate(-50%, -50%) rotate(var(--shirt-glint-rotate, 0deg)) scale(.25);
+  animation: prestige-shirt-glint-pop var(--shirt-glint-cycle, 3.8s) ease-out var(--shirt-glint-delay, 0s) infinite;
+}
+
+.prestige-shirt-glint::before,
+.prestige-shirt-glint::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 1.5px;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--shirt-glint-color, rgba(255,255,255,.98));
+  box-shadow: 0 0 4px var(--shirt-glint-shadow, rgba(255,255,255,.92));
+  transform: translateX(-50%);
+}
+
+.prestige-shirt-glint::after {
+  transform: translateX(-50%) rotate(90deg);
+}
+
+.prestige-shirt-glint-golden {
+  --shirt-glint-color: rgba(255,224,82,.99);
+  --shirt-glint-shadow: rgba(255,196,24,.88);
+}
+
+.prestige-shirt-glint-diamond {
+  --shirt-glint-color: rgba(255,255,255,1);
+  --shirt-glint-shadow: rgba(210,243,255,.98);
+  width: 14%;
+}
+
+.prestige-shirt-glint-swim {
+  left: 47%;
+  top: 64%;
+}
+
+.prestige-shirt-glint-walk {
+  left: 51%;
+  top: 55%;
+}
+
+@keyframes prestige-shirt-glint-pop {
+  0%, 68%, 100% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--shirt-glint-rotate, 0deg)) scale(.25); }
+  72% { opacity: .18; transform: translate(-50%, -50%) rotate(var(--shirt-glint-rotate, 0deg)) scale(.38); }
+  75% { opacity: 1; transform: translate(-50%, -50%) rotate(var(--shirt-glint-rotate, 0deg)) scale(1.18); }
+  80% { opacity: .78; transform: translate(-50%, -50%) rotate(calc(var(--shirt-glint-rotate, 0deg) + 13deg)) scale(.9); }
+  86% { opacity: 0; transform: translate(-50%, -50%) rotate(calc(var(--shirt-glint-rotate, 0deg) + 24deg)) scale(.3); }
 }
 
 /* Walking prestige keeps the v0.156 shirt alignment, but now uses the same
@@ -750,16 +792,10 @@ body {
   86%, 100% { transform: translate3d(470%,0,0) skewX(-14deg); opacity: 0; }
 }
 
-@keyframes prestige-lite-star {
-  0%, 64%, 100% { opacity: 0; transform: scale(.25) rotate(0deg); }
-  67% { opacity: .18; transform: scale(.35) rotate(3deg); }
-  70% { opacity: 1; transform: scale(1.16) rotate(12deg); }
-  75% { opacity: .72; transform: scale(.82) rotate(21deg); }
-  81% { opacity: 0; transform: scale(.28) rotate(34deg); }
-}
-
 .duck.fight-active .prestige-shirt-sheen,
-.duck.snake-panic .prestige-shirt-sheen {
+.duck.snake-panic .prestige-shirt-sheen,
+.duck.fight-active .prestige-shirt-glint,
+.duck.snake-panic .prestige-shirt-glint {
   opacity: 0;
 }
 
@@ -2242,6 +2278,7 @@ body.pond-focus-mode .fight-test-rig { display: none !important; }
 .scene-world.gangnam-running .duck .swim-stack,
 .scene-world.gangnam-running .duck .prestige-shirt-sheen,
 .scene-world.gangnam-running .duck .entry-prestige-live,
+.scene-world.gangnam-running .duck .prestige-shirt-glint,
 .scene-world.gangnam-running .duck .swim-wing-front,
 .scene-world.gangnam-running .duck .swim-wing-back {
   animation-play-state: paused !important;
