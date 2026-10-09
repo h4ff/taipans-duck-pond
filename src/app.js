@@ -3906,42 +3906,22 @@
     return image;
   }
 
-  function createPrestigeShirtGlints(prestigeType, mode) {
+  function createPrestigeWalkGlints(prestigeType) {
     const glints = [];
-    const anchors = mode === "walk"
-      ? [
-          // Outside-silhouette positions: in front of chest, above the back,
-          // and underneath the body above the feet/pier line.
-          { name: "front", left: 72, top: 53 },
-          { name: "back", left: 32, top: 39 },
-          { name: "low", left: 52, top: 76 }
-        ]
-      : [
-          // v0.173: swimming-only prestige correction. Keep one sparkle clearly
-          // in front of the chest (not on the beak), one above the duck's back,
-          // and one low near the waterline.
-          { name: "front", left: 66, top: 71 },
-          { name: "back", left: 34, top: 37 },
-          { name: "low", left: 52, top: 80 }
-        ];
+    const anchors = [
+      { name: "front", left: 72, top: 53 },
+      { name: "back", left: 32, top: 39 },
+      { name: "low", left: 52, top: 76 }
+    ];
 
-    // Gold and Diamond both get the three readable anchor points now.
     for (const anchor of anchors) {
       const glint = document.createElement("span");
       glint.className = `prestige-shirt-glint prestige-shirt-glint-${prestigeType} prestige-shirt-glint-${anchor.name}`;
       glint.setAttribute("aria-hidden", "true");
-
-      const size = prestigeType === "diamond"
-        ? 9 + Math.random() * 4.5
-        : 8 + Math.random() * 4;
-      const cycle = prestigeType === "diamond"
-        ? 0.98 + Math.random() * .18
-        : 1.06 + Math.random() * .22;
-      const left = anchor.left + (Math.random() * 2 - 1) * .7;
-      const top = anchor.top + (Math.random() * 2 - 1) * .7;
-
-      glint.style.setProperty("--shirt-glint-left", `${left.toFixed(1)}%`);
-      glint.style.setProperty("--shirt-glint-top", `${top.toFixed(1)}%`);
+      const size = prestigeType === "diamond" ? 9 + Math.random() * 4.5 : 8 + Math.random() * 4;
+      const cycle = prestigeType === "diamond" ? 0.98 + Math.random() * .18 : 1.06 + Math.random() * .22;
+      glint.style.setProperty("--shirt-glint-left", `${(anchor.left + (Math.random() * 2 - 1) * .7).toFixed(1)}%`);
+      glint.style.setProperty("--shirt-glint-top", `${(anchor.top + (Math.random() * 2 - 1) * .7).toFixed(1)}%`);
       glint.style.setProperty("--shirt-glint-size", `${size.toFixed(1)}px`);
       glint.style.setProperty("--shirt-glint-delay", `${(-Math.random() * cycle).toFixed(2)}s`);
       glint.style.setProperty("--shirt-glint-cycle", `${cycle.toFixed(2)}s`);
@@ -3949,6 +3929,40 @@
       glints.push(glint);
     }
     return glints;
+  }
+
+  function createPrestigeSwimGlints(duck, prestigeType) {
+    const wrap = document.createElement("span");
+    wrap.className = "prestige-swim-glints";
+    wrap.setAttribute("aria-hidden", "true");
+
+    const facingRight = duck.dataset.facing === "right";
+    const anchors = facingRight
+      ? [
+          { name: "front", left: 26, top: 62 },
+          { name: "back", left: 67, top: 37 },
+          { name: "low", left: 52, top: 82 }
+        ]
+      : [
+          { name: "front", left: 74, top: 62 },
+          { name: "back", left: 33, top: 37 },
+          { name: "low", left: 48, top: 82 }
+        ];
+
+    for (const anchor of anchors) {
+      const glint = document.createElement("span");
+      glint.className = `prestige-shirt-glint prestige-shirt-glint-${prestigeType} prestige-shirt-glint-${anchor.name}`;
+      const size = prestigeType === "diamond" ? 9 + Math.random() * 4.5 : 8 + Math.random() * 4;
+      const cycle = prestigeType === "diamond" ? 0.98 + Math.random() * .18 : 1.06 + Math.random() * .22;
+      glint.style.setProperty("--shirt-glint-left", `${anchor.left}%`);
+      glint.style.setProperty("--shirt-glint-top", `${anchor.top}%`);
+      glint.style.setProperty("--shirt-glint-size", `${size.toFixed(1)}px`);
+      glint.style.setProperty("--shirt-glint-delay", `${(-Math.random() * cycle).toFixed(2)}s`);
+      glint.style.setProperty("--shirt-glint-cycle", `${cycle.toFixed(2)}s`);
+      glint.style.setProperty("--shirt-glint-rotate", `${Math.round(Math.random() * 45)}deg`);
+      wrap.appendChild(glint);
+    }
+    return wrap;
   }
 
   function buildEntryVisual(duck, frameIndex = 1) {
@@ -3978,7 +3992,7 @@
       entryPrestige.style.setProperty("--prestige-cycle", `${prestigeType === "diamond" ? 2.45 + Math.random() * .65 : 3.15 + Math.random() * .8}s`);
 
       stack.appendChild(entryPrestige);
-      for (const glint of createPrestigeShirtGlints(prestigeType, "walk")) stack.appendChild(glint);
+      for (const glint of createPrestigeWalkGlints(prestigeType)) stack.appendChild(glint);
     }
 
     appendEntryImage(stack, "entry-body", walkBodySrc(tone, presentation));
@@ -4103,7 +4117,7 @@
     body.alt = "";
 
     let prestigeSheen = null;
-    let prestigeGlints = null;
+    let prestigeSwimGlints = null;
     if (["golden", "diamond"].includes(duck.dataset.duckType)) {
       const prestigeType = duck.dataset.duckType;
       prestigeSheen = document.createElement("span");
@@ -4111,11 +4125,10 @@
       prestigeSheen.setAttribute("aria-hidden", "true");
       prestigeSheen.style.setProperty("--prestige-delay", `${(-Math.random() * 4.5).toFixed(2)}s`);
       prestigeSheen.style.setProperty("--prestige-cycle", `${prestigeType === "diamond" ? 2.45 + Math.random() * .65 : 3.15 + Math.random() * .8}s`);
-      prestigeGlints = createPrestigeShirtGlints(prestigeType, "swim");
+      prestigeSwimGlints = createPrestigeSwimGlints(duck, prestigeType);
 
-      // v0.169: the dotted shirt texture is gone. Walking and swimming prestige
-      // now use a small number of real trail-style shirt glints, which read much
-      // better at pond scale without returning to the old expensive sparkle field.
+      // v0.174: swimming prestige glints live outside the flipped swim stack so
+      // their front/back positions remain predictable when the duck changes facing.
     }
 
     const hairSrc = visualHairSrc(duck, "swim");
@@ -4192,9 +4205,6 @@
 
     stack.append(wingBack, body, wake);
     if (prestigeSheen) stack.appendChild(prestigeSheen);
-    if (prestigeGlints) {
-      for (const glint of prestigeGlints) stack.appendChild(glint);
-    }
     if (showHair) stack.appendChild(hair);
     stack.appendChild(face);
     if (duckHasFlamingo(duck)) stack.appendChild(flamingo);
@@ -4206,6 +4216,7 @@
     // arm, the bat is behind the gripping front wing so the grip reads cleanly.
     stack.appendChild(fightArm);
     visual.appendChild(stack);
+    if (prestigeSwimGlints) visual.appendChild(prestigeSwimGlints);
 
     duck.dataset.face = faceName;
   }

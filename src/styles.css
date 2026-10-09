@@ -672,6 +672,13 @@ body {
   content: none;
 }
 
+.prestige-swim-glints {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+}
+
 .prestige-shirt-glint {
   position: absolute;
   z-index: 8;
