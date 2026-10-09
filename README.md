@@ -1,8 +1,15 @@
-# Duck Pond – v0.166
+# Duck Pond – v0.167
 
 
 
 
+
+## v0.167 – Dedicated Prestige Shirt Glint
+
+- Replaces the clipped v0.166 shirt flash with one dedicated trail-style cross glint per Golden/Diamond duck.
+- The glint sits on the shirt for both walking and swimming and can extend slightly outside the shirt mask at peak size so it remains visible at pond scale.
+- Golden and Diamond movement trails are unchanged; no trail is added while walking.
+- Keeps the low-cost prestige architecture: one shimmer surface plus one glint element per prestige duck.
 
 ## v0.166 – Trail-Style Shirt Glint
 
