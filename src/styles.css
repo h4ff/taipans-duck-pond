@@ -688,13 +688,13 @@ body {
 .prestige-shirt-glint {
   position: absolute;
   z-index: 8;
-  width: 12%;
-  aspect-ratio: 1 / 1;
+  width: var(--shirt-glint-size, 11px);
+  height: var(--shirt-glint-size, 11px);
   pointer-events: none;
   opacity: 0;
   transform-origin: 50% 50%;
   transform: translate(-50%, -50%) rotate(var(--shirt-glint-rotate, 0deg)) scale(.25);
-  animation: prestige-shirt-glint-pop var(--shirt-glint-cycle, 3.8s) ease-out var(--shirt-glint-delay, 0s) infinite;
+  animation: prestige-shirt-glint-pop var(--shirt-glint-cycle, 1.7s) ease-out var(--shirt-glint-delay, 0s) infinite;
 }
 
 .prestige-shirt-glint::before,
@@ -723,7 +723,6 @@ body {
 .prestige-shirt-glint-diamond {
   --shirt-glint-color: rgba(255,255,255,1);
   --shirt-glint-shadow: rgba(210,243,255,.98);
-  width: 14%;
 }
 
 .prestige-shirt-glint-swim {
@@ -737,11 +736,12 @@ body {
 }
 
 @keyframes prestige-shirt-glint-pop {
-  0%, 68%, 100% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--shirt-glint-rotate, 0deg)) scale(.25); }
-  72% { opacity: .18; transform: translate(-50%, -50%) rotate(var(--shirt-glint-rotate, 0deg)) scale(.38); }
-  75% { opacity: 1; transform: translate(-50%, -50%) rotate(var(--shirt-glint-rotate, 0deg)) scale(1.18); }
-  80% { opacity: .78; transform: translate(-50%, -50%) rotate(calc(var(--shirt-glint-rotate, 0deg) + 13deg)) scale(.9); }
-  86% { opacity: 0; transform: translate(-50%, -50%) rotate(calc(var(--shirt-glint-rotate, 0deg) + 24deg)) scale(.3); }
+  0% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--shirt-glint-rotate, 0deg)) scale(.25); }
+  8% { opacity: .35; transform: translate(-50%, -50%) rotate(var(--shirt-glint-rotate, 0deg)) scale(.45); }
+  14% { opacity: 1; transform: translate(-50%, -50%) rotate(var(--shirt-glint-rotate, 0deg)) scale(1.15); }
+  27% { opacity: .92; transform: translate(-50%, -50%) rotate(calc(var(--shirt-glint-rotate, 0deg) + 8deg)) scale(1); }
+  42% { opacity: 0; transform: translate(-50%, -50%) rotate(calc(var(--shirt-glint-rotate, 0deg) + 24deg)) scale(.25); }
+  43%, 100% { opacity: 0; transform: translate(-50%, -50%) rotate(calc(var(--shirt-glint-rotate, 0deg) + 24deg)) scale(.25); }
 }
 
 /* Walking prestige keeps the v0.156 shirt alignment, but now uses the same

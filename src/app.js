@@ -3910,9 +3910,20 @@
     const glint = document.createElement("span");
     glint.className = `prestige-shirt-glint prestige-shirt-glint-${prestigeType} prestige-shirt-glint-${mode}`;
     glint.setAttribute("aria-hidden", "true");
-    glint.style.setProperty("--shirt-glint-delay", `${(-Math.random() * 4.2).toFixed(2)}s`);
-    glint.style.setProperty("--shirt-glint-cycle", `${prestigeType === "diamond" ? 2.35 + Math.random() * .75 : 3.0 + Math.random() * .95}s`);
-    glint.style.setProperty("--shirt-glint-rotate", `${Math.round(Math.random() * 32 - 16)}deg`);
+
+    // v0.168: use the same readable pixel scale and fast pop language as the
+    // movement trail, while retaining only one shirt-glint node per prestige duck.
+    const size = prestigeType === "diamond"
+      ? 10.5 + Math.random() * 5.5
+      : 9 + Math.random() * 5;
+    const cycle = prestigeType === "diamond"
+      ? 1.25 + Math.random() * .35
+      : 1.55 + Math.random() * .4;
+
+    glint.style.setProperty("--shirt-glint-size", `${size.toFixed(1)}px`);
+    glint.style.setProperty("--shirt-glint-delay", `${(-Math.random() * cycle).toFixed(2)}s`);
+    glint.style.setProperty("--shirt-glint-cycle", `${cycle.toFixed(2)}s`);
+    glint.style.setProperty("--shirt-glint-rotate", `${Math.round(Math.random() * 45)}deg`);
     return glint;
   }
 
