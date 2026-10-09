@@ -3,6 +3,9 @@
 
   const WORLD_WIDTH = 1672;
   const WORLD_HEIGHT = 941;
+  // 2026/27 club season Round 1 week. Keep the selector anchored to the season
+  // rather than advancing forever with the calendar when no result data exists.
+  const CLUB_SEASON_FIRST_WEEK_START = "2026-09-28";
 
   const sceneFrame = document.getElementById("sceneFrame");
   const scene = document.getElementById("scene");
@@ -3929,18 +3932,6 @@
       entryPrestige.style.setProperty("--prestige-delay", `${(-Math.random() * 4.5).toFixed(2)}s`);
       entryPrestige.style.setProperty("--prestige-cycle", `${prestigeType === "diamond" ? 3.0 + Math.random() * .8 : 4.0 + Math.random() * 1.0}s`);
 
-      const glitterCount = prestigeType === "diamond" ? 9 : 7;
-      for (let i = 0; i < glitterCount; i++) {
-        const glitter = document.createElement("i");
-        glitter.className = "entry-prestige-glitter";
-        glitter.style.setProperty("--glitter-x", `${39 + Math.random() * 24}%`);
-        glitter.style.setProperty("--glitter-y", `${45 + Math.random() * 21}%`);
-        glitter.style.setProperty("--glitter-size", `${(prestigeType === "diamond" ? 3.8 + Math.random() * 4.8 : 3.0 + Math.random() * 3.8).toFixed(1)}px`);
-        glitter.style.setProperty("--glitter-delay", `${(-Math.random() * 3.8).toFixed(2)}s`);
-        glitter.style.setProperty("--glitter-speed", `${(prestigeType === "diamond" ? 1.55 + Math.random() * .9 : 1.9 + Math.random() * 1.15).toFixed(2)}s`);
-        glitter.style.setProperty("--glitter-rotate", `${Math.round(Math.random() * 55)}deg`);
-        entryPrestige.appendChild(glitter);
-      }
       stack.appendChild(entryPrestige);
     }
 
@@ -4074,21 +4065,9 @@
       prestigeSheen.style.setProperty("--prestige-delay", `${(-Math.random() * 4.5).toFixed(2)}s`);
       prestigeSheen.style.setProperty("--prestige-cycle", `${prestigeType === "diamond" ? 3.0 + Math.random() * .8 : 4.0 + Math.random() * 1.0}s`);
 
-      // Prestige shirts remain readable at pond scale; walking uses its own masked layer.
-      // Independent glitter points keep the shirt alive between the broader
-      // reflective sweeps without turning the whole duck into a glow effect.
-      const glitterCount = prestigeType === "diamond" ? 9 : 7;
-      for (let i = 0; i < glitterCount; i++) {
-        const glitter = document.createElement("i");
-        glitter.className = "prestige-glitter";
-        glitter.style.setProperty("--glitter-x", `${27 + Math.random() * 36}%`);
-        glitter.style.setProperty("--glitter-y", `${54 + Math.random() * 22}%`);
-        glitter.style.setProperty("--glitter-size", `${(prestigeType === "diamond" ? 3.8 + Math.random() * 4.8 : 3.0 + Math.random() * 3.8).toFixed(1)}px`);
-        glitter.style.setProperty("--glitter-delay", `${(-Math.random() * 3.8).toFixed(2)}s`);
-        glitter.style.setProperty("--glitter-speed", `${(prestigeType === "diamond" ? 1.55 + Math.random() * .9 : 1.9 + Math.random() * 1.15).toFixed(2)}s`);
-        glitter.style.setProperty("--glitter-rotate", `${Math.round(Math.random() * 55)}deg`);
-        prestigeSheen.appendChild(glitter);
-      }
+      // v0.164: one clipped prestige surface now supplies the shirt glitter;
+      // CSS pseudo-elements provide the occasional shimmer/starburst without
+      // creating 7-9 independently animated DOM nodes per prestige duck.
     }
 
     const hairSrc = visualHairSrc(duck, "swim");
@@ -4894,25 +4873,38 @@
   function populateWeekSelect() {
     if (!weekSelect) return;
     weekSelect.replaceChildren();
-    const currentMonday = mostRecentMonday(new Date());
-    const earliestEvent = DUCK_EVENTS.reduce((earliest, event) => !earliest || event.date < earliest ? event.date : earliest, "");
-    const latestEvent = DUCK_EVENTS.reduce((latest, event) => !latest || event.date > latest ? event.date : latest, "");
-    const earliestMonday = earliestEvent ? mostRecentMonday(localDateFromIso(earliestEvent)) : currentMonday;
-    // To include an event in a playback week we need the Monday immediately
-    // AFTER its Monday-Sunday club week (the dropdown is the as-at marker).
-    const latestEventWeekMonday = latestEvent ? mostRecentMonday(localDateFromIso(latestEvent)) : currentMonday;
-    const latestMarkerMonday = latestEvent ? addLocalDays(latestEventWeekMonday, 7) : currentMonday;
-    const firstMonday = latestMarkerMonday > currentMonday ? latestMarkerMonday : currentMonday;
 
-    // Show every relevant Monday marker across the loaded dataset. If the
-    // loaded data extends into a later club week than the current marker, use
-    // that latest marker by default so the newest entrants are not hidden.
-    let monday = firstMonday;
+    // The selector value remains the Monday immediately AFTER the displayed
+    // Monday-Sunday club week. Unlike the old implementation, the calendar
+    // date is not used to extend the selector. The season starts with Round 1
+    // (28 Sep-4 Oct 2026); later weeks are added only as event data reaches them.
+    const seasonFirstMarker = addLocalDays(CLUB_SEASON_FIRST_WEEK_START, 7);
+    const markerForEventDate = eventDate =>
+      addLocalDays(mostRecentMonday(localDateFromIso(eventDate)), 7);
+
+    const earliestEvent = DUCK_EVENTS.reduce(
+      (earliest, event) => !earliest || event.date < earliest ? event.date : earliest,
+      ""
+    );
+    const latestEvent = DUCK_EVENTS.reduce(
+      (latest, event) => !latest || event.date > latest ? event.date : latest,
+      ""
+    );
+
+    const earliestDataMarker = earliestEvent ? markerForEventDate(earliestEvent) : "";
+    const latestDataMarker = latestEvent ? markerForEventDate(latestEvent) : "";
+    const lastMarker = latestDataMarker && latestDataMarker > seasonFirstMarker
+      ? latestDataMarker
+      : seasonFirstMarker;
+    const firstMarker = earliestDataMarker && earliestDataMarker < seasonFirstMarker
+      ? earliestDataMarker
+      : seasonFirstMarker;
+
     const options = [];
+    let monday = lastMarker;
     for (let guard = 0; guard < 60; guard++) {
-      const context = weekContextForMonday(monday);
-      options.push(context);
-      if (monday <= earliestMonday) break;
+      options.push(weekContextForMonday(monday));
+      if (monday <= firstMarker) break;
       monday = addLocalDays(monday, -7);
     }
 
@@ -4922,10 +4914,11 @@
       option.textContent = formatClubWeekRange(context.start, context.end);
       weekSelect.appendChild(option);
     }
-    const preferredMonday = latestMarkerMonday > currentMonday ? latestMarkerMonday : currentMonday;
-    weekSelect.value = [...weekSelect.options].some(option => option.value === preferredMonday)
-      ? preferredMonday
-      : options[0]?.monday || "";
+
+    // With no events this selects Round 1. Once event data appears, the latest
+    // populated club week becomes the default while all intervening washout
+    // weeks remain available as zero-entry weeks.
+    weekSelect.value = lastMarker;
     updateWeekSummary();
   }
 

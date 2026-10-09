@@ -609,16 +609,90 @@ body {
   pointer-events: none;
   overflow: hidden;
   clip-path: polygon(23% 59%, 45% 49.5%, 66.8% 53%, 66.4% 66.5%, 58% 75.5%, 46% 79%, 31% 79.5%, 22.5% 71.5%);
-  opacity: 1;
-  mix-blend-mode: screen;
+  opacity: .96;
 }
 
-/* v0.148: keep the glitter field visible during walking/entering too, so
-   Gold/Diamond prestige reads on the pier as well as in the pond. The clip-path above keeps
-   every effect on the shirt rather than glowing the whole duck. */
+/* v0.164 prestige performance pass: one clipped surface per shirt, plus cheap
+   pseudo-element shimmer/starburst. No per-sparkle DOM nodes, filters or blend modes. */
+.prestige-golden {
+  background:
+    radial-gradient(circle at 28% 64%, rgba(255,250,176,.95) 0 1.1%, transparent 1.7%),
+    radial-gradient(circle at 42% 55%, rgba(255,255,226,.9) 0 .9%, transparent 1.5%),
+    radial-gradient(circle at 54% 69%, rgba(255,218,70,.92) 0 1.1%, transparent 1.8%),
+    radial-gradient(circle at 61% 58%, rgba(255,252,202,.82) 0 .8%, transparent 1.4%),
+    radial-gradient(circle at 36% 74%, rgba(255,210,49,.78) 0 .9%, transparent 1.5%);
+}
 
-/* v0.156: tighten the walking prestige overlay so the glitter sits more cleanly
-   on the side-view shirt and stops reading as a boxy panel. */
+.prestige-diamond {
+  background:
+    radial-gradient(circle at 27% 63%, rgba(255,255,255,1) 0 1.2%, transparent 1.8%),
+    radial-gradient(circle at 39% 54%, rgba(213,242,255,.98) 0 1.1%, transparent 1.7%),
+    radial-gradient(circle at 51% 70%, rgba(255,255,255,.95) 0 1.3%, transparent 1.9%),
+    radial-gradient(circle at 61% 58%, rgba(218,245,255,.94) 0 1%, transparent 1.6%),
+    radial-gradient(circle at 34% 75%, rgba(255,255,255,.9) 0 1%, transparent 1.6%),
+    radial-gradient(circle at 57% 76%, rgba(201,237,255,.86) 0 .9%, transparent 1.5%);
+}
+
+.prestige-shirt-sheen::before,
+.entry-prestige-live::before {
+  content: "";
+  position: absolute;
+  left: -58%;
+  top: 38%;
+  width: 34%;
+  height: 44%;
+  border-radius: 50%;
+  opacity: 0;
+  background: linear-gradient(108deg,
+    transparent 0%,
+    rgba(255,255,255,.08) 25%,
+    rgba(255,255,255,.9) 48%,
+    rgba(255,248,194,.45) 58%,
+    transparent 100%);
+  transform: translate3d(0,0,0) skewX(-14deg);
+  animation: prestige-lite-sweep var(--prestige-cycle, 4.6s) ease-in-out var(--prestige-delay, 0s) infinite;
+}
+
+.prestige-diamond::before,
+.entry-prestige-diamond::before {
+  background: linear-gradient(108deg,
+    transparent 0%,
+    rgba(205,239,255,.15) 23%,
+    rgba(255,255,255,.98) 47%,
+    rgba(219,245,255,.72) 58%,
+    transparent 100%);
+}
+
+.prestige-shirt-sheen::after,
+.entry-prestige-live::after {
+  content: "";
+  position: absolute;
+  left: 47%;
+  top: 59%;
+  width: 11%;
+  aspect-ratio: 1 / 1;
+  opacity: 0;
+  background:
+    linear-gradient(90deg, transparent 45%, rgba(255,255,255,.94) 47% 53%, transparent 55%),
+    linear-gradient(0deg, transparent 45%, rgba(255,255,255,.94) 47% 53%, transparent 55%),
+    linear-gradient(45deg, transparent 47%, rgba(255,255,255,.58) 49% 51%, transparent 53%),
+    linear-gradient(-45deg, transparent 47%, rgba(255,255,255,.58) 49% 51%, transparent 53%);
+  transform: scale(.25) rotate(0deg);
+  animation: prestige-lite-star var(--prestige-cycle, 4.6s) ease-out var(--prestige-delay, 0s) infinite;
+}
+
+.prestige-diamond::after,
+.entry-prestige-diamond::after {
+  width: 14%;
+  background:
+    linear-gradient(90deg, transparent 44%, rgba(255,255,255,1) 47% 53%, transparent 56%),
+    linear-gradient(0deg, transparent 44%, rgba(255,255,255,1) 47% 53%, transparent 56%),
+    linear-gradient(45deg, transparent 47%, rgba(215,244,255,.82) 49% 51%, transparent 53%),
+    linear-gradient(-45deg, transparent 47%, rgba(215,244,255,.82) 49% 51%, transparent 53%);
+}
+
+/* Walking prestige keeps the v0.156 shirt alignment, but now uses the same
+   lightweight static glitter texture + pseudo-element flash as swimming. */
 .entry-prestige-live {
   position: absolute;
   inset: 0;
@@ -626,7 +700,6 @@ body {
   pointer-events: none;
   overflow: hidden;
   opacity: 1 !important;
-  mix-blend-mode: screen;
   clip-path: polygon(38% 42%, 48.5% 40.5%, 60.5% 41.5%, 66.5% 45.5%, 67.5% 52.5%, 65.5% 60.5%, 60.5% 66.5%, 53% 69.5%, 44% 69.8%, 37.8% 66.8%, 35.2% 60.2%, 35.4% 48%);
 }
 .entry-stack.entry-female .entry-prestige-live {
@@ -634,214 +707,41 @@ body {
 }
 .entry-prestige-golden {
   background:
-    radial-gradient(circle, rgba(255,252,220,.95) 0 1.1px, rgba(255,208,50,.82) 1.2px 1.9px, transparent 2.1px) 2px 2px / 11px 9px,
-    radial-gradient(circle, rgba(255,255,255,.75) 0 .8px, transparent 1.5px) 6px 5px / 14px 11px;
-  filter: drop-shadow(0 0 2px rgba(255,206,42,.72));
-  animation: entry-prestige-drift 2.4s linear infinite;
+    radial-gradient(circle at 41% 49%, rgba(255,250,176,.95) 0 1.15%, transparent 1.8%),
+    radial-gradient(circle at 50% 58%, rgba(255,255,226,.9) 0 .9%, transparent 1.5%),
+    radial-gradient(circle at 59% 48%, rgba(255,218,70,.92) 0 1.05%, transparent 1.7%),
+    radial-gradient(circle at 44% 65%, rgba(255,210,49,.78) 0 .9%, transparent 1.5%);
 }
 .entry-prestige-diamond {
   background:
-    radial-gradient(circle, rgba(255,255,255,.96) 0 1.15px, rgba(210,240,255,.9) 1.25px 1.95px, transparent 2.2px) 2px 1px / 10px 9px,
-    radial-gradient(circle, rgba(255,255,255,.75) 0 .8px, transparent 1.5px) 6px 5px / 13px 11px;
-  filter: drop-shadow(0 0 3px rgba(225,247,255,.84));
-  animation: entry-prestige-drift 1.8s linear infinite;
+    radial-gradient(circle at 40% 49%, rgba(255,255,255,1) 0 1.2%, transparent 1.8%),
+    radial-gradient(circle at 49% 58%, rgba(213,242,255,.98) 0 1.1%, transparent 1.7%),
+    radial-gradient(circle at 59% 48%, rgba(255,255,255,.95) 0 1.25%, transparent 1.9%),
+    radial-gradient(circle at 45% 65%, rgba(201,237,255,.9) 0 1%, transparent 1.6%),
+    radial-gradient(circle at 61% 62%, rgba(255,255,255,.88) 0 .9%, transparent 1.5%);
 }
 .entry-prestige-live::before {
-  content: "";
-  position: absolute;
   top: 39%;
-  left: -46%;
-  width: 36%;
   height: 38%;
-  border-radius: 50%;
-  background: linear-gradient(108deg, transparent 0%, rgba(255,255,255,.18) 18%, rgba(255,255,255,.9) 46%, rgba(255,247,190,.78) 58%, transparent 100%);
-  filter: drop-shadow(0 0 5px rgba(255,255,255,.92));
-  transform: skewX(-14deg);
-  animation: entry-prestige-sweep var(--prestige-cycle, 4.2s) ease-in-out var(--prestige-delay, 0s) infinite;
 }
-.entry-prestige-diamond::before {
-  width: 41%;
-  background: linear-gradient(108deg, transparent 0%, rgba(205,239,255,.32) 18%, rgba(255,255,255,.92) 45%, rgba(218,244,255,.92) 58%, transparent 100%);
-}
-.entry-prestige-glitter {
-  position: absolute;
-  left: var(--glitter-x);
-  top: var(--glitter-y);
-  width: var(--glitter-size);
-  height: var(--glitter-size);
-  opacity: 0;
-  transform: translate(-50%,-50%) rotate(var(--glitter-rotate)) scale(.2);
-  animation: entry-prestige-pop var(--glitter-speed) ease-in-out var(--glitter-delay) infinite;
-}
-.entry-prestige-glitter::before,
-.entry-prestige-glitter::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 0;
-  width: 1.4px;
-  height: 100%;
-  border-radius: 999px;
-  background: rgba(255,255,255,1);
-  box-shadow: 0 0 4px rgba(255,255,255,1);
-  transform: translateX(-50%);
-}
-.entry-prestige-glitter::after { transform: translateX(-50%) rotate(90deg); }
-.entry-prestige-golden .entry-prestige-glitter { filter: drop-shadow(0 0 3px rgba(255,201,30,1)); }
-.entry-prestige-golden .entry-prestige-glitter::before,
-.entry-prestige-golden .entry-prestige-glitter::after { background: rgba(255,247,170,1); }
-.entry-prestige-diamond .entry-prestige-glitter:nth-child(3n) { filter: drop-shadow(0 0 6px rgba(220,247,255,1)); }
-@keyframes entry-prestige-drift {
-  0% { background-position: 3px 2px, 8px 6px; }
-  50% { background-position: 10px 6px, 2px 10px; }
-  100% { background-position: 16px 12px, -7px 18px; }
-}
-@keyframes entry-prestige-pop {
-  0%, 34%, 100% { opacity: .08; transform: translate(-50%,-50%) rotate(var(--glitter-rotate)) scale(.25); }
-  46% { opacity: .75; transform: translate(-50%,-50%) rotate(var(--glitter-rotate)) scale(.9); }
-  52% { opacity: 1; transform: translate(-50%,-50%) rotate(calc(var(--glitter-rotate) + 18deg)) scale(1.45); }
-  64% { opacity: .22; transform: translate(-50%,-50%) rotate(calc(var(--glitter-rotate) + 34deg)) scale(.4); }
-}
-@keyframes entry-prestige-sweep {
-  0%, 48% { left: -48%; opacity: 0; }
-  55% { opacity: .35; }
-  64% { opacity: 1; }
-  78% { left: 108%; opacity: 1; }
-  84%, 100% { left: 108%; opacity: 0; }
+.entry-prestige-live::after {
+  left: 51%;
+  top: 53%;
 }
 
-.prestige-golden {
-  background:
-    radial-gradient(circle, rgba(255,250,180,.92) 0 1px, rgba(255,216,82,.55) 1.1px 1.7px, transparent 2px) 3px 1px / 12px 10px,
-    radial-gradient(circle, rgba(255,255,226,.82) 0 .8px, transparent 1.5px) 8px 5px / 15px 13px;
-  filter: drop-shadow(0 0 2px rgba(255,216,68,.46));
-  animation: prestige-glitter-drift 2.8s linear infinite;
+@keyframes prestige-lite-sweep {
+  0%, 54% { transform: translate3d(0,0,0) skewX(-14deg); opacity: 0; }
+  60% { opacity: .28; }
+  68% { opacity: .92; }
+  80% { transform: translate3d(470%,0,0) skewX(-14deg); opacity: .78; }
+  86%, 100% { transform: translate3d(470%,0,0) skewX(-14deg); opacity: 0; }
 }
 
-.prestige-diamond {
-  background:
-    radial-gradient(circle, rgba(255,255,255,1) 0 1.2px, rgba(211,240,255,.88) 1.3px 1.9px, transparent 2.2px) 2px 1px / 10px 9px,
-    radial-gradient(circle, rgba(255,255,255,.94) 0 1px, transparent 1.7px) 7px 5px / 14px 12px;
-  filter: drop-shadow(0 0 3px rgba(225,247,255,.72));
-  animation: prestige-glitter-drift 2.05s linear infinite;
-}
-
-.prestige-shirt-sheen::before {
-  content: "";
-  position: absolute;
-  top: 42%;
-  left: -46%;
-  width: 40%;
-  height: 48%;
-  border-radius: 50%;
-  background: linear-gradient(108deg,
-    rgba(255,255,255,0) 0%,
-    rgba(255,255,255,.22) 22%,
-    rgba(255,255,255,.98) 47%,
-    rgba(255,247,196,.72) 58%,
-    rgba(255,255,255,0) 100%);
-  filter: blur(.35px) drop-shadow(0 0 5px rgba(255,255,255,.95));
-  transform: skewX(-14deg);
-  animation: prestige-mirror-sweep var(--prestige-cycle, 4.2s) ease-in-out var(--prestige-delay, 0s) infinite;
-}
-
-.prestige-shirt-sheen::after {
-  content: "";
-  position: absolute;
-  width: 12%;
-  aspect-ratio: 1 / 1;
-  left: 45%;
-  top: 58%;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255,255,255,1) 0 11%, rgba(255,255,255,.82) 16%, rgba(255,236,133,.5) 30%, rgba(255,255,255,0) 62%);
-  filter: drop-shadow(0 0 5px rgba(255,255,255,1));
-  transform: scale(.2);
-  opacity: 0;
-  animation: prestige-hotspot var(--prestige-cycle, 4.2s) ease-out var(--prestige-delay, 0s) infinite;
-}
-
-.prestige-diamond::before {
-  width: 47%;
-  background: linear-gradient(108deg,
-    rgba(255,255,255,0) 0%,
-    rgba(202,236,255,.35) 20%,
-    rgba(255,255,255,1) 45%,
-    rgba(221,244,255,.95) 57%,
-    rgba(255,255,255,0) 100%);
-  filter: blur(.18px) drop-shadow(0 0 7px rgba(255,255,255,1));
-}
-
-.prestige-glitter {
-  position: absolute;
-  left: var(--glitter-x);
-  top: var(--glitter-y);
-  width: var(--glitter-size);
-  height: var(--glitter-size);
-  opacity: 0;
-  transform: translate(-50%, -50%) rotate(var(--glitter-rotate)) scale(.2);
-  animation: prestige-glitter-pop var(--glitter-speed) ease-in-out var(--glitter-delay) infinite;
-}
-
-.prestige-glitter::before,
-.prestige-glitter::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 0;
-  width: 1.2px;
-  height: 100%;
-  border-radius: 999px;
-  background: rgba(255,255,255,.98);
-  box-shadow: 0 0 3px rgba(255,255,255,.95);
-  transform: translateX(-50%);
-}
-
-.prestige-glitter::after {
-  transform: translateX(-50%) rotate(90deg);
-}
-
-.prestige-golden .prestige-glitter {
-  filter: drop-shadow(0 0 2.5px rgba(255,208,57,.95));
-}
-
-.prestige-golden .prestige-glitter::before,
-.prestige-golden .prestige-glitter::after {
-  background: rgba(255,248,180,1);
-  box-shadow: 0 0 4px rgba(255,200,31,.95);
-}
-
-.prestige-diamond .prestige-glitter:nth-child(3n) {
-  --glitter-size: 9px;
-  filter: drop-shadow(0 0 5px rgba(221,247,255,1));
-}
-
-@keyframes prestige-glitter-drift {
-  0% { background-position: 3px 1px, 8px 5px; }
-  50% { background-position: 9px 5px, 2px 9px; }
-  100% { background-position: 15px 11px, -6px 17px; }
-}
-
-@keyframes prestige-glitter-pop {
-  0%, 36%, 100% { opacity: .06; transform: translate(-50%, -50%) rotate(var(--glitter-rotate)) scale(.25); }
-  43% { opacity: .5; transform: translate(-50%, -50%) rotate(var(--glitter-rotate)) scale(.65); }
-  50% { opacity: 1; transform: translate(-50%, -50%) rotate(calc(var(--glitter-rotate) + 16deg)) scale(1.35); }
-  58% { opacity: .55; transform: translate(-50%, -50%) rotate(calc(var(--glitter-rotate) + 28deg)) scale(.72); }
-  67% { opacity: .1; transform: translate(-50%, -50%) rotate(calc(var(--glitter-rotate) + 38deg)) scale(.3); }
-}
-
-@keyframes prestige-mirror-sweep {
-  0%, 50% { left: -46%; opacity: 0; }
-  55% { opacity: .28; }
-  63% { opacity: 1; }
-  77% { left: 108%; opacity: .98; }
-  82%, 100% { left: 108%; opacity: 0; }
-}
-
-@keyframes prestige-hotspot {
-  0%, 58% { opacity: 0; transform: scale(.15) rotate(0deg); }
-  64% { opacity: 1; transform: scale(1.7) rotate(22deg); }
-  70% { opacity: .62; transform: scale(.9) rotate(45deg); }
-  78%, 100% { opacity: 0; transform: scale(.15) rotate(70deg); }
+@keyframes prestige-lite-star {
+  0%, 62%, 100% { opacity: 0; transform: scale(.25) rotate(0deg); }
+  68% { opacity: .95; transform: scale(1.35) rotate(18deg); }
+  74% { opacity: .35; transform: scale(.72) rotate(38deg); }
+  82% { opacity: 0; transform: scale(.3) rotate(55deg); }
 }
 
 .duck.fight-active .prestige-shirt-sheen,
