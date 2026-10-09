@@ -1,8 +1,16 @@
-# Duck Pond – v0.164
+# Duck Pond – v0.165
 
 
 
 
+
+## v0.165 – Prestige Visibility + Golden Trail
+
+- Golden and Diamond shirt prestige is brighter and easier to read at pond scale while retaining the low-cost v0.164 single-surface implementation.
+- Larger occasional star flashes are used for both walking and swimming prestige ducks.
+- Golden ducks now leave a warm gold movement trail while swimming, using the same lightweight trail architecture as Diamond.
+- Diamond movement trail behaviour remains unchanged.
+- No prestige trail is shown while walking.
 
 ## v0.164 – Lightweight Prestige + Season Week Logic
 
