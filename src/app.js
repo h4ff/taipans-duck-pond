@@ -3937,29 +3937,25 @@
     if (!wrap) return;
     const facingRight = duck.dataset.facing === "right";
 
-    // v0.178: explicit fixed swim-star anchors based on the user-marked target.
-    // When the duck faces one way, the stars should read as:
-    // - back: above the back
-    // - front: just ahead of the chest
-    // - low: rear/waterline sparkle
-    // Mirror the X positions for the opposite facing; keep Y the same.
-    const leftFacing = {
-      back: [28, 49],
-      front: [80, 56],
-      low: [16, 78]
+    // v0.179: measured directly from the user's marked swimming-duck screenshot
+    // in the original 512x512 swim-asset coordinate system.
+    // Right-facing pixels: back=(153,225), front=(462,287), low=(114,455).
+    // Left-facing X values are exact 512px mirrors; Y values remain unchanged.
+    const rightFacingPx = {
+      back: [153, 225],
+      front: [462, 287],
+      low: [114, 455]
     };
-    const rightFacing = {
-      back: [100 - leftFacing.back[0], leftFacing.back[1]],
-      front: [100 - leftFacing.front[0], leftFacing.front[1]],
-      low: [100 - leftFacing.low[0], leftFacing.low[1]]
-    };
-    const positions = facingRight ? rightFacing : leftFacing;
+    const leftFacingPx = Object.fromEntries(
+      Object.entries(rightFacingPx).map(([name, [x, y]]) => [name, [512 - x, y]])
+    );
+    const positionsPx = facingRight ? rightFacingPx : leftFacingPx;
 
-    for (const [name, [left, top]] of Object.entries(positions)) {
+    for (const [name, [x, y]] of Object.entries(positionsPx)) {
       const glint = wrap.querySelector(`.prestige-shirt-glint-${name}`);
       if (!glint) continue;
-      glint.style.setProperty("--shirt-glint-left", `${left}%`);
-      glint.style.setProperty("--shirt-glint-top", `${top}%`);
+      glint.style.setProperty("--shirt-glint-left", `${(x / 512 * 100).toFixed(4)}%`);
+      glint.style.setProperty("--shirt-glint-top", `${(y / 512 * 100).toFixed(4)}%`);
     }
   }
 

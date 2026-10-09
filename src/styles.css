@@ -677,6 +677,9 @@ body {
   inset: 0;
   z-index: 20;
   pointer-events: none;
+  /* Align this non-flipped overlay to the same 512x512 swim canvas. */
+  transform: translateY(-27%);
+  transform-origin: 50% 50%;
 }
 
 .prestige-shirt-glint {
@@ -734,6 +737,22 @@ body {
   50% { opacity: .92; transform: translate(-50%, -50%) rotate(calc(var(--shirt-glint-rotate, 0deg) + 8deg)) scale(.9); }
   100% { opacity: 0; transform: translate(-50%, -50%) rotate(calc(var(--shirt-glint-rotate, 0deg) + 24deg)) scale(.22); }
 }
+
+/* v0.176: swimming prestige uses a longer visible duty cycle so the three
+   external stars read as a glitter cluster rather than one-at-a-time flashes. */
+.prestige-swim-glints .prestige-shirt-glint {
+  animation-name: prestige-swim-glint-pop;
+}
+
+@keyframes prestige-swim-glint-pop {
+  0% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--shirt-glint-rotate, 0deg)) scale(.18); }
+  10% { opacity: .55; transform: translate(-50%, -50%) rotate(var(--shirt-glint-rotate, 0deg)) scale(.48); }
+  22% { opacity: 1; transform: translate(-50%, -50%) rotate(var(--shirt-glint-rotate, 0deg)) scale(1.08); }
+  58% { opacity: .9; transform: translate(-50%, -50%) rotate(calc(var(--shirt-glint-rotate, 0deg) + 8deg)) scale(.9); }
+  78% { opacity: .25; transform: translate(-50%, -50%) rotate(calc(var(--shirt-glint-rotate, 0deg) + 18deg)) scale(.5); }
+  100% { opacity: 0; transform: translate(-50%, -50%) rotate(calc(var(--shirt-glint-rotate, 0deg) + 24deg)) scale(.22); }
+}
+
 
 /* Walking prestige keeps the v0.156 shirt alignment, but now uses the same
    lightweight static glitter texture + pseudo-element flash as swimming. */
