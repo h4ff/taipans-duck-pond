@@ -1,10 +1,10 @@
-# Duck Pond – v0.177
+# Duck Pond – v0.178
 
 
 
 
 
-## v0.177 – Swimming Prestige Front-Star Position
+## v0.178 – Swimming Prestige Front-Star Position
 
 - Moved the shared swimming front prestige star lower and slightly farther forward so it sits beside the chest rather than over the beak.
 - Applies to Golden and Diamond swimming ducks.
