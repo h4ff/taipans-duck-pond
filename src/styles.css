@@ -743,21 +743,10 @@ body {
   clip-path: polygon(39.5% 43%, 50% 41.5%, 62% 42.5%, 68.5% 46.5%, 69.5% 53%, 67% 61.5%, 61.5% 67.5%, 53.5% 70.2%, 44.5% 70.5%, 38.5% 67.2%, 36% 60.8%, 36.5% 48.8%);
 }
 .entry-prestige-golden {
-  background:
-    linear-gradient(rgba(255,200,24,.18), rgba(255,224,74,.10)),
-    radial-gradient(circle at 41% 49%, rgba(255,251,165,1) 0 1.65%, transparent 2.45%),
-    radial-gradient(circle at 50% 58%, rgba(255,255,226,1) 0 1.3%, transparent 2.05%),
-    radial-gradient(circle at 59% 48%, rgba(255,209,34,1) 0 1.55%, transparent 2.35%),
-    radial-gradient(circle at 44% 65%, rgba(255,196,18,.94) 0 1.3%, transparent 2.0%);
+  background: linear-gradient(rgba(255,200,24,.14), rgba(255,224,74,.07));
 }
 .entry-prestige-diamond {
-  background:
-    linear-gradient(rgba(215,245,255,.18), rgba(255,255,255,.09)),
-    radial-gradient(circle at 40% 49%, rgba(255,255,255,1) 0 1.8%, transparent 2.6%),
-    radial-gradient(circle at 49% 58%, rgba(198,238,255,1) 0 1.55%, transparent 2.3%),
-    radial-gradient(circle at 59% 48%, rgba(255,255,255,1) 0 1.85%, transparent 2.7%),
-    radial-gradient(circle at 45% 65%, rgba(190,234,255,.96) 0 1.45%, transparent 2.2%),
-    radial-gradient(circle at 61% 62%, rgba(255,255,255,.96) 0 1.35%, transparent 2.05%);
+  background: linear-gradient(rgba(215,245,255,.14), rgba(255,255,255,.07));
 }
 .entry-prestige-live::before {
   top: 39%;

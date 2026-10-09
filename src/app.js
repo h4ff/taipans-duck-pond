@@ -3910,14 +3910,19 @@
     const glints = [];
     const anchors = mode === "walk"
       ? [
-          { name: "front", left: 62, top: 52 },
-          { name: "back", left: 39, top: 46 },
-          { name: "low", left: 52, top: 67 }
+          // Outside-silhouette positions: in front of chest, above the back,
+          // and underneath the body above the feet/pier line.
+          { name: "front", left: 72, top: 53 },
+          { name: "back", left: 32, top: 39 },
+          { name: "low", left: 52, top: 76 }
         ]
       : [
-          { name: "front", left: 61, top: 58 },
-          { name: "back", left: 37, top: 51 },
-          { name: "low", left: 52, top: 72 }
+          // Swimming positions mirror the trail language rather than sitting
+          // over the shirt/wing: ahead of chest, above rear/back, and just
+          // under the body above the waterline.
+          { name: "front", left: 71, top: 58 },
+          { name: "back", left: 31, top: 43 },
+          { name: "low", left: 52, top: 80 }
         ];
 
     // Gold and Diamond both get the three readable anchor points now.
@@ -3932,8 +3937,8 @@
       const cycle = prestigeType === "diamond"
         ? 0.98 + Math.random() * .18
         : 1.06 + Math.random() * .22;
-      const left = anchor.left + (Math.random() * 2 - 1) * 1.4;
-      const top = anchor.top + (Math.random() * 2 - 1) * 1.2;
+      const left = anchor.left + (Math.random() * 2 - 1) * .7;
+      const top = anchor.top + (Math.random() * 2 - 1) * .7;
 
       glint.style.setProperty("--shirt-glint-left", `${left.toFixed(1)}%`);
       glint.style.setProperty("--shirt-glint-top", `${top.toFixed(1)}%`);
