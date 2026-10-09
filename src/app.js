@@ -3930,7 +3930,7 @@
       entryPrestige.className = `entry-prestige-live entry-prestige-${prestigeType}`;
       entryPrestige.setAttribute("aria-hidden", "true");
       entryPrestige.style.setProperty("--prestige-delay", `${(-Math.random() * 4.5).toFixed(2)}s`);
-      entryPrestige.style.setProperty("--prestige-cycle", `${prestigeType === "diamond" ? 3.0 + Math.random() * .8 : 4.0 + Math.random() * 1.0}s`);
+      entryPrestige.style.setProperty("--prestige-cycle", `${prestigeType === "diamond" ? 2.45 + Math.random() * .65 : 3.15 + Math.random() * .8}s`);
 
       stack.appendChild(entryPrestige);
     }
@@ -4063,7 +4063,7 @@
       prestigeSheen.className = `prestige-shirt-sheen prestige-${prestigeType}`;
       prestigeSheen.setAttribute("aria-hidden", "true");
       prestigeSheen.style.setProperty("--prestige-delay", `${(-Math.random() * 4.5).toFixed(2)}s`);
-      prestigeSheen.style.setProperty("--prestige-cycle", `${prestigeType === "diamond" ? 3.0 + Math.random() * .8 : 4.0 + Math.random() * 1.0}s`);
+      prestigeSheen.style.setProperty("--prestige-cycle", `${prestigeType === "diamond" ? 2.45 + Math.random() * .65 : 3.15 + Math.random() * .8}s`);
 
       // v0.164: one clipped prestige surface now supplies the shirt glitter;
       // CSS pseudo-elements provide the occasional shimmer/starburst without
@@ -4159,20 +4159,24 @@
     duck.dataset.face = faceName;
   }
 
-  function spawnDiamondTrailGlint(duck) {
+  function spawnPrestigeTrailGlint(duck, type) {
     if (!duckLayer || !duck?.isConnected) return;
-    if (duck.dataset.duckType !== "diamond" || duck.dataset.motionState !== "swimming") return;
+    if (!['golden', 'diamond'].includes(type) || duck.dataset.duckType !== type) return;
+    if (duck.dataset.motionState !== "swimming") return;
     if (duck.dataset.fightActive === "true" || duck.classList.contains("snake-panic")) return;
-    if (duckLayer.querySelectorAll(".diamond-trail-glint").length >= 28) return;
+
+    const trailClass = type === "diamond" ? "diamond-trail-glint" : "golden-trail-glint";
+    const trailLimit = type === "diamond" ? 28 : 24;
+    if (duckLayer.querySelectorAll(`.${trailClass}`).length >= trailLimit) return;
 
     const pos = currentPosition(duck);
     const glint = document.createElement("span");
-    glint.className = "diamond-trail-glint";
+    glint.className = trailClass;
     glint.setAttribute("aria-hidden", "true");
     const behind = duck.dataset.facing === "right" ? -2.2 : 2.2;
     const spreadX = (Math.random() - .5) * 1.7;
     const spreadY = (Math.random() - .5) * 1.2;
-    const size = 6 + Math.random() * 7;
+    const size = type === "diamond" ? 6 + Math.random() * 7 : 5.5 + Math.random() * 6.5;
     glint.style.setProperty("--trail-size", `${size.toFixed(1)}px`);
     glint.style.setProperty("--trail-rotate", `${Math.round(Math.random() * 45)}deg`);
     setWorldPosition(glint, pos.x + behind + spreadX, pos.y + .7 + spreadY);
@@ -4180,14 +4184,25 @@
     setTimeout(() => glint.remove(), 720);
   }
 
+  function spawnDiamondTrailGlint(duck) {
+    spawnPrestigeTrailGlint(duck, "diamond");
+  }
+
+  function spawnGoldenTrailGlint(duck) {
+    spawnPrestigeTrailGlint(duck, "golden");
+  }
+
   function prestigeTrailTick() {
-    // v0.158: the Gangnam cutscene already adds several animated layers; skip
-    // decorative Diamond trail particles while it is active to reduce mobile GPU work.
+    // Trails are only for swimming prestige ducks. Walking prestige remains shirt-only.
+    // Skip decorative particles during Gangnam to keep the cutscene GPU-light.
     if (gangnamActive) return;
     for (const duck of ducks.values()) {
-      if (duck.dataset.duckType !== "diamond") continue;
       if (duck.dataset.motionState !== "swimming") continue;
-      if (Math.random() < .72) spawnDiamondTrailGlint(duck);
+      if (duck.dataset.duckType === "diamond") {
+        if (Math.random() < .72) spawnDiamondTrailGlint(duck);
+      } else if (duck.dataset.duckType === "golden") {
+        if (Math.random() < .62) spawnGoldenTrailGlint(duck);
+      }
     }
   }
 

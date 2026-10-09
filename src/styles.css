@@ -616,21 +616,23 @@ body {
    pseudo-element shimmer/starburst. No per-sparkle DOM nodes, filters or blend modes. */
 .prestige-golden {
   background:
-    radial-gradient(circle at 28% 64%, rgba(255,250,176,.95) 0 1.1%, transparent 1.7%),
-    radial-gradient(circle at 42% 55%, rgba(255,255,226,.9) 0 .9%, transparent 1.5%),
-    radial-gradient(circle at 54% 69%, rgba(255,218,70,.92) 0 1.1%, transparent 1.8%),
-    radial-gradient(circle at 61% 58%, rgba(255,252,202,.82) 0 .8%, transparent 1.4%),
-    radial-gradient(circle at 36% 74%, rgba(255,210,49,.78) 0 .9%, transparent 1.5%);
+    linear-gradient(rgba(255,200,24,.18), rgba(255,224,74,.10)),
+    radial-gradient(circle at 28% 64%, rgba(255,251,165,1) 0 1.7%, transparent 2.5%),
+    radial-gradient(circle at 42% 55%, rgba(255,255,225,1) 0 1.35%, transparent 2.1%),
+    radial-gradient(circle at 54% 69%, rgba(255,209,34,1) 0 1.65%, transparent 2.5%),
+    radial-gradient(circle at 61% 58%, rgba(255,250,182,.96) 0 1.2%, transparent 1.9%),
+    radial-gradient(circle at 36% 74%, rgba(255,196,18,.92) 0 1.3%, transparent 2.0%);
 }
 
 .prestige-diamond {
   background:
-    radial-gradient(circle at 27% 63%, rgba(255,255,255,1) 0 1.2%, transparent 1.8%),
-    radial-gradient(circle at 39% 54%, rgba(213,242,255,.98) 0 1.1%, transparent 1.7%),
-    radial-gradient(circle at 51% 70%, rgba(255,255,255,.95) 0 1.3%, transparent 1.9%),
-    radial-gradient(circle at 61% 58%, rgba(218,245,255,.94) 0 1%, transparent 1.6%),
-    radial-gradient(circle at 34% 75%, rgba(255,255,255,.9) 0 1%, transparent 1.6%),
-    radial-gradient(circle at 57% 76%, rgba(201,237,255,.86) 0 .9%, transparent 1.5%);
+    linear-gradient(rgba(215,245,255,.18), rgba(255,255,255,.09)),
+    radial-gradient(circle at 27% 63%, rgba(255,255,255,1) 0 1.8%, transparent 2.6%),
+    radial-gradient(circle at 39% 54%, rgba(198,238,255,1) 0 1.55%, transparent 2.3%),
+    radial-gradient(circle at 51% 70%, rgba(255,255,255,1) 0 1.9%, transparent 2.7%),
+    radial-gradient(circle at 61% 58%, rgba(208,242,255,1) 0 1.45%, transparent 2.2%),
+    radial-gradient(circle at 34% 75%, rgba(255,255,255,.98) 0 1.4%, transparent 2.1%),
+    radial-gradient(circle at 57% 76%, rgba(190,234,255,.96) 0 1.3%, transparent 2.0%);
 }
 
 .prestige-shirt-sheen::before,
@@ -669,7 +671,7 @@ body {
   position: absolute;
   left: 47%;
   top: 59%;
-  width: 11%;
+  width: 19%;
   aspect-ratio: 1 / 1;
   opacity: 0;
   background:
@@ -683,7 +685,7 @@ body {
 
 .prestige-diamond::after,
 .entry-prestige-diamond::after {
-  width: 14%;
+  width: 24%;
   background:
     linear-gradient(90deg, transparent 44%, rgba(255,255,255,1) 47% 53%, transparent 56%),
     linear-gradient(0deg, transparent 44%, rgba(255,255,255,1) 47% 53%, transparent 56%),
@@ -707,18 +709,20 @@ body {
 }
 .entry-prestige-golden {
   background:
-    radial-gradient(circle at 41% 49%, rgba(255,250,176,.95) 0 1.15%, transparent 1.8%),
-    radial-gradient(circle at 50% 58%, rgba(255,255,226,.9) 0 .9%, transparent 1.5%),
-    radial-gradient(circle at 59% 48%, rgba(255,218,70,.92) 0 1.05%, transparent 1.7%),
-    radial-gradient(circle at 44% 65%, rgba(255,210,49,.78) 0 .9%, transparent 1.5%);
+    linear-gradient(rgba(255,200,24,.18), rgba(255,224,74,.10)),
+    radial-gradient(circle at 41% 49%, rgba(255,251,165,1) 0 1.65%, transparent 2.45%),
+    radial-gradient(circle at 50% 58%, rgba(255,255,226,1) 0 1.3%, transparent 2.05%),
+    radial-gradient(circle at 59% 48%, rgba(255,209,34,1) 0 1.55%, transparent 2.35%),
+    radial-gradient(circle at 44% 65%, rgba(255,196,18,.94) 0 1.3%, transparent 2.0%);
 }
 .entry-prestige-diamond {
   background:
-    radial-gradient(circle at 40% 49%, rgba(255,255,255,1) 0 1.2%, transparent 1.8%),
-    radial-gradient(circle at 49% 58%, rgba(213,242,255,.98) 0 1.1%, transparent 1.7%),
-    radial-gradient(circle at 59% 48%, rgba(255,255,255,.95) 0 1.25%, transparent 1.9%),
-    radial-gradient(circle at 45% 65%, rgba(201,237,255,.9) 0 1%, transparent 1.6%),
-    radial-gradient(circle at 61% 62%, rgba(255,255,255,.88) 0 .9%, transparent 1.5%);
+    linear-gradient(rgba(215,245,255,.18), rgba(255,255,255,.09)),
+    radial-gradient(circle at 40% 49%, rgba(255,255,255,1) 0 1.8%, transparent 2.6%),
+    radial-gradient(circle at 49% 58%, rgba(198,238,255,1) 0 1.55%, transparent 2.3%),
+    radial-gradient(circle at 59% 48%, rgba(255,255,255,1) 0 1.85%, transparent 2.7%),
+    radial-gradient(circle at 45% 65%, rgba(190,234,255,.96) 0 1.45%, transparent 2.2%),
+    radial-gradient(circle at 61% 62%, rgba(255,255,255,.96) 0 1.35%, transparent 2.05%);
 }
 .entry-prestige-live::before {
   top: 39%;
@@ -783,6 +787,42 @@ body {
   0% { opacity: 0; transform: rotate(var(--trail-rotate, 0deg)) scale(.25); }
   18% { opacity: 1; transform: rotate(var(--trail-rotate, 0deg)) scale(1.15); }
   100% { opacity: 0; transform: rotate(calc(var(--trail-rotate, 0deg) + 24deg)) scale(.25) translateY(5px); }
+}
+
+.golden-trail-glint {
+  position: absolute;
+  width: var(--trail-size, 9px);
+  height: var(--trail-size, 9px);
+  margin-left: calc(var(--trail-size, 9px) * -.5);
+  margin-top: calc(var(--trail-size, 9px) * -.5);
+  pointer-events: none;
+  z-index: 2900;
+  transform: rotate(var(--trail-rotate, 0deg));
+  animation: golden-trail-fade .72s ease-out 1 both;
+}
+
+.golden-trail-glint::before,
+.golden-trail-glint::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 1.5px;
+  height: 100%;
+  border-radius: 999px;
+  background: rgba(255,224,82,.98);
+  box-shadow: 0 0 3px rgba(255,196,24,.82);
+  transform: translateX(-50%);
+}
+
+.golden-trail-glint::after {
+  transform: translateX(-50%) rotate(90deg);
+}
+
+@keyframes golden-trail-fade {
+  0% { opacity: 0; transform: rotate(var(--trail-rotate, 0deg)) scale(.25); }
+  18% { opacity: 1; transform: rotate(var(--trail-rotate, 0deg)) scale(1.1); }
+  100% { opacity: 0; transform: rotate(calc(var(--trail-rotate, 0deg) + 22deg)) scale(.25) translateY(5px); }
 }
 
 .swim-captain-layer { z-index: 6; }
@@ -2196,7 +2236,8 @@ body.pond-focus-mode .fight-test-rig { display: none !important; }
 .scene-world.gangnam-running .duck .swim-wing-back {
   animation-play-state: paused !important;
 }
-.scene-world.gangnam-running .diamond-trail-glint {
+.scene-world.gangnam-running .diamond-trail-glint,
+.scene-world.gangnam-running .golden-trail-glint {
   display: none !important;
 }
 
