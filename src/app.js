@@ -3917,10 +3917,10 @@
           { name: "low", left: 52, top: 76 }
         ]
       : [
-          // Swimming positions mirror the trail language rather than sitting
-          // over the shirt/wing: ahead of chest, above rear/back, and just
-          // under the body above the waterline.
-          { name: "front", left: 71, top: 58 },
+          // v0.172: keep swimming prestige stars outside the duck silhouette.
+          // The front star sits lower and slightly farther forward so it reads
+          // beside the chest rather than crossing the beak.
+          { name: "front", left: 74, top: 66 },
           { name: "back", left: 31, top: 43 },
           { name: "low", left: 52, top: 80 }
         ];
