@@ -1,10 +1,10 @@
-# Duck Pond v0.180 — Pre-1.0 Release & Security Review
+# Duck Pond v1.0.0 — Release & Security Review
 
-Date: 9 Oct 2026
+Date: 10 Oct 2026
 
 ## Scope
 
-Static GitHub Pages client application, including CSV loading, DOM rendering, audio, mobile interaction, event/timer lifecycle, production assets and the v0.179 feature set.
+Static GitHub Pages client application, including CSV loading, DOM rendering, audio, mobile interaction, event/timer lifecycle, production assets and the tested v0.183 release-candidate feature set.
 
 ## Security findings
 
@@ -18,7 +18,7 @@ Static GitHub Pages client application, including CSV loading, DOM rendering, au
 - The current player data model contains display names/nicknames and should not be extended with confidential or sensitive data.
 - The Gangnam audio clip remains a licensing consideration for any future commercial distribution.
 
-## Cleanup completed in v0.180
+## Pre-release cleanup completed
 
 - Removed hidden developer/test UI and its event handlers.
 - Removed hidden CSV diagnostic tables and their DOM-building code.
@@ -32,9 +32,9 @@ Static GitHub Pages client application, including CSV loading, DOM rendering, au
 ## Residual platform limitations
 
 - GitHub Pages does not provide application-controlled HTTP response headers such as HSTS or header-level CSP.
-- Facebook's iOS in-app browser may lock orientation; the application cannot force the Facebook container to rotate.
+- Facebook and Instagram in-app browsers may restrict orientation behaviour; the application provides a browser-opening notice but cannot force the social-app container to rotate.
 - High duck counts can increase mobile thermal/rendering load. v0.162+ transform-based movement and the cheaper prestige implementation materially reduce this cost.
 
 ## Release recommendation
 
-v0.180 is suitable as the final pre-1.0 baseline after a short regression check on the production phone/browser path. Further changes before launch should be defect-only.
+v1.0.0 is the production release promoted directly from the tested v0.183 candidate. Post-launch changes should be developed and tested separately before promotion to production.
