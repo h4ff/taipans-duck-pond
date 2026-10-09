@@ -3917,11 +3917,11 @@
           { name: "low", left: 52, top: 76 }
         ]
       : [
-          // v0.172: keep swimming prestige stars outside the duck silhouette.
-          // The front star sits lower and slightly farther forward so it reads
-          // beside the chest rather than crossing the beak.
-          { name: "front", left: 74, top: 66 },
-          { name: "back", left: 31, top: 43 },
+          // v0.173: swimming-only prestige correction. Keep one sparkle clearly
+          // in front of the chest (not on the beak), one above the duck's back,
+          // and one low near the waterline.
+          { name: "front", left: 66, top: 71 },
+          { name: "back", left: 34, top: 37 },
           { name: "low", left: 52, top: 80 }
         ];
 
