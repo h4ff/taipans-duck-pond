@@ -1,8 +1,15 @@
-# Duck Pond – v0.162
+# Duck Pond – v0.163
 
 
 
 
+
+## v0.163 – High-Duck-Count Simulation Pass
+
+- Ordinary pond movement calculations now run at about 30 Hz while requestAnimationFrame remains the timing clock.
+- Perspective scale/depth sorting updates at about 10 Hz instead of every movement tick.
+- Ducks well outside the visible viewport pause cosmetic CSS animations and skip collision work until they approach the viewport again.
+- No changes to routes, choreography, assets, CSVs or visual layout.
 
 ## v0.162 – High-Duck-Count Movement Performance
 
