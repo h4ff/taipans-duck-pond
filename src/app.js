@@ -3941,12 +3941,12 @@
       ? [
           { name: "front", left: 26, top: 62 },
           { name: "back", left: 67, top: 37 },
-          { name: "low", left: 52, top: 82 }
+          { name: "low", left: 54, top: 47 }
         ]
       : [
           { name: "front", left: 74, top: 62 },
           { name: "back", left: 33, top: 37 },
-          { name: "low", left: 48, top: 82 }
+          { name: "low", left: 46, top: 47 }
         ];
 
     for (const anchor of anchors) {
