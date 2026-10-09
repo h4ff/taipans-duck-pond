@@ -2386,6 +2386,7 @@
     if (whistle) whistle.src = coachWhistleSrc("swim", nextFacing);
 
     duck.dataset.facing = nextFacing;
+    setPrestigeSwimGlintPositions(duck);
   }
 
   function curvedControlPoint(from, to) {
@@ -3931,31 +3932,38 @@
     return glints;
   }
 
+  function setPrestigeSwimGlintPositions(duck) {
+    const wrap = duck.querySelector(".prestige-swim-glints");
+    if (!wrap) return;
+    const facingRight = duck.dataset.facing === "right";
+    const positions = facingRight
+      ? { front: [22, 60], back: [70, 33], low: [58, 43] }
+      : { front: [78, 60], back: [30, 33], low: [42, 43] };
+
+    for (const [name, [left, top]] of Object.entries(positions)) {
+      const glint = wrap.querySelector(`.prestige-shirt-glint-${name}`);
+      if (!glint) continue;
+      glint.style.setProperty("--shirt-glint-left", `${left}%`);
+      glint.style.setProperty("--shirt-glint-top", `${top}%`);
+    }
+  }
+
   function createPrestigeSwimGlints(duck, prestigeType) {
     const wrap = document.createElement("span");
     wrap.className = "prestige-swim-glints";
     wrap.setAttribute("aria-hidden", "true");
 
-    const facingRight = duck.dataset.facing === "right";
-    const anchors = facingRight
-      ? [
-          { name: "front", left: 26, top: 62 },
-          { name: "back", left: 67, top: 37 },
-          { name: "low", left: 54, top: 47 }
-        ]
-      : [
-          { name: "front", left: 74, top: 62 },
-          { name: "back", left: 33, top: 37 },
-          { name: "low", left: 46, top: 47 }
-        ];
+    const anchors = [
+      { name: "front" },
+      { name: "back" },
+      { name: "low" }
+    ];
 
     for (const anchor of anchors) {
       const glint = document.createElement("span");
       glint.className = `prestige-shirt-glint prestige-shirt-glint-${prestigeType} prestige-shirt-glint-${anchor.name}`;
       const size = prestigeType === "diamond" ? 9 + Math.random() * 4.5 : 8 + Math.random() * 4;
       const cycle = prestigeType === "diamond" ? 0.98 + Math.random() * .18 : 1.06 + Math.random() * .22;
-      glint.style.setProperty("--shirt-glint-left", `${anchor.left}%`);
-      glint.style.setProperty("--shirt-glint-top", `${anchor.top}%`);
       glint.style.setProperty("--shirt-glint-size", `${size.toFixed(1)}px`);
       glint.style.setProperty("--shirt-glint-delay", `${(-Math.random() * cycle).toFixed(2)}s`);
       glint.style.setProperty("--shirt-glint-cycle", `${cycle.toFixed(2)}s`);
@@ -4217,6 +4225,7 @@
     stack.appendChild(fightArm);
     visual.appendChild(stack);
     if (prestigeSwimGlints) visual.appendChild(prestigeSwimGlints);
+    if (prestigeSwimGlints) setPrestigeSwimGlintPositions(duck);
 
     duck.dataset.face = faceName;
   }
