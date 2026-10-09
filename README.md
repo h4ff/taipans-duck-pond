@@ -1,10 +1,10 @@
-# Duck Pond – v0.169
+# Duck Pond – v0.170
 
 
 
 
 
-## v0.169 – Prestige Shirt Glint Visibility
+## v0.170 – Prestige Shirt Glint Visibility
 
 - Shirt glints now use trail-scale pixel sizing instead of percentage sizing.
 - Golden and Diamond glints use a faster, brighter trail-style pop/fade cadence.
