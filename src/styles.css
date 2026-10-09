@@ -2047,3 +2047,62 @@ footer {
   0%,100% { transform: rotate(12deg); }
   50% { transform: rotate(-15deg) translateY(3px); }
 }
+
+
+/* v0.181 mobile discoverability. */
+.landscape-scroll-hint {
+  position: absolute;
+  top: 50%;
+  z-index: 8500;
+  width: 34px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  transform: translateY(-50%);
+  border-radius: 999px;
+  background: rgba(24,39,44,.48);
+  color: rgba(255,255,255,.92);
+  font: 700 42px/1 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  pointer-events: none;
+  user-select: none;
+  opacity: .78;
+  animation: pond-scroll-hint-pulse 1.6s ease-in-out infinite;
+}
+.landscape-scroll-hint-left { left: 7px; }
+.landscape-scroll-hint-right { right: 7px; }
+.landscape-scroll-hint[hidden] { display: none !important; }
+@keyframes pond-scroll-hint-pulse {
+  0%, 100% { opacity: .42; transform: translateY(-50%) scale(.92); }
+  50% { opacity: .92; transform: translateY(-50%) scale(1); }
+}
+.facebook-browser-notice {
+  position: relative;
+  z-index: 9000;
+  margin: 8px 0 0;
+  padding: 8px 34px 8px 10px;
+  border: 2px solid rgba(24,39,44,.9);
+  border-radius: 10px;
+  background: rgba(255,249,226,.97);
+  color: #18272c;
+  font-size: .82rem;
+  line-height: 1.25;
+}
+.facebook-browser-notice button {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: 700 22px/1 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  cursor: pointer;
+}
+.facebook-browser-notice[hidden] { display: none !important; }
+@media (max-width: 900px) and (pointer: coarse) and (orientation: portrait) {
+  .landscape-scroll-hint { display: grid; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .landscape-scroll-hint { animation: none; }
+}

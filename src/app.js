@@ -1716,7 +1716,7 @@
   function updateLandscapeScrollHints() {
     if (!landscapeScrollHintLeft || !landscapeScrollHintRight || !scene) return;
     const maxScrollX = Math.max(0, scene.scrollWidth - scene.clientWidth);
-    const hasOverflow = landscapeMobileMode() && maxScrollX > 3;
+    const hasOverflow = portraitMobileMode() && maxScrollX > 3;
     landscapeScrollHintLeft.hidden = !hasOverflow || scene.scrollLeft <= 3;
     landscapeScrollHintRight.hidden = !hasOverflow || scene.scrollLeft >= maxScrollX - 3;
   }
