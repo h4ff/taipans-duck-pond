@@ -23,6 +23,10 @@
 
   const mobilePondToggle = document.getElementById("mobilePondToggle");
   const mobileZoomReset = document.getElementById("mobileZoomReset");
+  const landscapeScrollHintLeft = document.getElementById("landscapeScrollHintLeft");
+  const landscapeScrollHintRight = document.getElementById("landscapeScrollHintRight");
+  const facebookBrowserNotice = document.getElementById("facebookBrowserNotice");
+  const closeFacebookBrowserNotice = document.getElementById("closeFacebookBrowserNotice");
 
   const weekSelect = document.getElementById("weekSelect");
   const weekSummary = document.getElementById("weekSummary");
@@ -1709,6 +1713,25 @@
     if (zoomed) mobileZoomReset.textContent = `Reset Zoom (${mobileUserZoom.toFixed(1)}×)`;
   }
 
+  function updateLandscapeScrollHints() {
+    if (!landscapeScrollHintLeft || !landscapeScrollHintRight || !scene) return;
+    const maxScrollX = Math.max(0, scene.scrollWidth - scene.clientWidth);
+    const hasOverflow = landscapeMobileMode() && maxScrollX > 3;
+    landscapeScrollHintLeft.hidden = !hasOverflow || scene.scrollLeft <= 3;
+    landscapeScrollHintRight.hidden = !hasOverflow || scene.scrollLeft >= maxScrollX - 3;
+  }
+
+  function socialInAppBrowser() {
+    const ua = navigator.userAgent || "";
+    return /FBAN|FBAV|Instagram/i.test(ua);
+  }
+
+  function updateFacebookBrowserNotice() {
+    if (!facebookBrowserNotice) return;
+    const dismissed = sessionStorage.getItem("duckPondSocialBrowserNoticeDismissed") === "1";
+    facebookBrowserNotice.hidden = !socialInAppBrowser() || dismissed;
+  }
+
   function applyWorldScale(options = {}) {
     const preserveWorldPoint = options.preserveWorldPoint || null;
     const previousScrollableX = Math.max(0, worldStage.offsetWidth - scene.clientWidth);
@@ -1782,6 +1805,7 @@
         mobileUserZoom = 1;
         updateMobileZoomUi();
       }
+      updateLandscapeScrollHints();
     });
   }
 
@@ -5235,6 +5259,16 @@
     });
   }
 
+  scene.addEventListener("scroll", updateLandscapeScrollHints, { passive: true });
+
+  if (closeFacebookBrowserNotice) {
+    closeFacebookBrowserNotice.addEventListener("click", () => {
+      sessionStorage.setItem("duckPondSocialBrowserNoticeDismissed", "1");
+      facebookBrowserNotice.hidden = true;
+    });
+  }
+  updateFacebookBrowserNotice();
+
   let resizeFrame = null;
   let orientationTimer = null;
   let lastLayoutWidth = document.documentElement.clientWidth;
@@ -5259,6 +5293,8 @@
       mobileUserZoom = 1;
       pinchState = null;
       handleViewportChange(true);
+      updateLandscapeScrollHints();
+      updateFacebookBrowserNotice();
     }, 180);
   }, { passive: true });
 
