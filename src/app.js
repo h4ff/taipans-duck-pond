@@ -1960,8 +1960,33 @@
   }
 
   function setWorldPosition(element, xPct, yPct) {
-    element.style.left = `${pctToWorldX(xPct)}px`;
-    element.style.top = `${pctToWorldY(yPct)}px`;
+    const xPx = pctToWorldX(xPct);
+    const yPx = pctToWorldY(yPct);
+
+    // v0.162: pond ducks use compositor-friendly translate positioning once
+    // they are in the water. Entry ducks still use left/top because the pier
+    // choreography anchors their zero-size wrapper at the feet. Keeping pond
+    // position in the individual `translate` property lets the existing
+    // bob/scale/rotation `transform` continue independently.
+    if (element?.classList?.contains("duck") && !element.classList.contains("entrying")) {
+      if (!element._usesPondTranslate) {
+        element.style.left = "0px";
+        element.style.top = "0px";
+        element.style.removeProperty("translate");
+        element._usesPondTranslate = true;
+      }
+      element.style.translate = `${xPx}px ${yPx}px`;
+      return;
+    }
+
+    if (element?.classList?.contains("duck")) {
+      if (element._usesPondTranslate) {
+        element.style.removeProperty("translate");
+        element._usesPondTranslate = false;
+      }
+    }
+    element.style.left = `${xPx}px`;
+    element.style.top = `${yPx}px`;
   }
 
   function updateCounts() {
@@ -1998,7 +2023,11 @@
   const FLAMINGO_DEPTH_Y_OFFSET = 1.32;
 
   function setDepth(duck, y) {
-    duck.style.setProperty("--duck-scale", scaleForY(y).toFixed(3));
+    const nextScale = scaleForY(y).toFixed(3);
+    if (duck._lastDepthScale !== nextScale) {
+      duck.style.setProperty("--duck-scale", nextScale);
+      duck._lastDepthScale = nextScale;
+    }
 
     // Depth sorting is based on the visible water-contact point, not simply
     // the duck sprite's logical Y. The flamingo wake finishes 49 source pixels
@@ -2011,7 +2040,11 @@
     // Swimming ducks sort against one another by their visual waterline, but
     // remain below the permanent pier layer (z-index 2200). Entry ducks are
     // explicitly raised above the pier while waddling and jumping.
-    duck.style.zIndex = String(depthZForY(depthY));
+    const nextDepthZ = depthZForY(depthY);
+    if (duck._lastDepthZ !== nextDepthZ) {
+      duck.style.zIndex = String(nextDepthZ);
+      duck._lastDepthZ = nextDepthZ;
+    }
   }
 
   function setEffectDepth(effect, y) {

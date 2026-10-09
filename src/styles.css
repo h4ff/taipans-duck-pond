@@ -318,7 +318,7 @@ body {
   cursor: pointer;
   user-select: none;
   filter: drop-shadow(0 8px 3px rgba(24,39,44,.20));
-  will-change: left, top, transform;
+  will-change: auto;
   touch-action: manipulation;
 }
 
@@ -913,6 +913,13 @@ body {
 
 .duck[data-motion-state="swimming"] .swim-wake {
   opacity: 1;
+}
+
+/* v0.162: only active swimmers get a compositor hint. Keeping will-change on
+   every floating duck permanently became expensive once the pond reached
+   50+ ducks. Pond position itself now uses the independent translate property. */
+.duck[data-motion-state="swimming"] {
+  will-change: translate;
 }
 
 .duck.floating {
