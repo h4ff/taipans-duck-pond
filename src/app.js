@@ -3936,9 +3936,24 @@
     const wrap = duck.querySelector(".prestige-swim-glints");
     if (!wrap) return;
     const facingRight = duck.dataset.facing === "right";
-    const positions = facingRight
-      ? { front: [22, 60], back: [70, 33], low: [58, 43] }
-      : { front: [78, 60], back: [30, 33], low: [42, 43] };
+
+    // v0.178: explicit fixed swim-star anchors based on the user-marked target.
+    // When the duck faces one way, the stars should read as:
+    // - back: above the back
+    // - front: just ahead of the chest
+    // - low: rear/waterline sparkle
+    // Mirror the X positions for the opposite facing; keep Y the same.
+    const leftFacing = {
+      back: [28, 49],
+      front: [80, 56],
+      low: [16, 78]
+    };
+    const rightFacing = {
+      back: [100 - leftFacing.back[0], leftFacing.back[1]],
+      front: [100 - leftFacing.front[0], leftFacing.front[1]],
+      low: [100 - leftFacing.low[0], leftFacing.low[1]]
+    };
+    const positions = facingRight ? rightFacing : leftFacing;
 
     for (const [name, [left, top]] of Object.entries(positions)) {
       const glint = wrap.querySelector(`.prestige-shirt-glint-${name}`);
