@@ -1,8 +1,16 @@
-# Duck Pond – v0.162
+# Duck Pond – v0.164
 
 
 
 
+
+## v0.164 – Lightweight Prestige + Season Week Logic
+
+- Rebuilt Gold/Diamond shirt prestige as one clipped glitter surface with lightweight pseudo-element shimmer/starburst instead of 7–9 independently animated sparkle nodes per prestige duck.
+- Removed prestige filters/blend-mode work; Diamond movement trail is unchanged.
+- Walking Gold/Diamond prestige uses the same lightweight treatment while preserving the accepted shirt alignment.
+- Club-week selector is now anchored to the 2026/27 season start (28 Sep–4 Oct 2026) rather than advancing with the calendar when no duck data exists.
+- With no duck events, Round 1 remains selected; once later data exists, the latest populated week becomes default and intervening washout weeks remain selectable as zero-entry weeks.
 
 ## v0.162 – High-Duck-Count Movement Performance
 
