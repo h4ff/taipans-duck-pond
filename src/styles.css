@@ -1484,16 +1484,6 @@ footer {
   }
 }
 
-/* v0.163: ducks well outside the visible mobile/zoomed viewport do not need
-   to keep running purely cosmetic CSS animations. Their logical movement keeps
-   advancing and these resume automatically as they approach the viewport. */
-.duck.viewport-paused .swim-stack,
-.duck.viewport-paused .prestige-shirt-sheen,
-.duck.viewport-paused .swim-wing-front,
-.duck.viewport-paused .swim-wing-back {
-  animation-play-state: paused !important;
-}
-
 /* v0.87 production-style weekly playback/debug data view. */
 .data-debug-panel {
   margin-top: 18px;
