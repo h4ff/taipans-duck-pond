@@ -1,4 +1,4 @@
-# Duck Pond — v1.0.1
+# Duck Pond — v1.1.1
 
 ## v1.0.3 – Smart TV stability
 
@@ -72,7 +72,7 @@ v1.0.4 improves TV startup/display behaviour. Detected TV browsers enter full-po
 - No CSS, assets or CSV data changed.
 
 
-## v1.0.1
+## v1.0.7
 
 - Added deterministic TV display mode via `?tv=1`.
 - A forced TV display choice is remembered in local storage for future visits on that browser.
@@ -81,8 +81,16 @@ v1.0.4 improves TV startup/display behaviour. Detected TV browsers enter full-po
 - No CSS, assets, or CSV data changed.
 
 
-## Production promotion
+## v1.1 production promotion
 
-- Production v1.0.1 is promoted from the tested puddledev v1.0.7 build.
-- Functional code is unchanged from the tested dev build.
-- Only release/version metadata and cache references were changed for production.
+- Promoted from the tested puddledev v1.0.7 build.
+- Includes the tested smart-TV display-mode CSS that was missing from the earlier production upload.
+- `?tv=1` forces TV display mode and remembers it for that site/browser.
+- No duck behaviour, animation or data changes were introduced during promotion.
+
+
+## v1.1.1
+
+- TV display mode now attempts to initialise and resume pond audio automatically at startup.
+- Phone and laptop audio behaviour is unchanged and still unlocks on user interaction.
+- Some TV/browser engines may still enforce autoplay restrictions at the browser level.
