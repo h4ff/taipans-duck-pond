@@ -5123,6 +5123,10 @@
     try {
         if (TV_DISPLAY_BROWSER) {
             enterTvDisplayMode();
+            // TV display mode is intended to run unattended. Attempt to initialise
+            // and resume pond audio immediately instead of waiting for a click/tap.
+            // Browsers that enforce gesture-only audio may still reject this attempt.
+            unlockDuckPondAudio();
             if (loadingOverlay) {
                 loadingOverlay.hidden = false;
                 loadingOverlay.classList.remove("loading-complete", "loading-failed");
