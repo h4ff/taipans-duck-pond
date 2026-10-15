@@ -1,4 +1,12 @@
-# Duck Pond — v1.0.0
+# Duck Pond — v1.0.1
+
+## v1.0.3 – Smart TV stability
+
+- Uses classic transform-based pond positioning on detected TV browsers to reduce jitter.
+- Keeps swimming prestige stars aligned to the 512×512 duck canvas on legacy TV engines.
+- Disables Gangnam and duck fights on TV browsers because older Web Animations implementations can abort those sequences mid-event.
+- Modern phone/desktop browsers retain all existing interactions and performance paths.
+
 
 Duck Pond is the Taipans Cricket Club weekly duck animation. Player and duck data are loaded from CSV files and rendered as an interactive pond for desktop and mobile browsers.
 
@@ -39,3 +47,42 @@ The production build is suitable for static hosting on GitHub Pages. Treat every
 ## v1.0.0 release
 
 v1.0.0 is the production launch build promoted directly from the tested v0.183 release candidate. It includes the completed pre-release cleanup plus mobile portrait pond-scroll hints and the Facebook/Instagram in-app-browser landscape notice. No functional pond changes were made during the v1.0.0 promotion.
+
+
+## v1.0.1 compatibility release
+
+- Transpiles modern JavaScript syntax for older smart-TV browser engines.
+- Adds small DOM/JavaScript compatibility fallbacks required by older browsers.
+- Detects common smart-TV browsers and automatically enters a TV display mode after the selected week loads.
+- TV mode hides normal page chrome and leaves a remote-friendly **Change week** control to return to the selector.
+- The default remains the latest populated club week.
+- No duck, animation, asset, CSV or scoring behaviour changed from v1.0.0.
+
+## Release notes
+
+v1.0.4 improves TV startup/display behaviour. Detected TV browsers enter full-pond display mode immediately, show the loading pond overlay while production data/assets are prepared, then begin the newest-week entry sequence without waiting for all ducks to finish entering. The non-working TV Change Week control has been removed. Modern phone/desktop behaviour is unchanged.
+
+
+## v1.0.6
+
+- Rebuilt directly from known-good v1.0.4.
+- Added Hisense / VIDAA / Odin detection only for TV display mode.
+- Hisense enters full-pond TV display mode immediately at startup.
+- Existing v1.0.4 rendering and legacy-TV compatibility logic is unchanged.
+- No CSS, assets or CSV data changed.
+
+
+## v1.0.1
+
+- Added deterministic TV display mode via `?tv=1`.
+- A forced TV display choice is remembered in local storage for future visits on that browser.
+- `?tv=0` clears the remembered TV display choice and disables TV display mode for that load.
+- Existing v1.0.6 rendering and legacy-TV compatibility logic is unchanged.
+- No CSS, assets, or CSV data changed.
+
+
+## Production promotion
+
+- Production v1.0.1 is promoted from the tested puddledev v1.0.7 build.
+- Functional code is unchanged from the tested dev build.
+- Only release/version metadata and cache references were changed for production.
