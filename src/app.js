@@ -155,8 +155,14 @@
     const TV_DISPLAY_BROWSER = TV_DISPLAY_QUERY === false
         ? false
         : (TV_DISPLAY_QUERY === true || rememberedTvDisplayMode() || tvDisplayBrowserDetected());
+    // TV_MODE is the full presentation/behaviour profile. It can be forced with
+    // ?tv=1 even when the browser does not identify itself as a television.
+    // TV_BROWSER remains legacy-rendering detection only.
+    const TV_MODE = TV_DISPLAY_BROWSER;
     if (TV_BROWSER)
         document.body.classList.add("tv-browser");
+    if (TV_MODE)
+        document.body.classList.add("tv-mode");
     function enterTvDisplayMode() {
         if (!TV_DISPLAY_BROWSER)
             return;
@@ -3101,7 +3107,7 @@
         return now - Number(collisionPairs.get(key) || 0) >= 9000;
     }
     function fightEligibleDuck(duck) {
-        if (TV_BROWSER)
+        if (TV_MODE)
             return false;
         if (!(duck === null || duck === void 0 ? void 0 : duck.isConnected) || duck.dataset.motionState !== "floating")
             return false;
@@ -3116,7 +3122,7 @@
         return true;
     }
     function fightTapEligibleDuck(duck) {
-        if (TV_BROWSER)
+        if (TV_MODE)
             return false;
         if (!(duck === null || duck === void 0 ? void 0 : duck.isConnected) || duck.dataset.motionState !== "floating")
             return false;
@@ -4844,7 +4850,7 @@
         return animation.finished.catch(() => { }).then(() => gangnamSetPosition(xPct, yPct));
     }
     async function runGangnamEvent() {
-        if (TV_BROWSER)
+        if (TV_MODE)
             return;
         const fallbackSongMs = 20500;
         const breakdownAtMs = 10450;
@@ -4979,7 +4985,7 @@
         gangnamDoorHotspot.addEventListener("click", event => {
             event.preventDefault();
             event.stopPropagation();
-            if (TV_BROWSER)
+            if (TV_MODE)
                 return;
             const now = performance.now();
             const doubleTap = now - gangnamDoorTapAt <= 420;
