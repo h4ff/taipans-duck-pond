@@ -1,4 +1,4 @@
-# Duck Pond — v1.1.1
+# Duck Pond — 1.1.2
 
 ## v1.0.3 – Smart TV stability
 
@@ -94,3 +94,10 @@ v1.0.4 improves TV startup/display behaviour. Detected TV browsers enter full-po
 - TV display mode now attempts to initialise and resume pond audio automatically at startup.
 - Phone and laptop audio behaviour is unchanged and still unlocks on user interaction.
 - Some TV/browser engines may still enforce autoplay restrictions at the browser level.
+
+
+## 1.1.2
+
+- Forced TV mode (`?tv=1`) now applies the full TV behaviour profile regardless of device detection.
+- Fight interactions and Gangnam are disabled whenever TV mode is active.
+- Legacy smart-TV rendering fallbacks remain tied only to actual legacy-TV detection, so Hisense keeps the modern rendering path.
