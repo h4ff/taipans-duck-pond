@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'; connect-src 'self'; font-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; worker-src 'none';">
-  <title>Taipans Duck Pond — v1.1.2</title>
-  <link rel="stylesheet" href="src/styles.css?v=1.1.1">
+  <title>Taipans Duck Pond — v1.2.0</title>
+  <link rel="stylesheet" href="src/styles.css?v=1.2-dev.38">
 </head>
 <body>
   <main class="app-shell production-shell">
@@ -26,6 +26,7 @@
         <button id="mobilePondToggle" type="button" class="secondary" aria-pressed="false">Expand Pond</button>
         <button id="mobileZoomReset" type="button" class="secondary" hidden>Reset Zoom</button>
       </div>
+
     </header>
 
     <section id="sceneFrame" class="scene-frame" aria-label="Interactive Taipan duck pond">
@@ -43,6 +44,7 @@
         </div>
         <button id="gangnamDoorHotspot" class="gangnam-door-hotspot" type="button" aria-label="Pavilion door"></button>
 
+
         <button id="liveScoreboard" class="live-scoreboard" type="button"
                 aria-label="Open pond scoreboard" data-mode="leaderboard">
           <span id="scoreboardLabel" class="score-label">POND LEADERS</span>
@@ -52,6 +54,14 @@
           <span id="scoreboardMini2" class="score-mini"><b>2</b><span>—</span></span>
           <span id="scoreboardMini3" class="score-mini"><b>3</b><span>—</span></span>
         </button>
+
+        <div id="cricketGameLayer" class="cricket-game-layer" aria-hidden="true">
+          <div id="cricketPitch" class="cricket-pitch"></div>
+          <div id="cricketStumps" class="cricket-stumps"><i></i><i></i><i></i><b></b><b></b></div>
+        </div>
+        <div id="cricketBallLayer" class="cricket-ball-layer" aria-hidden="true">
+          <button id="cricketBall" class="cricket-ball" type="button" aria-label="Cricket ball"></button>
+        </div>
 
         <div id="destinationMarker" class="destination-marker" hidden aria-hidden="true"></div>
         <div id="duckLayer" class="duck-layer"></div>
@@ -74,6 +84,11 @@
         </div>
       </div>
 
+
+      <div id="cricketLandscapeNotice" class="cricket-landscape-notice" hidden role="status" aria-live="polite">
+        <span><strong>Better in landscape!</strong> Turn your phone sideways for the best cricket experience.</span>
+        <button id="closeCricketLandscapeNotice" type="button" aria-label="Dismiss landscape suggestion">×</button>
+      </div>
 
       <div id="loadingOverlay" class="loading-overlay" role="status" aria-live="polite" aria-label="Loading pond assets">
         <div class="loading-card">
@@ -113,6 +128,6 @@
     <div id="status" hidden aria-live="polite"></div>
   </main>
 
-  <script src="src/app.js?v=1.1.1"></script>
+  <script src="src/app.js?v=1.2.0"></script>
 </body>
 </html>
